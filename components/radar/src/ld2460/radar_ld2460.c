@@ -17,7 +17,6 @@
 #include "freertos/task.h"
 #include "freertos/semphr.h"
 #include "esp_log.h"
-#include "esp_timer.h"
 #include "driver/uart.h"
 #include "radar_ld2460.h"
 
