@@ -66,13 +66,13 @@ static void wifi_event_handler(void* arg, esp_event_base_t event_base,
 }
 
 /**
- * 初始化 WiFi AP 模式
+ * 初始化 WiFi STA 模式（连接路由器）
  */
-static void wifi_init_softap(void)
+static void wifi_init_sta(void)
 {
     ESP_ERROR_CHECK(esp_netif_init());
     ESP_ERROR_CHECK(esp_event_loop_create_default());
-    esp_netif_create_default_wifi_ap();
+    esp_netif_create_default_wifi_sta();
 
     wifi_init_config_t cfg = WIFI_INIT_CONFIG_DEFAULT();
     ESP_ERROR_CHECK(esp_wifi_init(&cfg));
@@ -82,37 +82,29 @@ static void wifi_init_softap(void)
                                                         &wifi_event_handler,
                                                         NULL,
                                                         NULL));
+    ESP_ERROR_CHECK(esp_event_handler_instance_register(IP_EVENT,
+                                                        IP_EVENT_STA_GOT_IP,
+                                                        &wifi_event_handler,
+                                                        NULL,
+                                                        NULL));
 
     wifi_config_t wifi_config = {
-        .ap = {
+        .sta = {
             .ssid = WIFI_SSID,
-            .ssid_len = strlen(WIFI_SSID),
-            .channel = WIFI_CHANNEL,
             .password = WIFI_PASS,
-            .max_connection = WIFI_MAX_CONN,
-            .authmode = WIFI_AUTH_WPA_WPA2_PSK,
+            .threshold.authmode = WIFI_AUTH_WPA2_PSK,
             .pmf_cfg = {
-                .required = false,
+                .capable = true,
+                .required = false
             },
         },
     };
 
-    if (strlen(WIFI_PASS) == 0) {
-        wifi_config.ap.authmode = WIFI_AUTH_OPEN;
-    }
-
-    ESP_ERROR_CHECK(esp_wifi_set_mode(WIFI_MODE_AP));
-    ESP_ERROR_CHECK(esp_wifi_set_config(WIFI_IF_AP, &wifi_config));
+    ESP_ERROR_CHECK(esp_wifi_set_mode(WIFI_MODE_STA));
+    ESP_ERROR_CHECK(esp_wifi_set_config(WIFI_IF_STA, &wifi_config));
     ESP_ERROR_CHECK(esp_wifi_start());
 
-    ESP_LOGI(TAG, "WiFi AP initialized. SSID:%s password:%s channel:%d",
-             WIFI_SSID, WIFI_PASS, WIFI_CHANNEL);
-
-    // 获取并打印 IP 地址
-    esp_netif_ip_info_t ip_info;
-    esp_netif_get_ip_info(esp_netif_get_handle_from_ifkey("WIFI_AP_DEF"), &ip_info);
-    ESP_LOGI(TAG, "AP IP Address: " IPSTR, IP2STR(&ip_info.ip));
-    ESP_LOGI(TAG, "Web Server URL: http://" IPSTR "/", IP2STR(&ip_info.ip));
+    ESP_LOGI(TAG, "WiFi STA initialized, connecting to SSID:%s", WIFI_SSID);
 }
 
 /**
@@ -146,8 +138,8 @@ void app_main(void)
     ESP_ERROR_CHECK(fatfs_init());
     ESP_LOGI(TAG, "FATFS initialized");
 
-    // 初始化 WiFi
-    wifi_init_softap();
+    // 初始化 WiFi STA 模式
+    wifi_init_sta();
 
     // 启动 HTTP 服务器
     ESP_ERROR_CHECK(http_server_start());
@@ -155,8 +147,7 @@ void app_main(void)
 
     ESP_LOGI(TAG, "=================================");
     ESP_LOGI(TAG, "System Ready!");
-    ESP_LOGI(TAG, "Connect to WiFi: %s", WIFI_SSID);
-    ESP_LOGI(TAG, "Password: %s", WIFI_PASS);
+    ESP_LOGI(TAG, "Connecting to WiFi: %s", WIFI_SSID);
     ESP_LOGI(TAG, "=================================");
 
     // 主循环 - 打印系统状态
