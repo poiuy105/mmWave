@@ -1,0 +1,46 @@
+menu "Radar Configuration"
+
+    choice RADAR_TYPE
+        prompt "Select radar type"
+        default RADAR_LD2460
+
+        config RADAR_NMEA
+            bool "NMEA Radar (GPS style)"
+            help
+                NMEA protocol radar, e.g. GPS receivers.
+                Uses text-based protocol with line delimiters.
+
+        config RADAR_LD2460
+            bool "HLK-LD2460 (2T4R Multi-target Tracking)"
+            help
+                Hi-Link LD2460 24GHz millimeter wave radar.
+                Binary protocol, default baud rate 115200.
+
+    endchoice
+
+    config RADAR_UART_NUM
+        int "UART port number"
+        default 1
+        range 0 2
+
+    config RADAR_UART_TX_PIN
+        int "UART TX pin"
+        default 1
+
+    config RADAR_UART_RX_PIN
+        int "UART RX pin"
+        default 2
+
+    config RADAR_UART_BAUD_RATE
+        int "UART baud rate (0 = use radar default)"
+        default 0
+
+    config RADAR_TASK_STACK_SIZE
+        int "Radar parser task stack size"
+        default 4096
+
+    config RADAR_TASK_PRIORITY
+        int "Radar parser task priority"
+        default 10
+
+endmenu
