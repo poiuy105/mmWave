@@ -38,6 +38,13 @@ menu "Radar Configuration"
                 Supports X/Y/Z coordinates, area detection, low power mode.
                 Subset of LD6004 features (no stay areas, no baud rate setting).
 
+        config RADAR_LD2461
+            bool "HLK-LD2461 (2T4R Motion Detection)"
+            help
+                Hi-Link LD2461 24GHz motion detection and tracking radar.
+                Binary protocol with big-endian format, default baud rate 9600.
+                Supports up to 3 configurable regions for filtering.
+
     endchoice
 
     config RADAR_UART_NUM

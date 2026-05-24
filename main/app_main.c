@@ -4,7 +4,7 @@
  *
  * Radar Demo Application
  *
- * Supports: HLK-LD2450, HLK-LD6002B, HLK-LD6004, HLK-LD2460, NMEA
+ * Supports: HLK-LD2461, HLK-LD2450, HLK-LD6002B, HLK-LD6004, HLK-LD2460, NMEA
  * UART1 → Radar
  * UART0 → PC serial monitor (printf)
  */
@@ -17,7 +17,34 @@
 
 static const char *TAG = "APP";
 
-#if defined(CONFIG_RADAR_LD2450)
+#if defined(CONFIG_RADAR_LD2461)
+
+static void radar_event_handler(void *handler_args, esp_event_base_t base,
+                                 int32_t event_id, void *event_data)
+{
+    if (event_id == LD2461_EVENT_COORDINATES) {
+        ld2461_data_t *data = (ld2461_data_t *)event_data;
+        if (data->target_count == 0) {
+            printf("No target detected\n");
+            return;
+        }
+        printf("Targets: %d\n", data->target_count);
+        for (int i = 0; i < data->target_count; i++) {
+            printf("  [%d] X=%.1f m, Y=%.1f m\n",
+                   i,
+                   data->targets[i].x,
+                   data->targets[i].y);
+        }
+    } else if (event_id == LD2461_EVENT_REGION_STATUS) {
+        ld2461_region_status_t *status = (ld2461_region_status_t *)event_data;
+        printf("Region status: [R1:%s, R2:%s, R3:%s]\n",
+               status->region1_occupied ? "OCC" : "EMP",
+               status->region2_occupied ? "OCC" : "EMP",
+               status->region3_occupied ? "OCC" : "EMP");
+    }
+}
+
+#elif defined(CONFIG_RADAR_LD2450)
 
 static void radar_event_handler(void *handler_args, esp_event_base_t base,
                                  int32_t event_id, void *event_data)
@@ -193,6 +220,24 @@ void app_main(void)
                  version.version_major, version.version_minor,
                  version.year, version.month,
                  version.mode == LD2460_INSTALL_SIDE ? "side" : "top");
+    }
+
+#elif defined(CONFIG_RADAR_LD2461)
+    /* LD2461 specific: query version */
+    ld2461_version_t ver;
+    if (ld2461_get_version(radar, &ver) == ESP_OK) {
+        ESP_LOGI(TAG, "LD2461 firmware: V%d.%d (20%02d/%02d/%02d) ID=0x%08lX",
+                 ver.major, ver.minor,
+                 ver.year, ver.month, ver.day,
+                 (unsigned long)ver.unique_id);
+    }
+
+    /* LD2461 specific: query report format */
+    ld2461_report_format_t fmt;
+    if (ld2461_get_report_format(radar, &fmt) == ESP_OK) {
+        const char *fmt_str = (fmt == LD2461_REPORT_COORDINATES) ? "coordinates" :
+                              (fmt == LD2461_REPORT_STATUS) ? "status" : "both";
+        ESP_LOGI(TAG, "Report format: %s", fmt_str);
     }
 #endif
 

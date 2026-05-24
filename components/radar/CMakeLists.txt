@@ -10,6 +10,9 @@ set(LD6004_SRCS src/ld6004/radar_ld6004.c)
 # LD6002B radar driver sources
 set(LD6002B_SRCS src/ld6002b/radar_ld6002b.c)
 
+# LD2461 radar driver sources
+set(LD2461_SRCS src/ld2461/radar_ld2461.c)
+
 # NMEA radar driver sources (original code, in main/ for now)
 set(NMEA_SRCS ${CMAKE_SOURCE_DIR}/main/nmea_parser.c)
 
@@ -26,6 +29,9 @@ elseif(CONFIG_RADAR_LD6004)
 elseif(CONFIG_RADAR_LD6002B)
     set(RADAR_SRCS ${LD6002B_SRCS})
     set(RADAR_INCLUDES include src/ld6002b)
+elseif(CONFIG_RADAR_LD2461)
+    set(RADAR_SRCS ${LD2461_SRCS})
+    set(RADAR_INCLUDES include src/ld2461)
 elseif(CONFIG_RADAR_NMEA)
     set(RADAR_SRCS ${NMEA_SRCS})
     set(RADAR_INCLUDES include ${CMAKE_SOURCE_DIR}/main)
