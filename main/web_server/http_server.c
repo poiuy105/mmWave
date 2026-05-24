@@ -62,7 +62,7 @@ static const char* get_mime_type(const char *filename)
  */
 static esp_err_t static_file_handler(httpd_req_t *req)
 {
-    char filepath[512];
+    char filepath[600];
     const char *uri = req->uri;
     
     // 默认首页
@@ -71,7 +71,12 @@ static esp_err_t static_file_handler(httpd_req_t *req)
     }
     
     // 构建文件路径
-    snprintf(filepath, sizeof(filepath), "/storage/www%s", uri);
+    int len = snprintf(filepath, sizeof(filepath), "/storage/www%s", uri);
+    if (len >= sizeof(filepath)) {
+        ESP_LOGW(TAG, "URI too long");
+        httpd_resp_send_404(req);
+        return ESP_FAIL;
+    }
     
     // 检查文件是否存在
     struct stat st;
