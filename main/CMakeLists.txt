@@ -5,6 +5,7 @@ set(srcs
     "main.c"
     "web_server/fatfs_init.c"
     "web_server/http_server.c"
+    "web_server/websocket_server.c"
 )
 
 # 头文件目录
