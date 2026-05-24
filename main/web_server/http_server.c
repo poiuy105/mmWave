@@ -5,6 +5,7 @@
 
 #include "http_server.h"
 #include "websocket_server.h"
+#include "embedded_web.h"
 #include "esp_log.h"
 #include "esp_http_server.h"
 #include "nvs_flash.h"
@@ -68,6 +69,14 @@ static esp_err_t static_file_handler(httpd_req_t *req)
     // 默认首页
     if (strcmp(uri, "/") == 0) {
         uri = "/index.html";
+    }
+    
+    // 对于 index.html，直接返回内嵌的 HTML
+    if (strcmp(uri, "/index.html") == 0) {
+        httpd_resp_set_type(req, "text/html");
+        httpd_resp_send(req, embedded_index_html, strlen(embedded_index_html));
+        ESP_LOGI(TAG, "Served embedded index.html");
+        return ESP_OK;
     }
     
     // 构建文件路径
