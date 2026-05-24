@@ -260,7 +260,6 @@ void app_main(void)
                               (fmt == LD2461_REPORT_STATUS) ? "status" : "both";
         ESP_LOGI(TAG, "Report format: %s", fmt_str);
     }
-#endif
 
 #elif defined(CONFIG_RADAR_LD2452)
     /* LD2452 is report-only, no commands available */
