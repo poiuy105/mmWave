@@ -26,6 +26,9 @@ idf_component_register(
         json
 )
 
+# 链接数学库
+target_link_libraries(${COMPONENT_LIB} m)
+
 # 嵌入网页文件到 FATFS (可选，用于首次烧录时初始化)
 # 这些文件会在 fatfs_init 时复制到 FATFS 分区
 set(WEB_FILES

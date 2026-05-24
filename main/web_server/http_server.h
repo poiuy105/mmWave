@@ -6,12 +6,13 @@
 #ifndef HTTP_SERVER_H
 #define HTTP_SERVER_H
 
+#include <stdbool.h>
 #include "esp_err.h"
+#include "esp_http_server.h"
 
 #ifdef __cplusplus
 extern "C" {
 #endif
-
 /**
  * @brief 启动 HTTP 服务器
  *

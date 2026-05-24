@@ -11,6 +11,7 @@
 #include <string.h>
 #include <sys/stat.h>
 #include <dirent.h>
+#include <math.h>
 #include <cJSON.h>
 
 static const char *TAG = "HTTP_SERVER";
