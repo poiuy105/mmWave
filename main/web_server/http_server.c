@@ -62,7 +62,7 @@ static const char* get_mime_type(const char *filename)
  */
 static esp_err_t static_file_handler(httpd_req_t *req)
 {
-    char filepath[256];
+    char filepath[512];
     const char *uri = req->uri;
     
     // 默认首页
