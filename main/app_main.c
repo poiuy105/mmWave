@@ -4,7 +4,7 @@
  *
  * Radar Demo Application
  *
- * Supports: HLK-LD6004, HLK-LD2460, NMEA
+ * Supports: HLK-LD6002B, HLK-LD6004, HLK-LD2460, NMEA
  * UART1 → Radar
  * UART0 → PC serial monitor (printf)
  */
@@ -17,7 +17,36 @@
 
 static const char *TAG = "APP";
 
-#if defined(CONFIG_RADAR_LD6004)
+#if defined(CONFIG_RADAR_LD6002B)
+
+static void radar_event_handler(void *handler_args, esp_event_base_t base,
+                                 int32_t event_id, void *event_data)
+{
+    if (event_id == LD6002B_EVENT_TARGET_UPDATE) {
+        ld6002b_data_t *data = (ld6002b_data_t *)event_data;
+        if (data->target_count == 0) {
+            printf("No target detected\n");
+            return;
+        }
+        printf("Targets: %d\n", data->target_count);
+        for (int i = 0; i < data->target_count; i++) {
+            printf("  [%d] X=%.2f Y=%.2f Z=%.2f dop=%ld cluster=%ld\n",
+                   i,
+                   data->targets[i].x,
+                   data->targets[i].y,
+                   data->targets[i].z,
+                   (long)data->targets[i].dop_idx,
+                   (long)data->targets[i].cluster_id);
+        }
+    } else if (event_id == LD6002B_EVENT_AREA_STATE) {
+        ld6002b_area_state_t *state = (ld6002b_area_state_t *)event_data;
+        printf("Area state: [%d,%d,%d,%d]\n",
+               state->states[0], state->states[1],
+               state->states[2], state->states[3]);
+    }
+}
+
+#elif defined(CONFIG_RADAR_LD6004)
 
 static void radar_event_handler(void *handler_args, esp_event_base_t base,
                                  int32_t event_id, void *event_data)
@@ -92,7 +121,20 @@ void app_main(void)
     /* Register event handler */
     RADAR_ADD_HANDLER(radar, radar_event_handler, NULL);
 
-#if defined(CONFIG_RADAR_LD6004)
+#if defined(CONFIG_RADAR_LD6002B)
+    /* LD6002B specific: query install mode */
+    ld6002b_install_mode_t mode;
+    if (ld6002b_get_install_mode(radar, &mode) == ESP_OK) {
+        ESP_LOGI(TAG, "Install mode: %s", mode == LD6002B_INSTALL_TOP ? "top" : "side");
+    }
+
+    /* LD6002B specific: query sensitivity */
+    ld6002b_sensitivity_t sens;
+    if (ld6002b_get_sensitivity(radar, &sens) == ESP_OK) {
+        ESP_LOGI(TAG, "Sensitivity: %d", sens);
+    }
+
+#elif defined(CONFIG_RADAR_LD6004)
     /* LD6004 specific: query firmware version */
     if (ld6004_query_firmware_version(radar) == ESP_OK) {
         ESP_LOGI(TAG, "LD6004 firmware queried successfully");
