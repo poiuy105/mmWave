@@ -16,7 +16,6 @@
 #include "freertos/queue.h"
 #include "esp_log.h"
 #include "esp_check.h"
-#include "driver/gpio.h"
 
 static const char *TAG = "LD2461";
 
