@@ -4,7 +4,7 @@
  *
  * Radar Demo Application
  *
- * Supports: HLK-LD6002B, HLK-LD6004, HLK-LD2460, NMEA
+ * Supports: HLK-LD2450, HLK-LD6002B, HLK-LD6004, HLK-LD2460, NMEA
  * UART1 → Radar
  * UART0 → PC serial monitor (printf)
  */
@@ -17,7 +17,28 @@
 
 static const char *TAG = "APP";
 
-#if defined(CONFIG_RADAR_LD6002B)
+#if defined(CONFIG_RADAR_LD2450)
+
+static void radar_event_handler(void *handler_args, esp_event_base_t base,
+                                 int32_t event_id, void *event_data)
+{
+    ld2450_data_t *data = (ld2450_data_t *)event_data;
+    if (data->target_count == 0) {
+        printf("No target detected\n");
+        return;
+    }
+    printf("Targets: %d\n", data->target_count);
+    for (int i = 0; i < data->target_count; i++) {
+        printf("  [%d] X=%d mm, Y=%d mm, speed=%d cm/s, res=%d mm\n",
+               i,
+               data->targets[i].x,
+               data->targets[i].y,
+               data->targets[i].speed,
+               data->targets[i].resolution);
+    }
+}
+
+#elif defined(CONFIG_RADAR_LD6002B)
 
 static void radar_event_handler(void *handler_args, esp_event_base_t base,
                                  int32_t event_id, void *event_data)
@@ -121,7 +142,20 @@ void app_main(void)
     /* Register event handler */
     RADAR_ADD_HANDLER(radar, radar_event_handler, NULL);
 
-#if defined(CONFIG_RADAR_LD6002B)
+#if defined(CONFIG_RADAR_LD2450)
+    /* LD2450 specific: query firmware version */
+    ld2450_version_t ver;
+    if (ld2450_get_firmware_version(radar, &ver) == ESP_OK) {
+        ESP_LOGI(TAG, "LD2450 firmware: V%d.%d", ver.major, ver.minor);
+    }
+
+    /* LD2450 specific: query tracking mode */
+    ld2450_tracking_mode_t mode;
+    if (ld2450_get_tracking_mode(radar, &mode) == ESP_OK) {
+        ESP_LOGI(TAG, "Tracking mode: %s", mode == LD2450_MODE_SINGLE ? "single" : "multi");
+    }
+
+#elif defined(CONFIG_RADAR_LD6002B)
     /* LD6002B specific: query install mode */
     ld6002b_install_mode_t mode;
     if (ld6002b_get_install_mode(radar, &mode) == ESP_OK) {

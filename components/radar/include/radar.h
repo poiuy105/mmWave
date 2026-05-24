@@ -21,7 +21,23 @@ extern "C" {
 
 /* ============ Compile-time radar type selection ============ */
 
-#if defined(CONFIG_RADAR_LD6002B)
+#if defined(CONFIG_RADAR_LD2450)
+    #include "radar_ld2450.h"
+
+    typedef ld2450_config_t     radar_config_t;
+    typedef ld2450_handle_t     radar_handle_t;
+    typedef ld2450_event_id_t   radar_event_id_t;
+    typedef ld2450_data_t       radar_data_t;
+
+    #define RADAR_CONFIG_DEFAULT()    LD2450_CONFIG_DEFAULT()
+    #define RADAR_INIT(cfg)           ld2450_init(cfg)
+    #define RADAR_DEINIT(hdl)         ld2450_deinit(hdl)
+    #define RADAR_ADD_HANDLER(h, fn, arg)  ld2450_add_handler(h, fn, arg)
+    #define RADAR_RM_HANDLER(h, fn)       ld2450_remove_handler(h, fn)
+    #define RADAR_EVENT_BASE         ESP_LD2450_EVENT
+    #define RADAR_EVENT_TARGET       LD2450_EVENT_TARGET_UPDATE
+
+#elif defined(CONFIG_RADAR_LD6002B)
     #include "radar_ld6002b.h"
 
     typedef ld6002b_config_t     radar_config_t;

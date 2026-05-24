@@ -10,6 +10,13 @@ menu "Radar Configuration"
                 NMEA protocol radar, e.g. GPS receivers.
                 Uses text-based protocol with line delimiters.
 
+        config RADAR_LD2450
+            bool "HLK-LD2450 (1T2R Multi-target Tracking)"
+            help
+                Hi-Link LD2450 24GHz millimeter wave radar.
+                Binary protocol, default baud rate 256000.
+                Supports X/Y coordinates, speed, resolution per target.
+
         config RADAR_LD2460
             bool "HLK-LD2460 (2T4R Multi-target Tracking)"
             help
