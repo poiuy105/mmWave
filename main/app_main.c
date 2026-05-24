@@ -2,9 +2,10 @@
  * SPDX-FileCopyrightText: 2026
  * SPDX-License-Identifier: Apache-2.0
  *
- * LD2460 Radar Demo Application
+ * Radar Demo Application
  *
- * UART1 → LD2460 radar
+ * Supports: HLK-LD6004, HLK-LD2460, NMEA
+ * UART1 → Radar
  * UART0 → PC serial monitor (printf)
  */
 
@@ -16,18 +17,45 @@
 
 static const char *TAG = "APP";
 
-#if defined(CONFIG_RADAR_LD2460)
+#if defined(CONFIG_RADAR_LD6004)
+
+static void radar_event_handler(void *handler_args, esp_event_base_t base,
+                                 int32_t event_id, void *event_data)
+{
+    if (event_id == LD6004_EVENT_TARGET_UPDATE) {
+        ld6004_data_t *data = (ld6004_data_t *)event_data;
+        if (data->target_count == 0) {
+            printf("No target detected\n");
+            return;
+        }
+        printf("Targets: %d\n", data->target_count);
+        for (int i = 0; i < data->target_count; i++) {
+            printf("  [%d] X=%.2f Y=%.2f Z=%.2f dop=%d cluster=%d\n",
+                   i,
+                   data->targets[i].x,
+                   data->targets[i].y,
+                   data->targets[i].z,
+                   data->targets[i].dop_idx,
+                   data->targets[i].cluster_id);
+        }
+    } else if (event_id == LD6004_EVENT_AREA_STATE) {
+        ld6004_area_state_t *state = (ld6004_area_state_t *)event_data;
+        printf("Area state: [%d,%d,%d,%d]\n",
+               state->states[0], state->states[1],
+               state->states[2], state->states[3]);
+    }
+}
+
+#elif defined(CONFIG_RADAR_LD2460)
 
 static void radar_event_handler(void *handler_args, esp_event_base_t base,
                                  int32_t event_id, void *event_data)
 {
     ld2460_data_t *data = (ld2460_data_t *)event_data;
-
     if (data->target_count == 0) {
         printf("No target detected\n");
         return;
     }
-
     printf("Targets: %d\n", data->target_count);
     for (int i = 0; i < data->target_count; i++) {
         printf("  [%d] X=%.1f m, Y=%.1f m\n",
@@ -64,8 +92,27 @@ void app_main(void)
     /* Register event handler */
     RADAR_ADD_HANDLER(radar, radar_event_handler, NULL);
 
-#if defined(CONFIG_RADAR_LD2460)
-    /* LD2460 specific: query and print firmware version */
+#if defined(CONFIG_RADAR_LD6004)
+    /* LD6004 specific: query firmware version */
+    ld6004_version_t ver;
+    if (ld6004_query_firmware_version(radar, &ver) == ESP_OK) {
+        ESP_LOGI(TAG, "LD6004 firmware: V%d.%d.%d (project=%d)",
+                 ver.major, ver.sub, ver.modified, ver.project);
+    }
+
+    /* LD6004 specific: query install mode */
+    ld6004_install_mode_t mode;
+    if (ld6004_get_install_mode(radar, &mode) == ESP_OK) {
+        ESP_LOGI(TAG, "Install mode: %s", mode == LD6004_INSTALL_TOP ? "top" : "side");
+    }
+
+    /* LD6004 specific: query work mode */
+    ld6004_work_mode_t wmode;
+    if (ld6004_get_work_mode(radar, &wmode) == ESP_OK) {
+        ESP_LOGI(TAG, "Work mode: %d", wmode);
+    }
+
+#elif defined(CONFIG_RADAR_LD2460)
     ld2460_version_t version;
     if (ld2460_get_firmware_version(radar, &version) == ESP_OK) {
         ESP_LOGI(TAG, "LD2460 firmware: V%d.%d (%02d/%02d) mode=%s",
@@ -73,24 +120,10 @@ void app_main(void)
                  version.year, version.month,
                  version.mode == LD2460_INSTALL_SIDE ? "side" : "top");
     }
-
-    /* LD2460 specific: query installation mode */
-    ld2460_install_mode_t mode;
-    if (ld2460_get_install_mode(radar, &mode) == ESP_OK) {
-        ESP_LOGI(TAG, "Install mode: %s", mode == LD2460_INSTALL_SIDE ? "side" : "top");
-    }
-
-    /* LD2460 specific: query detection range */
-    ld2460_range_t range;
-    if (ld2460_get_detection_range(radar, &range) == ESP_OK) {
-        ESP_LOGI(TAG, "Detection range: %.1f m, angle %.1f° ~ %.1f°",
-                 range.distance, range.angle_start, range.angle_end);
-    }
 #endif
 
     ESP_LOGI(TAG, "Radar initialized, waiting for data...");
 
-    /* Main loop: just sleep, events are handled by radar task */
     while (1) {
         vTaskDelay(pdMS_TO_TICKS(1000));
     }

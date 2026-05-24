@@ -16,6 +16,13 @@ menu "Radar Configuration"
                 Hi-Link LD2460 24GHz millimeter wave radar.
                 Binary protocol, default baud rate 115200.
 
+        config RADAR_LD6004
+            bool "HLK-LD6004 (3D Presence Detection)"
+            help
+                Hi-Link LD6004 60GHz 3D presence radar.
+                TinyFrame protocol, default baud rate 115200.
+                Supports X/Y/Z coordinates, area detection, low power mode.
+
     endchoice
 
     config RADAR_UART_NUM
