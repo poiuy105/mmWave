@@ -30,13 +30,13 @@ static void radar_event_handler(void *handler_args, esp_event_base_t base,
         }
         printf("Targets: %d\n", data->target_count);
         for (int i = 0; i < data->target_count; i++) {
-            printf("  [%d] X=%.2f Y=%.2f Z=%.2f dop=%d cluster=%d\n",
+            printf("  [%d] X=%.2f Y=%.2f Z=%.2f dop=%ld cluster=%ld\n",
                    i,
                    data->targets[i].x,
                    data->targets[i].y,
                    data->targets[i].z,
-                   data->targets[i].dop_idx,
-                   data->targets[i].cluster_id);
+                   (long)data->targets[i].dop_idx,
+                   (long)data->targets[i].cluster_id);
         }
     } else if (event_id == LD6004_EVENT_AREA_STATE) {
         ld6004_area_state_t *state = (ld6004_area_state_t *)event_data;
@@ -94,10 +94,8 @@ void app_main(void)
 
 #if defined(CONFIG_RADAR_LD6004)
     /* LD6004 specific: query firmware version */
-    ld6004_version_t ver;
-    if (ld6004_query_firmware_version(radar, &ver) == ESP_OK) {
-        ESP_LOGI(TAG, "LD6004 firmware: V%d.%d.%d (project=%d)",
-                 ver.major, ver.sub, ver.modified, ver.project);
+    if (ld6004_query_firmware_version(radar) == ESP_OK) {
+        ESP_LOGI(TAG, "LD6004 firmware queried successfully");
     }
 
     /* LD6004 specific: query install mode */
