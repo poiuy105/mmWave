@@ -146,13 +146,13 @@ void app_main(void)
     /* LD2450 specific: query firmware version */
     ld2450_version_t ver;
     if (ld2450_get_firmware_version(radar, &ver) == ESP_OK) {
-        ESP_LOGI(TAG, "LD2450 firmware: V%d.%d", ver.major, ver.minor);
+        ESP_LOGI(TAG, "LD2450 firmware: V%lu.%lu", (unsigned long)ver.major, (unsigned long)ver.minor);
     }
 
     /* LD2450 specific: query tracking mode */
     ld2450_tracking_mode_t mode;
     if (ld2450_get_tracking_mode(radar, &mode) == ESP_OK) {
-        ESP_LOGI(TAG, "Tracking mode: %s", mode == LD2450_MODE_SINGLE ? "single" : "multi");
+        ESP_LOGI(TAG, "Tracking mode: %s", mode == LD2450_TRACKING_SINGLE ? "single" : "multi");
     }
 
 #elif defined(CONFIG_RADAR_LD6002B)
