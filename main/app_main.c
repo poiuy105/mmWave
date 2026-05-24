@@ -4,7 +4,7 @@
  *
  * Radar Demo Application
  *
- * Supports: HLK-LD2461, HLK-LD2450, HLK-LD6002B, HLK-LD6004, HLK-LD2460, NMEA
+ * Supports: HLK-LD2452, HLK-LD2461, HLK-LD2450, HLK-LD6002B, HLK-LD6004, HLK-LD2460, NMEA
  * UART1 → Radar
  * UART0 → PC serial monitor (printf)
  */
@@ -17,7 +17,28 @@
 
 static const char *TAG = "APP";
 
-#if defined(CONFIG_RADAR_LD2461)
+#if defined(CONFIG_RADAR_LD2452)
+
+static void radar_event_handler(void *handler_args, esp_event_base_t base,
+                                 int32_t event_id, void *event_data)
+{
+    ld2452_data_t *data = (ld2452_data_t *)event_data;
+    if (data->target_count == 0) {
+        printf("No target detected\n");
+        return;
+    }
+    printf("Targets: %d\n", data->target_count);
+    for (int i = 0; i < data->target_count; i++) {
+        printf("  [%d] X=%.3f m, Y=%.3f m, speed=%.2f m/s, dist=%.3f m\n",
+               i,
+               data->targets[i].x,
+               data->targets[i].y,
+               data->targets[i].speed,
+               data->targets[i].distance);
+    }
+}
+
+#elif defined(CONFIG_RADAR_LD2461)
 
 static void radar_event_handler(void *handler_args, esp_event_base_t base,
                                  int32_t event_id, void *event_data)
@@ -239,6 +260,11 @@ void app_main(void)
                               (fmt == LD2461_REPORT_STATUS) ? "status" : "both";
         ESP_LOGI(TAG, "Report format: %s", fmt_str);
     }
+#endif
+
+#elif defined(CONFIG_RADAR_LD2452)
+    /* LD2452 is report-only, no commands available */
+    ESP_LOGI(TAG, "LD2452 ready (report-only, baud=9600, max 3 targets)");
 #endif
 
     ESP_LOGI(TAG, "Radar initialized, waiting for data...");

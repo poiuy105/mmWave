@@ -37,6 +37,22 @@ extern "C" {
     #define RADAR_EVENT_BASE         LD2461_EVENT
     #define RADAR_EVENT_TARGET       LD2461_EVENT_COORDINATES
 
+#elif defined(CONFIG_RADAR_LD2452)
+    #include "radar_ld2452.h"
+
+    typedef ld2452_config_t       radar_config_t;
+    typedef ld2452_handle_t       radar_handle_t;
+    typedef ld2452_event_id_t     radar_event_id_t;
+    typedef ld2452_data_t         radar_data_t;
+
+    #define RADAR_CONFIG_DEFAULT()    LD2452_DEFAULT_CONFIG()
+    #define RADAR_INIT(cfg)           ld2452_init(cfg)
+    #define RADAR_DEINIT(hdl)         ld2452_deinit(hdl)
+    #define RADAR_ADD_HANDLER(h, fn, arg)  ld2452_add_handler(h, fn, arg)
+    #define RADAR_RM_HANDLER(h, fn)       ld2452_remove_handler(h, fn)
+    #define RADAR_EVENT_BASE         LD2452_EVENT
+    #define RADAR_EVENT_TARGET       LD2452_EVENT_TARGET_UPDATE
+
 #elif defined(CONFIG_RADAR_LD2450)
     #include "radar_ld2450.h"
 

@@ -45,6 +45,14 @@ menu "Radar Configuration"
                 Binary protocol with big-endian format, default baud rate 9600.
                 Supports up to 3 configurable regions for filtering.
 
+        config RADAR_LD2452
+            bool "HLK-LD2452 (1T2R Multi-target Tracking)"
+            help
+                Hi-Link LD2452 24GHz high-precision multi-target sensor.
+                Report-only protocol (no commands), default baud rate 9600.
+                Fixed 30-byte frame: AA FF 03 00 [3 targets × 8 bytes] 55 CC.
+                Supports up to 3 targets with X/Y/speed/distance per target.
+
     endchoice
 
     config RADAR_UART_NUM
