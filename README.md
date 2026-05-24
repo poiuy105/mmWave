@@ -1,112 +1,239 @@
-| Supported Targets | ESP32 | ESP32-C2 | ESP32-C3 | ESP32-C5 | ESP32-C6 | ESP32-C61 | ESP32-H2 | ESP32-H21 | ESP32-H4 | ESP32-P4 | ESP32-S2 | ESP32-S3 | ESP32-S31 |
-| ----------------- | ----- | -------- | -------- | -------- | -------- | --------- | -------- | --------- | -------- | -------- | -------- | -------- | --------- |
+# LD Radar Web Monitor
 
-# NMEA Parser Example
+ESP32-C3 嵌入式 Web 服务器监控系统，支持 LD 系列毫米波雷达（LD2460/LD2450/LD2452/LD2461）的可视化监控和参数配置。
 
-(See the README.md file in the upper level 'examples' directory for more information about examples.)
+## 功能特性
 
-## Overview
+- **双安装模式支持**: 顶装(ceiling)和侧装(side)两种安装方式可视化
+- **实时数据展示**: WebSocket 10Hz 实时推送雷达数据
+- **运动轨迹显示**: 60秒轨迹记录，支持缩放和平移
+- **参数配置**: 完整的雷达参数设置和保存
+- **日志系统**: 系统日志记录和下载
+- **多雷达适配**: 统一接口支持多种 LD 系列雷达
 
-This example will show how to parse NMEA-0183 data streams output from GPS/BDS/GLONASS modules based on ESP UART Event driver and ESP event loop library.
-For the convenience of the presentation, this example will only parse the following basic statements:
-* GGA
-* GSA
-* GSV
-* RMC
-* GLL
-* VTG
+## 硬件要求
 
-See [Limitation for multiple navigation system](#Limitation) for more information about this example.
+- ESP32-C3 开发板
+- LD2460/LD2450/LD2452/LD2461 雷达模块
+- 串口连接: TX/RX
 
-Usually, modules will also output some vendor specific statements which common nmea library can not cover. In this example, the NMEA Parser will propagate all unknown statements to the user, where a custom handler can parse information from it.
+## 软件架构
 
-## How to use example
+```
+┌─────────────────────────────────────────┐
+│           Web Browser                   │
+│  ┌─────────┐ ┌─────────┐ ┌──────────┐  │
+│  │ Canvas  │ │ WebSocket│ │ REST API │  │
+│  │ 可视化  │ │ 实时数据 │ │ 配置管理 │  │
+│  └─────────┘ └─────────┘ └──────────┘  │
+└─────────────────────────────────────────┘
+                    │
+                    ▼
+┌─────────────────────────────────────────┐
+│         ESP32-C3 Web Server             │
+│  ┌─────────┐ ┌─────────┐ ┌──────────┐  │
+│  │ HTTP    │ │ WebSocket│ │ FATFS   │  │
+│  │ 静态文件│ │ 服务端   │ │ 文件系统│  │
+│  └─────────┘ └─────────┘ └──────────┘  │
+│  ┌─────────┐ ┌─────────┐ ┌──────────┐  │
+│  │ NVS     │ │ Radar   │ │ WiFi AP │  │
+│  │ 配置存储│ │ 驱动    │ │ 热点    │  │
+│  └─────────┘ └─────────┘ └──────────┘  │
+└─────────────────────────────────────────┘
+```
 
-### Hardware Required
+## 项目结构
 
-To run this example, you need a dev board that is based on Espressif SoC (e.g. ESP32-WROVER Kit). For test purpose, you also need a GPS module. Here we take the `ATGM332D-5N` as an example to show how to parse the NMEA statements and output common information such as UTC time, latitude, longitude, altitude, speed and so on.
+```
+├── main/
+│   ├── main.c                    # 主程序入口
+│   ├── CMakeLists.txt            # 主组件构建配置
+│   └── web_server/
+│       ├── fatfs_init.h/c        # FATFS 初始化
+│       ├── http_server.h/c       # HTTP 服务器
+│       ├── websocket_server.h/c  # WebSocket 服务器
+│       └── ...
+├── storage/
+│   ├── www/                      # Web 静态文件
+│   │   ├── index.html            # 主页面
+│   │   ├── css/                  # 样式文件
+│   │   │   ├── main.css
+│   │   │   ├── layout.css
+│   │   │   └── canvas.css
+│   │   └── js/                   # JavaScript 文件
+│   │       ├── utils.js          # 工具函数
+│   │       ├── config.js         # 配置管理
+│   │       ├── api.js            # REST API 客户端
+│   │       ├── websocket.js      # WebSocket 客户端
+│   │       ├── radar-canvas.js   # 雷达画布
+│   │       └── app.js            # 主应用逻辑
+│   ├── logs/                     # 日志存储
+│   └── config/                   # 配置文件
+├── docs/
+│   └── web_monitor_design.md     # 设计文档
+├── partitions.csv                # 分区表
+├── CMakeLists.txt                # 项目构建配置
+├── sdkconfig.defaults            # 默认配置
+└── README.md                     # 本文件
+```
 
-#### Pin Assignment:
+## 构建和烧录
 
-**Note:** GPIO5 is used by default as the RX pin, you can change it by `idf.py menuconfig` > `Example Configuration` > `NMEA_PARSER_UART_RXD`.
+### 1. 环境准备
 
-| ESP                        | GPS             |
-| -------------------------- | --------------- |
-| UART-RX (GPIO5 by default) | GPS-TX          |
-| GND                        | GND             |
-| 5V                         | VCC             |
-
-**Note:** UART TX pin is not necessary if you only use UART to receive data.
-
-
-### Configure the project
-
-Open the project configuration menu (`idf.py menuconfig`). Then go into `Example Configuration` menu.
-
-- Set the size of ring buffer used by uart driver in `NMEA Parser Ring Buffer Size` option.
-- Set the stack size of the NMEA Parser task in `NMEA Parser Task Stack Size` option.
-- Set the priority of the NMEA Parser task in `NMEA Parser Task Priority` option.
-- In the `NMEA Statement support` submenu, you can choose the type of statements that you want to parse. **Note:** you should choose at least one statement to parse.
-
-### Build and Flash
-
-Run `idf.py -p PORT flash monitor` to build and flash the project..
-
-(To exit the serial monitor, type ``Ctrl-]``.)
-
-See the [Getting Started Guide](https://docs.espressif.com/projects/esp-idf/en/latest/get-started/index.html) for full steps to configure and use ESP-IDF to build projects.
-
-## Example Output
+确保已安装 ESP-IDF v5.0 或更高版本：
 
 ```bash
-I (0) cpu_start: Starting scheduler on APP CPU.
-I (317) uart: queue free spaces: 16
-I (317) nmea_parser: NMEA Parser init OK
-I (1067) gps_demo: 2018/12/4 13:59:34 =>
-						latitude   = 31.20177°N
-						longitude = 121.57933°E
-						altitude   = 17.30m
-						speed      = 0.370400m/s
-W (1177) gps_demo: Unknown statement:$GPTXT,01,01,01,ANTENNA OK*35
-I (2067) gps_demo: 2018/12/4 13:59:35 =>
-						latitude   = 31.20177°N
-						longitude  = 121.57933°E
-						altitude   = 17.30m
-						speed      = 0.000000m/s
-W (2177) gps_demo: Unknown statement:$GPTXT,01,01,01,ANTENNA OK*35
-I (3067) gps_demo: 2018/12/4 13:59:36 =>
-						latitude   = 31.20178°N
-						longitude  = 121.57933°E
-						altitude   = 17.30m
-						speed      = 0.000000m/s
-W (3177) gps_demo: Unknown statement:$GPTXT,01,01,01,ANTENNA OK*35
-I (4067) gps_demo: 2018/12/4 13:59:37 =>
-						latitude   = 31.20178°N
-						longitude  = 121.57933°E
-						altitude   = 17.30m
-						speed      = 0.000000m/s
-W (4177) gps_demo: Unknown statement:$GPTXT,01,01,01,ANTENNA OK*35
-I (5067) gps_demo: 2018/12/4 13:59:38 =>
-						latitude   = 31.20178°N
-						longitude  = 121.57933°E
-						altitude   = 17.30m
-						speed      = 0.685240m/s
-W (5177) gps_demo: Unknown statement:$GPTXT,01,01,01,ANTENNA OK*35
+# 检查 ESP-IDF 版本
+idf.py --version
 ```
-As shown above, the ESP board finally got the information after parsed the NMEA0183 format statements. But as we didn't add `GPTXT` type statement in the library (that means it is UNKNOWN to NMEA Parser library), so it was propagated to user without any process.
 
-## Troubleshooting
+### 2. 配置项目
 
-1. I cannot receive any statements from GPS although I have checked all the pin connections.
-   * Test your GPS via other terminal (e.g. minicom, putty) to check the right communication parameters (e.g. baudrate supported by GPS).
+```bash
+# 进入项目目录
+cd /path/to/ld_radar_monitor
 
-## Limitation
-If the GPS module supports multiple satellite navigation system (e.g. GPS, BDS), then the satellite ids and descriptions may be delivered in different statements (e.g. GPGSV, BDGSV, GPGSA, BDGSA), depend on the version of NMEA protocol used by the GPS module. This example currently can only record id and description of satellites from one navigation system.
-However, for other statements, this example can parse them correctly whatever the navigation system is.
+# 设置目标芯片
+idf.py set-target esp32c3
 
-### Steps to skip the limitation
-1. Uncheck the `GSA` and `GSV` statements in menuconfig
-2. In the `gps_event_handler` will get a signal called `GPS_UNKNOWN`, and the unknown statement itself (It's a deep copy of the original statement).
-3. Manually parse the unknown statements and get the satellites' descriptions.
+# 配置项目（可选）
+idf.py menuconfig
+```
 
-(For any technical queries, please open an [issue](https://github.com/espressif/esp-idf/issues) on GitHub. We will get back to you as soon as possible.)
+### 3. 构建项目
+
+```bash
+# 构建
+idf.py build
+```
+
+### 4. 烧录固件
+
+```bash
+# 烧录（替换 /dev/ttyUSB0 为你的串口）
+idf.py -p /dev/ttyUSB0 flash
+
+# 监控输出
+idf.py -p /dev/ttyUSB0 monitor
+```
+
+### 5. 一次性执行
+
+```bash
+idf.py -p /dev/ttyUSB0 flash monitor
+```
+
+## 使用方法
+
+### 连接 WiFi
+
+1. 上电后，ESP32-C3 会创建一个 WiFi 热点：
+   - SSID: `LD-Radar-AP`
+   - 密码: `12345678`
+
+2. 用电脑或手机连接该热点
+
+3. 打开浏览器访问: `http://192.168.4.1/`
+
+### 网页界面
+
+- **雷达画布**: 显示目标位置和运动轨迹
+  - 鼠标滚轮: 缩放
+  - 鼠标拖拽: 平移
+  - 点击目标: 查看详情
+
+- **设置面板**: 配置雷达参数
+  - 雷达类型选择
+  - 安装模式切换
+  - 房间尺寸设置
+  - 显示选项
+
+- **日志面板**: 查看和下载系统日志
+
+## API 接口
+
+### REST API
+
+| 接口 | 方法 | 说明 |
+|------|------|------|
+| `/api/status` | GET | 服务器状态 |
+| `/api/system/info` | GET | 系统信息 |
+| `/api/radar/status` | GET | 雷达状态 |
+| `/api/config` | GET | 获取配置 |
+| `/api/config` | PUT | 更新配置 |
+| `/api/logs` | GET | 获取日志 |
+
+### WebSocket
+
+- 地址: `ws://192.168.4.1/ws`
+- 数据格式: JSON
+
+**订阅消息:**
+```json
+{
+  "type": "subscribe",
+  "channels": ["radar", "system"]
+}
+```
+
+**雷达数据:**
+```json
+{
+  "type": "radar_data",
+  "timestamp": 1234567890,
+  "frame_id": 100,
+  "targets": [
+    {
+      "id": 1,
+      "x": 1.5,
+      "y": 2.0,
+      "z": 1.2,
+      "vx": 0.1,
+      "vy": 0.2,
+      "vz": 0.0,
+      "snr": 35.5
+    }
+  ],
+  "target_count": 1
+}
+```
+
+## 配置说明
+
+### 分区表 (partitions.csv)
+
+```
+# Name,   Type, SubType, Offset,  Size,      Flags
+nvs,      data, nvs,     0x9000,  0x6000,         # 24KB NVS
+phy_init, data, phy,     0xf000,  0x1000,         # 4KB PHY
+factory,  app,  factory, 0x10000, 0x180000,       # 1.5MB App
+storage,  data, fat,     ,        0x260000,       # 2.4MB FATFS
+```
+
+### 默认配置
+
+- WiFi 模式: AP 模式
+- 雷达类型: LD2460
+- 波特率: 115200
+- 安装模式: 侧装
+- 轨迹长度: 60秒
+- 数据刷新率: 10Hz
+
+## 开发计划
+
+- [x] Phase 1: 基础框架 (HTTP + FATFS + 前端)
+- [x] Phase 2: WebSocket 实时数据
+- [x] Phase 3: Canvas 可视化
+- [x] Phase 4: 参数配置和 NVS 存储
+- [x] Phase 5: 日志系统
+- [ ] Phase 6: 多雷达适配器 (LD2450/LD2452/LD2461)
+- [ ] Phase 7: 测试和优化
+
+## 许可证
+
+MIT License
+
+## 作者
+
+LD Radar Web Monitor Team
