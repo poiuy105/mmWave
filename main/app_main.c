@@ -4,7 +4,7 @@
  *
  * Radar Demo Application
  *
- * Supports: HLK-LD2452, HLK-LD2461, HLK-LD2450, HLK-LD6002B, HLK-LD6004, HLK-LD2460, NMEA
+ * Supports: R60ABD1, HLK-LD2452, HLK-LD2461, HLK-LD2450, HLK-LD6002B, HLK-LD6004, HLK-LD2460, NMEA
  * UART1 → Radar
  * UART0 → PC serial monitor (printf)
  */
@@ -17,7 +17,44 @@
 
 static const char *TAG = "APP";
 
-#if defined(CONFIG_RADAR_LD2452)
+#if defined(CONFIG_RADAR_R60ABD1)
+
+static void radar_event_handler(void *handler_args, esp_event_base_t base,
+                                 int32_t event_id, void *event_data)
+{
+    r60abd1_data_t *data = (r60abd1_data_t *)event_data;
+
+    if (data->has_human) {
+        printf("Human: %s\n", data->human == R60ABD1_HUMAN_PRESENT ? "PRESENT" : "NONE");
+    }
+    if (data->has_motion) {
+        const char *motion_str = (data->motion == R60ABD1_MOTION_STATIC) ? "STATIC" :
+                                 (data->motion == R60ABD1_MOTION_ACTIVE) ? "ACTIVE" : "NONE";
+        printf("Motion: %s\n", motion_str);
+    }
+    if (data->has_breath_rate) {
+        printf("Breath: %d/min\n", data->breath_rate);
+    }
+    if (data->has_heart_rate) {
+        printf("Heart: %d/min\n", data->heart_rate);
+    }
+    if (data->has_bed) {
+        const char *bed_str = (data->bed == R60ABD1_BED_IN) ? "IN" :
+                              (data->bed == R60ABD1_BED_AWAY) ? "AWAY" : "NONE";
+        printf("Bed: %s\n", bed_str);
+    }
+    if (data->has_sleep_state) {
+        const char *sleep_str = (data->sleep_state == R60ABD1_SLEEP_DEEP) ? "DEEP" :
+                                (data->sleep_state == R60ABD1_SLEEP_LIGHT) ? "LIGHT" :
+                                (data->sleep_state == R60ABD1_SLEEP_AWAKE) ? "AWAKE" : "NONE";
+        printf("Sleep: %s\n", sleep_str);
+    }
+    if (data->has_sleep_score) {
+        printf("Sleep Score: %d\n", data->sleep_score);
+    }
+}
+
+#elif defined(CONFIG_RADAR_LD2452)
 
 static void radar_event_handler(void *handler_args, esp_event_base_t base,
                                  int32_t event_id, void *event_data)
@@ -264,6 +301,19 @@ void app_main(void)
 #elif defined(CONFIG_RADAR_LD2452)
     /* LD2452 is report-only, no commands available */
     ESP_LOGI(TAG, "LD2452 ready (report-only, baud=9600, max 3 targets)");
+
+#elif defined(CONFIG_RADAR_R60ABD1)
+    /* R60ABD1 specific: enable functions */
+    char version[32] = {0};
+    if (r60abd1_get_firmware_version(radar, version, sizeof(version)) == ESP_OK) {
+        ESP_LOGI(TAG, "R60ABD1 firmware: %s", version);
+    }
+
+    r60abd1_set_human_enable(radar, true);
+    r60abd1_set_breath_enable(radar, true);
+    r60abd1_set_heart_enable(radar, true);
+    r60abd1_set_sleep_enable(radar, true);
+    ESP_LOGI(TAG, "R60ABD1 ready (sleep/breath/heart monitoring enabled)");
 #endif
 
     ESP_LOGI(TAG, "Radar initialized, waiting for data...");
