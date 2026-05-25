@@ -409,38 +409,72 @@ static esp_err_t api_files_upload_handler(httpd_req_t *req)
         return ESP_FAIL;
     }
     
-    // 接收文件内容
     int content_len = req->content_len;
-    uint8_t *buffer = NULL;
+    ESP_LOGI(TAG, "Uploading to %s (%d bytes)", path, content_len);
     
-    if (content_len > 0) {
-        buffer = (uint8_t *)malloc(content_len);
-        if (!buffer) {
-            httpd_resp_send_err(req, HTTPD_500_INTERNAL_SERVER_ERROR, "Out of memory");
-            return ESP_FAIL;
+    // 确保父目录存在
+    char parent_dir[512];
+    strncpy(parent_dir, path, sizeof(parent_dir) - 1);
+    char *last_slash = strrchr(parent_dir, '/');
+    if (last_slash && last_slash != parent_dir) {
+        *last_slash = '\0';
+        // 递归创建目录
+        char tmp[512];
+        strncpy(tmp, parent_dir, sizeof(tmp));
+        for (char *p = tmp + 1; *p; p++) {
+            if (*p == '/') {
+                *p = '\0';
+                mkdir(tmp, 0755);
+                *p = '/';
+            }
         }
-        
-        int received = httpd_req_recv(req, (char *)buffer, content_len);
-        if (received != content_len) {
-            free(buffer);
-            httpd_resp_send_err(req, HTTPD_400_BAD_REQUEST, "Failed to receive data");
-            return ESP_FAIL;
-        }
+        mkdir(tmp, 0755);
     }
     
-    // 保存文件
-    esp_err_t err = file_manager_upload(path, buffer, content_len);
+    // 流式写入（分块接收，避免大文件 OOM）
+    FILE *file = fopen(path, "wb");
+    if (!file) {
+        ESP_LOGE(TAG, "Failed to create file: %s", path);
+        httpd_resp_send_err(req, HTTPD_500_INTERNAL_SERVER_ERROR, "Failed to create file");
+        return ESP_FAIL;
+    }
     
-    if (buffer) free(buffer);
+    #define UPLOAD_CHUNK_SIZE 4096
+    uint8_t chunk[UPLOAD_CHUNK_SIZE];
+    int remaining = content_len;
+    int total_written = 0;
+    
+    while (remaining > 0) {
+        int to_recv = (remaining > UPLOAD_CHUNK_SIZE) ? UPLOAD_CHUNK_SIZE : remaining;
+        int received = httpd_req_recv(req, (char *)chunk, to_recv);
+        
+        if (received <= 0) {
+            ESP_LOGE(TAG, "Upload recv error: received=%d", received);
+            break;
+        }
+        
+        size_t written = fwrite(chunk, 1, received, file);
+        if (written != (size_t)received) {
+            ESP_LOGE(TAG, "Write error: wrote %zu of %d", written, received);
+            break;
+        }
+        
+        total_written += received;
+        remaining -= received;
+    }
+    
+    fclose(file);
     
     cJSON *root = cJSON_CreateObject();
-    if (err == ESP_OK) {
+    if (total_written == content_len) {
         cJSON_AddBoolToObject(root, "success", true);
         cJSON_AddStringToObject(root, "path", path);
-        cJSON_AddNumberToObject(root, "size", content_len);
+        cJSON_AddNumberToObject(root, "size", total_written);
+        ESP_LOGI(TAG, "Upload complete: %s (%d bytes)", path, total_written);
     } else {
         cJSON_AddBoolToObject(root, "success", false);
-        cJSON_AddStringToObject(root, "message", "Upload failed");
+        cJSON_AddStringToObject(root, "message", "Upload incomplete");
+        ESP_LOGE(TAG, "Upload incomplete: %d of %d bytes", total_written, content_len);
     }
     
     char *json = cJSON_PrintUnformatted(root);

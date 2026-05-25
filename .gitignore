@@ -3,3 +3,5 @@
 docs/
 # Firmware build output directories
 firmware*/
+frontend/
+frontend*.7z
