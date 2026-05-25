@@ -18,6 +18,7 @@
 
 #include "web_server/fatfs_init.h"
 #include "web_server/http_server.h"
+#include "radar_adapter/radar_adapter.h"
 
 static const char *TAG = "MAIN";
 
@@ -144,6 +145,16 @@ void app_main(void)
     // 初始化 FATFS
     ESP_ERROR_CHECK(fatfs_init());
     ESP_LOGI(TAG, "FATFS initialized");
+
+    // 初始化雷达适配层
+    esp_err_t radar_err = radar_adapter_init();
+    if (radar_err == ESP_OK) {
+        radar_info_t radar_info;
+        radar_adapter_get_info(&radar_info);
+        ESP_LOGI(TAG, "Radar initialized: %s", radar_info.name);
+    } else {
+        ESP_LOGW(TAG, "Radar initialization failed: %s (continuing without radar)", esp_err_to_name(radar_err));
+    }
 
     // 初始化 WiFi STA 模式
     wifi_init_sta();

@@ -8,6 +8,7 @@
 #include "file_manager.h"
 #include "embedded_web.h"
 #include "upload_page.h"
+#include "radar_adapter/radar_adapter.h"
 #include "esp_log.h"
 #include "esp_http_server.h"
 #include "nvs_flash.h"
@@ -20,8 +21,7 @@
 static const char *TAG = "HTTP_SERVER";
 static httpd_handle_t s_server = NULL;
 
-// 雷达数据模拟（用于测试）
-static uint32_t s_frame_count = 0;
+// 雷达数据广播定时器
 static TimerHandle_t s_radar_timer = NULL;
 
 /* MIME 类型映射 */
@@ -174,11 +174,14 @@ static esp_err_t api_status_handler(httpd_req_t *req)
  */
 static esp_err_t api_system_info_handler(httpd_req_t *req)
 {
+    radar_status_t radar_status;
+    radar_adapter_get_status(&radar_status);
+    
     cJSON *root = cJSON_CreateObject();
     cJSON_AddStringToObject(root, "chip_model", "ESP32-C3");
     cJSON_AddNumberToObject(root, "free_heap", esp_get_free_heap_size());
     cJSON_AddNumberToObject(root, "min_free_heap", esp_get_minimum_free_heap_size());
-    cJSON_AddNumberToObject(root, "frame_count", s_frame_count);
+    cJSON_AddNumberToObject(root, "radar_frames", radar_status.frame_count);
     cJSON_AddNumberToObject(root, "uptime", xTaskGetTickCount() / configTICK_RATE_HZ);
     
     char *json = cJSON_PrintUnformatted(root);
@@ -195,11 +198,37 @@ static esp_err_t api_system_info_handler(httpd_req_t *req)
  */
 static esp_err_t api_radar_status_handler(httpd_req_t *req)
 {
+    radar_info_t info;
+    radar_status_t status;
+    radar_frame_t frame;
+    
+    radar_adapter_get_info(&info);
+    radar_adapter_get_status(&status);
+    
     cJSON *root = cJSON_CreateObject();
-    cJSON_AddBoolToObject(root, "running", true);
-    cJSON_AddStringToObject(root, "type", "LD2460");
-    cJSON_AddNumberToObject(root, "target_count", 0);
-    cJSON_AddStringToObject(root, "mount_mode", "side");
+    cJSON_AddBoolToObject(root, "initialized", status.initialized);
+    cJSON_AddBoolToObject(root, "report_enabled", status.report_enabled);
+    cJSON_AddStringToObject(root, "type", info.type);
+    cJSON_AddStringToObject(root, "name", info.name);
+    cJSON_AddNumberToObject(root, "max_targets", info.max_targets);
+    cJSON_AddNumberToObject(root, "frame_count", status.frame_count);
+    cJSON_AddNumberToObject(root, "error_count", status.error_count);
+    
+    // 当前目标数
+    if (radar_adapter_get_frame(&frame) == ESP_OK) {
+        cJSON_AddNumberToObject(root, "target_count", frame.target_count);
+    } else {
+        cJSON_AddNumberToObject(root, "target_count", 0);
+    }
+    
+    // 能力
+    uint32_t caps = radar_adapter_get_capabilities();
+    cJSON *capabilities = cJSON_CreateObject();
+    cJSON_AddBoolToObject(capabilities, "has_3d", (caps & RADAR_CAP_3D) != 0);
+    cJSON_AddBoolToObject(capabilities, "has_install_mode", (caps & RADAR_CAP_INSTALL_MODE) != 0);
+    cJSON_AddBoolToObject(capabilities, "has_region_filter", (caps & RADAR_CAP_REGION_FILTER) != 0);
+    cJSON_AddBoolToObject(capabilities, "has_sensitivity", (caps & RADAR_CAP_SENSITIVITY) != 0);
+    cJSON_AddItemToObject(root, "capabilities", capabilities);
     
     char *json = cJSON_PrintUnformatted(root);
     httpd_resp_set_type(req, "application/json");
@@ -501,6 +530,174 @@ static esp_err_t api_fs_format_handler(httpd_req_t *req)
 }
 
 /**
+ * @brief API 雷达安装模式获取 handler (LD2460 特有)
+ */
+static esp_err_t api_radar_install_mode_get_handler(httpd_req_t *req)
+{
+    cJSON *root = cJSON_CreateObject();
+    
+#if defined(CONFIG_RADAR_LD2460)
+    ld2460_install_mode_t mode;
+    ld2460_install_params_t params;
+    
+    radar_handle_t radar = radar_adapter_get_handle();
+    if (radar && ld2460_get_install_mode(radar, &mode) == ESP_OK) {
+        cJSON_AddStringToObject(root, "mode", mode == LD2460_INSTALL_TOP ? "top" : "side");
+    }
+    if (radar && ld2460_get_install_params(radar, &params) == ESP_OK) {
+        cJSON_AddNumberToObject(root, "height", params.height);
+        cJSON_AddNumberToObject(root, "angle", params.angle);
+    }
+    cJSON_AddBoolToObject(root, "supported", true);
+#else
+    cJSON_AddBoolToObject(root, "supported", false);
+    cJSON_AddStringToObject(root, "message", "Not supported by this radar");
+#endif
+    
+    char *json = cJSON_PrintUnformatted(root);
+    httpd_resp_set_type(req, "application/json");
+    httpd_resp_send(req, json, strlen(json));
+    
+    free(json);
+    cJSON_Delete(root);
+    return ESP_OK;
+}
+
+/**
+ * @brief API 雷达安装模式设置 handler (LD2460 特有)
+ */
+static esp_err_t api_radar_install_mode_set_handler(httpd_req_t *req)
+{
+    char buf[256];
+    int ret = httpd_req_recv(req, buf, sizeof(buf) - 1);
+    if (ret <= 0) {
+        httpd_resp_send_err(req, HTTPD_400_BAD_REQUEST, "Invalid request body");
+        return ESP_FAIL;
+    }
+    buf[ret] = '\0';
+    
+    cJSON *root = cJSON_CreateObject();
+    esp_err_t err = ESP_ERR_NOT_SUPPORTED;
+    
+#if defined(CONFIG_RADAR_LD2460)
+    cJSON *json = cJSON_Parse(buf);
+    if (json) {
+        radar_handle_t radar = radar_adapter_get_handle();
+        if (radar) {
+            cJSON *mode_item = cJSON_GetObjectItem(json, "mode");
+            cJSON *height_item = cJSON_GetObjectItem(json, "height");
+            cJSON *angle_item = cJSON_GetObjectItem(json, "angle");
+            
+            if (mode_item && cJSON_IsString(mode_item)) {
+                ld2460_install_mode_t mode = (strcmp(mode_item->valuestring, "top") == 0) 
+                    ? LD2460_INSTALL_TOP : LD2460_INSTALL_SIDE;
+                err = ld2460_set_install_mode(radar, mode);
+            }
+            
+            if (height_item && angle_item && cJSON_IsNumber(height_item) && cJSON_IsNumber(angle_item)) {
+                err = ld2460_set_install_params(radar, height_item->valuedouble, angle_item->valuedouble);
+            }
+        }
+        cJSON_Delete(json);
+    }
+#endif
+    
+    cJSON_AddBoolToObject(root, "success", err == ESP_OK);
+    if (err != ESP_OK) {
+        cJSON_AddStringToObject(root, "message", err == ESP_ERR_NOT_SUPPORTED ? 
+            "Not supported by this radar" : "Operation failed");
+    }
+    
+    char *json = cJSON_PrintUnformatted(root);
+    httpd_resp_set_type(req, "application/json");
+    httpd_resp_send(req, json, strlen(json));
+    
+    free(json);
+    cJSON_Delete(root);
+    return ESP_OK;
+}
+
+/**
+ * @brief API 雷达检测范围获取 handler
+ */
+static esp_err_t api_radar_range_get_handler(httpd_req_t *req)
+{
+    cJSON *root = cJSON_CreateObject();
+    
+#if defined(CONFIG_RADAR_LD2460)
+    ld2460_range_t range;
+    radar_handle_t radar = radar_adapter_get_handle();
+    if (radar && ld2460_get_detection_range(radar, &range) == ESP_OK) {
+        cJSON_AddNumberToObject(root, "distance", range.distance);
+        cJSON_AddNumberToObject(root, "angle_start", range.angle_start);
+        cJSON_AddNumberToObject(root, "angle_end", range.angle_end);
+    }
+    cJSON_AddBoolToObject(root, "supported", true);
+#else
+    cJSON_AddBoolToObject(root, "supported", false);
+    cJSON_AddStringToObject(root, "message", "Not supported by this radar");
+#endif
+    
+    char *json = cJSON_PrintUnformatted(root);
+    httpd_resp_set_type(req, "application/json");
+    httpd_resp_send(req, json, strlen(json));
+    
+    free(json);
+    cJSON_Delete(root);
+    return ESP_OK;
+}
+
+/**
+ * @brief API 雷达检测范围设置 handler
+ */
+static esp_err_t api_radar_range_set_handler(httpd_req_t *req)
+{
+    char buf[256];
+    int ret = httpd_req_recv(req, buf, sizeof(buf) - 1);
+    if (ret <= 0) {
+        httpd_resp_send_err(req, HTTPD_400_BAD_REQUEST, "Invalid request body");
+        return ESP_FAIL;
+    }
+    buf[ret] = '\0';
+    
+    cJSON *root = cJSON_CreateObject();
+    esp_err_t err = ESP_ERR_NOT_SUPPORTED;
+    
+#if defined(CONFIG_RADAR_LD2460)
+    cJSON *json = cJSON_Parse(buf);
+    if (json) {
+        radar_handle_t radar = radar_adapter_get_handle();
+        if (radar) {
+            cJSON *dist = cJSON_GetObjectItem(json, "distance");
+            cJSON *angle_start = cJSON_GetObjectItem(json, "angle_start");
+            cJSON *angle_end = cJSON_GetObjectItem(json, "angle_end");
+            
+            if (dist && angle_start && angle_end && 
+                cJSON_IsNumber(dist) && cJSON_IsNumber(angle_start) && cJSON_IsNumber(angle_end)) {
+                err = ld2460_set_detection_range(radar, dist->valuedouble, 
+                    angle_start->valuedouble, angle_end->valuedouble);
+            }
+        }
+        cJSON_Delete(json);
+    }
+#endif
+    
+    cJSON_AddBoolToObject(root, "success", err == ESP_OK);
+    if (err != ESP_OK) {
+        cJSON_AddStringToObject(root, "message", err == ESP_ERR_NOT_SUPPORTED ? 
+            "Not supported by this radar" : "Operation failed");
+    }
+    
+    char *json = cJSON_PrintUnformatted(root);
+    httpd_resp_set_type(req, "application/json");
+    httpd_resp_send(req, json, strlen(json));
+    
+    free(json);
+    cJSON_Delete(root);
+    return ESP_OK;
+}
+
+/**
  * @brief CORS 预检 handler
  */
 static esp_err_t api_options_handler(httpd_req_t *req)
@@ -559,43 +756,34 @@ static void radar_broadcast_callback(TimerHandle_t xTimer)
         return;
     }
     
-    s_frame_count++;
+    // 获取真实雷达数据
+    radar_frame_t frame;
+    if (radar_adapter_get_frame(&frame) != ESP_OK) {
+        return;  // 无数据则跳过
+    }
     
-    // 构建模拟雷达数据
+    // 构建 JSON
     cJSON *root = cJSON_CreateObject();
     cJSON_AddStringToObject(root, "type", "radar_data");
-    cJSON_AddNumberToObject(root, "timestamp", xTaskGetTickCount());
-    cJSON_AddNumberToObject(root, "frame_id", s_frame_count);
+    cJSON_AddNumberToObject(root, "timestamp", frame.timestamp_ms);
+    cJSON_AddNumberToObject(root, "frame_id", frame.frame_id);
     
-    // 模拟目标数据
+    // 目标数据
     cJSON *targets = cJSON_CreateArray();
-    
-    // 生成 1-3 个随机目标
-    int num_targets = (s_frame_count % 3) + 1;
-    for (int i = 0; i < num_targets; i++) {
+    for (int i = 0; i < frame.target_count; i++) {
         cJSON *target = cJSON_CreateObject();
-        cJSON_AddNumberToObject(target, "id", i + 1);
-        
-        // 模拟运动轨迹（圆周运动）
-        float angle = (s_frame_count * 0.1f) + (i * 2.0f);
-        float radius = 2.0f + i * 0.5f;
-        float x = radius * cosf(angle);
-        float y = radius * sinf(angle);
-        float z = 1.5f + 0.5f * sinf(angle * 0.5f);
-        
-        cJSON_AddNumberToObject(target, "x", x);
-        cJSON_AddNumberToObject(target, "y", y);
-        cJSON_AddNumberToObject(target, "z", z);
-        cJSON_AddNumberToObject(target, "vx", -radius * sinf(angle) * 0.1f);
-        cJSON_AddNumberToObject(target, "vy", radius * cosf(angle) * 0.1f);
-        cJSON_AddNumberToObject(target, "vz", 0.0f);
-        cJSON_AddNumberToObject(target, "snr", 30.0f + (s_frame_count % 10));
-        
+        cJSON_AddNumberToObject(target, "id", frame.targets[i].id);
+        cJSON_AddNumberToObject(target, "x", frame.targets[i].x);
+        cJSON_AddNumberToObject(target, "y", frame.targets[i].y);
+        cJSON_AddNumberToObject(target, "z", frame.targets[i].z);
+        cJSON_AddNumberToObject(target, "speed", frame.targets[i].speed);
+        cJSON_AddNumberToObject(target, "snr", frame.targets[i].snr);
+        cJSON_AddNumberToObject(target, "confidence", frame.targets[i].confidence);
         cJSON_AddItemToArray(targets, target);
     }
     
     cJSON_AddItemToObject(root, "targets", targets);
-    cJSON_AddNumberToObject(root, "target_count", num_targets);
+    cJSON_AddNumberToObject(root, "target_count", frame.target_count);
     
     char *json = cJSON_PrintUnformatted(root);
     websocket_broadcast_text(json);
@@ -668,6 +856,31 @@ static const httpd_uri_t uri_handlers[] = {
         .uri = "/api/radar/status",
         .method = HTTP_GET,
         .handler = api_radar_status_handler,
+        .user_ctx = NULL
+    },
+    // 雷达特有功能 API
+    {
+        .uri = "/api/radar/install_mode",
+        .method = HTTP_GET,
+        .handler = api_radar_install_mode_get_handler,
+        .user_ctx = NULL
+    },
+    {
+        .uri = "/api/radar/install_mode",
+        .method = HTTP_PUT,
+        .handler = api_radar_install_mode_set_handler,
+        .user_ctx = NULL
+    },
+    {
+        .uri = "/api/radar/range",
+        .method = HTTP_GET,
+        .handler = api_radar_range_get_handler,
+        .user_ctx = NULL
+    },
+    {
+        .uri = "/api/radar/range",
+        .method = HTTP_PUT,
+        .handler = api_radar_range_set_handler,
         .user_ctx = NULL
     },
     {

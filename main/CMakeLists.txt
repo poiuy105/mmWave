@@ -7,6 +7,7 @@ set(srcs
     "web_server/http_server.c"
     "web_server/websocket_server.c"
     "web_server/file_manager.c"
+    "radar_adapter/radar_adapter.c"
 )
 
 # 头文件目录
@@ -26,6 +27,7 @@ idf_component_register(
         esp_netif
         wear_levelling
         json
+        radar
 )
 
 # 链接数学库
