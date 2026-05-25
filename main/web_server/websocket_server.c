@@ -380,12 +380,13 @@ esp_err_t websocket_init(httpd_handle_t server, const ws_config_t *config)
         s_config.task_priority = 5;
     }
     
-    // 注册 URI handler
+    // 注册 URI handler (WebSocket)
     httpd_uri_t ws_uri = {
         .uri = "/ws",
         .method = HTTP_GET,
         .handler = ws_handler,
-        .user_ctx = NULL
+        .user_ctx = NULL,
+        .is_websocket = true  // 启用 WebSocket 协议支持
     };
     
     esp_err_t err = httpd_register_uri_handler(server, &ws_uri);
