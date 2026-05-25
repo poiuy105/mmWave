@@ -410,7 +410,7 @@ static esp_err_t api_files_upload_handler(httpd_req_t *req)
     }
     
     // URL 解码：%2F -> /
-    char *decoded_path = esp_httpd_uri_decode(path);
+    char *decoded_path = httpd_uri_decode(path);
     if (decoded_path) {
         strncpy(path, decoded_path, sizeof(path) - 1);
         path[sizeof(path) - 1] = '\0';
