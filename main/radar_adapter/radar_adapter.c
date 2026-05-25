@@ -7,6 +7,7 @@
 #include "radar.h"
 #include "esp_log.h"
 #include "esp_timer.h"
+#include "esp_event.h"
 #include "freertos/FreeRTOS.h"
 #include "freertos/semphr.h"
 #include <string.h>

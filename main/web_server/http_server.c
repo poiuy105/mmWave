@@ -11,12 +11,18 @@
 #include "radar_adapter/radar_adapter.h"
 #include "esp_log.h"
 #include "esp_http_server.h"
+#include "esp_timer.h"
 #include "nvs_flash.h"
 #include <string.h>
 #include <sys/stat.h>
 #include <dirent.h>
 #include <math.h>
 #include <cJSON.h>
+
+// 雷达特有头文件（条件编译）
+#if defined(CONFIG_RADAR_LD2460)
+#include "radar_ld2460.h"
+#endif
 
 static const char *TAG = "HTTP_SERVER";
 static httpd_handle_t s_server = NULL;
@@ -540,7 +546,7 @@ static esp_err_t api_radar_install_mode_get_handler(httpd_req_t *req)
     ld2460_install_mode_t mode;
     ld2460_install_params_t params;
     
-    radar_handle_t radar = radar_adapter_get_handle();
+    ld2460_handle_t radar = (ld2460_handle_t)radar_adapter_get_handle();
     if (radar && ld2460_get_install_mode(radar, &mode) == ESP_OK) {
         cJSON_AddStringToObject(root, "mode", mode == LD2460_INSTALL_TOP ? "top" : "side");
     }
@@ -580,13 +586,13 @@ static esp_err_t api_radar_install_mode_set_handler(httpd_req_t *req)
     esp_err_t err = ESP_ERR_NOT_SUPPORTED;
     
 #if defined(CONFIG_RADAR_LD2460)
-    cJSON *json = cJSON_Parse(buf);
-    if (json) {
-        radar_handle_t radar = radar_adapter_get_handle();
+    cJSON *parsed = cJSON_Parse(buf);
+    if (parsed) {
+        ld2460_handle_t radar = (ld2460_handle_t)radar_adapter_get_handle();
         if (radar) {
-            cJSON *mode_item = cJSON_GetObjectItem(json, "mode");
-            cJSON *height_item = cJSON_GetObjectItem(json, "height");
-            cJSON *angle_item = cJSON_GetObjectItem(json, "angle");
+            cJSON *mode_item = cJSON_GetObjectItem(parsed, "mode");
+            cJSON *height_item = cJSON_GetObjectItem(parsed, "height");
+            cJSON *angle_item = cJSON_GetObjectItem(parsed, "angle");
             
             if (mode_item && cJSON_IsString(mode_item)) {
                 ld2460_install_mode_t mode = (strcmp(mode_item->valuestring, "top") == 0) 
@@ -598,7 +604,7 @@ static esp_err_t api_radar_install_mode_set_handler(httpd_req_t *req)
                 err = ld2460_set_install_params(radar, height_item->valuedouble, angle_item->valuedouble);
             }
         }
-        cJSON_Delete(json);
+        cJSON_Delete(parsed);
     }
 #endif
     
@@ -626,7 +632,7 @@ static esp_err_t api_radar_range_get_handler(httpd_req_t *req)
     
 #if defined(CONFIG_RADAR_LD2460)
     ld2460_range_t range;
-    radar_handle_t radar = radar_adapter_get_handle();
+    ld2460_handle_t radar = (ld2460_handle_t)radar_adapter_get_handle();
     if (radar && ld2460_get_detection_range(radar, &range) == ESP_OK) {
         cJSON_AddNumberToObject(root, "distance", range.distance);
         cJSON_AddNumberToObject(root, "angle_start", range.angle_start);
@@ -664,13 +670,13 @@ static esp_err_t api_radar_range_set_handler(httpd_req_t *req)
     esp_err_t err = ESP_ERR_NOT_SUPPORTED;
     
 #if defined(CONFIG_RADAR_LD2460)
-    cJSON *json = cJSON_Parse(buf);
-    if (json) {
-        radar_handle_t radar = radar_adapter_get_handle();
+    cJSON *parsed = cJSON_Parse(buf);
+    if (parsed) {
+        ld2460_handle_t radar = (ld2460_handle_t)radar_adapter_get_handle();
         if (radar) {
-            cJSON *dist = cJSON_GetObjectItem(json, "distance");
-            cJSON *angle_start = cJSON_GetObjectItem(json, "angle_start");
-            cJSON *angle_end = cJSON_GetObjectItem(json, "angle_end");
+            cJSON *dist = cJSON_GetObjectItem(parsed, "distance");
+            cJSON *angle_start = cJSON_GetObjectItem(parsed, "angle_start");
+            cJSON *angle_end = cJSON_GetObjectItem(parsed, "angle_end");
             
             if (dist && angle_start && angle_end && 
                 cJSON_IsNumber(dist) && cJSON_IsNumber(angle_start) && cJSON_IsNumber(angle_end)) {
@@ -678,7 +684,7 @@ static esp_err_t api_radar_range_set_handler(httpd_req_t *req)
                     angle_start->valuedouble, angle_end->valuedouble);
             }
         }
-        cJSON_Delete(json);
+        cJSON_Delete(parsed);
     }
 #endif
     
