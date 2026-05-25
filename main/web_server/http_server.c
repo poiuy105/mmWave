@@ -5,7 +5,9 @@
 
 #include "http_server.h"
 #include "websocket_server.h"
+#include "file_manager.h"
 #include "embedded_web.h"
+#include "upload_page.h"
 #include "esp_log.h"
 #include "esp_http_server.h"
 #include "nvs_flash.h"
@@ -28,17 +30,20 @@ static const struct {
     const char *mime;
 } mime_types[] = {
     {".html", "text/html"},
+    {".htm", "text/html"},
     {".css", "text/css"},
     {".js", "application/javascript"},
     {".json", "application/json"},
     {".png", "image/png"},
     {".jpg", "image/jpeg"},
+    {".jpeg", "image/jpeg"},
     {".gif", "image/gif"},
     {".svg", "image/svg+xml"},
     {".ico", "image/x-icon"},
     {".woff", "font/woff"},
     {".woff2", "font/woff2"},
     {".ttf", "font/ttf"},
+    {".map", "application/json"},
     {NULL, "application/octet-stream"}
 };
 
@@ -60,69 +65,92 @@ static const char* get_mime_type(const char *filename)
 
 /**
  * @brief 静态文件处理 handler
+ * 
+ * 优先级：
+ * 1. FATFS 中的文件（/storage/www/*）
+ * 2. 内嵌的雷达监控页面（/app/）
+ * 3. 内嵌的文件管理页面（/）
  */
 static esp_err_t static_file_handler(httpd_req_t *req)
 {
     char filepath[600];
     const char *uri = req->uri;
     
+    // 根路径 -> 文件管理页面
+    if (strcmp(uri, "/") == 0) {
+        // 检查 FATFS 中是否有 index.html
+        if (file_manager_exists("/storage/www/index.html")) {
+            uri = "/index.html";
+            // 继续走 FATFS 逻辑
+        } else {
+            // 返回内嵌的文件管理页面
+            httpd_resp_set_type(req, "text/html");
+            httpd_resp_send(req, upload_page_html, strlen(upload_page_html));
+            ESP_LOGI(TAG, "Served embedded upload page");
+            return ESP_OK;
+        }
+    }
+    
+    // /app/ 路径 -> 雷达监控应用
+    if (strncmp(uri, "/app", 4) == 0) {
+        if (strcmp(uri, "/app") == 0 || strcmp(uri, "/app/") == 0) {
+            uri = "/index.html";
+        } else {
+            uri = uri + 4;  // 去掉 /app 前缀
+            if (uri[0] == '\0') uri = "/index.html";
+        }
+    }
+    
     // 默认首页
     if (strcmp(uri, "/") == 0) {
         uri = "/index.html";
     }
     
-    // 对于 index.html，直接返回内嵌的 HTML
-    if (strcmp(uri, "/index.html") == 0) {
-        httpd_resp_set_type(req, "text/html");
-        httpd_resp_send(req, embedded_index_html, strlen(embedded_index_html));
-        ESP_LOGI(TAG, "Served embedded index.html");
-        return ESP_OK;
-    }
-    
     // 构建文件路径
-    int len = snprintf(filepath, sizeof(filepath), "/storage/www%s", uri);
-    if (len >= sizeof(filepath)) {
-        ESP_LOGW(TAG, "URI too long");
-        httpd_resp_send_404(req);
-        return ESP_FAIL;
-    }
+    snprintf(filepath, sizeof(filepath), "/storage/www%s", uri);
     
     // 检查文件是否存在
     struct stat st;
-    if (stat(filepath, &st) != 0) {
-        ESP_LOGW(TAG, "File not found: %s", filepath);
-        httpd_resp_send_404(req);
-        return ESP_FAIL;
-    }
-    
-    // 打开文件
-    FILE *file = fopen(filepath, "r");
-    if (!file) {
-        ESP_LOGE(TAG, "Failed to open file: %s", filepath);
-        httpd_resp_send_500(req);
-        return ESP_FAIL;
-    }
-    
-    // 设置 Content-Type
-    const char *mime = get_mime_type(filepath);
-    httpd_resp_set_type(req, mime);
-    
-    // 发送文件内容
-    char buffer[1024];
-    size_t read_bytes;
-    while ((read_bytes = fread(buffer, 1, sizeof(buffer), file)) > 0) {
-        esp_err_t err = httpd_resp_send_chunk(req, buffer, read_bytes);
-        if (err != ESP_OK) {
-            fclose(file);
-            return err;
+    if (stat(filepath, &st) == 0 && S_ISREG(st.st_mode)) {
+        // 从 FATFS 读取文件
+        FILE *file = fopen(filepath, "r");
+        if (!file) {
+            ESP_LOGE(TAG, "Failed to open file: %s", filepath);
+            httpd_resp_send_500(req);
+            return ESP_FAIL;
         }
+        
+        const char *mime = get_mime_type(filepath);
+        httpd_resp_set_type(req, mime);
+        
+        char buffer[2048];
+        size_t read_bytes;
+        while ((read_bytes = fread(buffer, 1, sizeof(buffer), file)) > 0) {
+            if (httpd_resp_send_chunk(req, buffer, read_bytes) != ESP_OK) {
+                fclose(file);
+                return ESP_FAIL;
+            }
+        }
+        
+        fclose(file);
+        httpd_resp_send_chunk(req, NULL, 0);
+        ESP_LOGD(TAG, "Served from FATFS: %s", uri);
+        return ESP_OK;
     }
     
-    fclose(file);
-    httpd_resp_send_chunk(req, NULL, 0);  // 结束响应
+    // FATFS 中没有，尝试内嵌资源
+    if (strcmp(uri, "/index.html") == 0) {
+        // 返回内嵌的雷达监控页面
+        httpd_resp_set_type(req, "text/html");
+        httpd_resp_send(req, embedded_index_html, strlen(embedded_index_html));
+        ESP_LOGI(TAG, "Served embedded radar app");
+        return ESP_OK;
+    }
     
-    ESP_LOGD(TAG, "Served: %s (%s)", uri, mime);
-    return ESP_OK;
+    // 文件不存在
+    ESP_LOGW(TAG, "File not found: %s", uri);
+    httpd_resp_send_404(req);
+    return ESP_FAIL;
 }
 
 /**
@@ -133,8 +161,9 @@ static esp_err_t api_status_handler(httpd_req_t *req)
     cJSON *root = cJSON_CreateObject();
     cJSON_AddStringToObject(root, "status", "ok");
     cJSON_AddStringToObject(root, "server", "running");
-    cJSON_AddStringToObject(root, "version", "1.0.0");
+    cJSON_AddStringToObject(root, "version", "1.1.0");
     cJSON_AddNumberToObject(root, "websocket_clients", websocket_get_client_count());
+    cJSON_AddBoolToObject(root, "fatfs_ready", file_manager_is_ready());
     
     char *json = cJSON_PrintUnformatted(root);
     httpd_resp_set_type(req, "application/json");
@@ -213,8 +242,8 @@ static esp_err_t api_config_get_handler(httpd_req_t *req)
     
     // 网络配置
     cJSON *network = cJSON_CreateObject();
-    cJSON_AddStringToObject(network, "wifi_mode", "ap");
-    cJSON_AddStringToObject(network, "ssid", "LD-Radar-AP");
+    cJSON_AddStringToObject(network, "wifi_mode", "sta");
+    cJSON_AddStringToObject(network, "ssid", "FUCK_cao");
     cJSON_AddItemToObject(root, "network", network);
     
     char *json = cJSON_PrintUnformatted(root);
@@ -284,6 +313,199 @@ static esp_err_t api_logs_handler(httpd_req_t *req)
 }
 
 /**
+ * @brief API 文件列表 handler
+ */
+static esp_err_t api_files_list_handler(httpd_req_t *req)
+{
+    char path[256] = "/storage/www";
+    
+    // 从查询参数获取路径
+    char query[256];
+    if (httpd_req_get_url_query_str(req, query, sizeof(query)) == ESP_OK) {
+        char path_param[256];
+        if (httpd_query_key_value(query, "path", path_param, sizeof(path_param)) == ESP_OK) {
+            strncpy(path, path_param, sizeof(path) - 1);
+        }
+    }
+    
+    file_list_t list;
+    esp_err_t err = file_manager_list(path, &list);
+    
+    cJSON *root = cJSON_CreateObject();
+    cJSON_AddStringToObject(root, "path", path);
+    
+    if (err == ESP_OK) {
+        cJSON *files = cJSON_CreateArray();
+        for (int i = 0; i < list.count; i++) {
+            cJSON *file = cJSON_CreateObject();
+            cJSON_AddStringToObject(file, "name", list.files[i].name);
+            cJSON_AddStringToObject(file, "path", list.files[i].path);
+            cJSON_AddNumberToObject(file, "size", list.files[i].size);
+            cJSON_AddBoolToObject(file, "is_dir", list.files[i].is_dir);
+            cJSON_AddItemToArray(files, file);
+        }
+        cJSON_AddItemToObject(root, "files", files);
+        cJSON_AddNumberToObject(root, "count", list.count);
+        file_manager_list_free(&list);
+    } else {
+        cJSON_AddItemToObject(root, "files", cJSON_CreateArray());
+        cJSON_AddNumberToObject(root, "count", 0);
+    }
+    
+    char *json = cJSON_PrintUnformatted(root);
+    httpd_resp_set_type(req, "application/json");
+    httpd_resp_send(req, json, strlen(json));
+    
+    free(json);
+    cJSON_Delete(root);
+    return ESP_OK;
+}
+
+/**
+ * @brief API 文件上传 handler
+ */
+static esp_err_t api_files_upload_handler(httpd_req_t *req)
+{
+    // 获取目标路径
+    char path[512] = {0};
+    char query[512];
+    
+    if (httpd_req_get_url_query_str(req, query, sizeof(query)) == ESP_OK) {
+        httpd_query_key_value(query, "path", path, sizeof(path));
+    }
+    
+    if (strlen(path) == 0) {
+        httpd_resp_send_err(req, HTTPD_400_BAD_REQUEST, "Missing path parameter");
+        return ESP_FAIL;
+    }
+    
+    // 接收文件内容
+    int content_len = req->content_len;
+    uint8_t *buffer = NULL;
+    
+    if (content_len > 0) {
+        buffer = (uint8_t *)malloc(content_len);
+        if (!buffer) {
+            httpd_resp_send_err(req, HTTPD_500_INTERNAL_SERVER_ERROR, "Out of memory");
+            return ESP_FAIL;
+        }
+        
+        int received = httpd_req_recv(req, (char *)buffer, content_len);
+        if (received != content_len) {
+            free(buffer);
+            httpd_resp_send_err(req, HTTPD_400_BAD_REQUEST, "Failed to receive data");
+            return ESP_FAIL;
+        }
+    }
+    
+    // 保存文件
+    esp_err_t err = file_manager_upload(path, buffer, content_len);
+    
+    if (buffer) free(buffer);
+    
+    cJSON *root = cJSON_CreateObject();
+    if (err == ESP_OK) {
+        cJSON_AddBoolToObject(root, "success", true);
+        cJSON_AddStringToObject(root, "path", path);
+        cJSON_AddNumberToObject(root, "size", content_len);
+    } else {
+        cJSON_AddBoolToObject(root, "success", false);
+        cJSON_AddStringToObject(root, "message", "Upload failed");
+    }
+    
+    char *json = cJSON_PrintUnformatted(root);
+    httpd_resp_set_type(req, "application/json");
+    httpd_resp_send(req, json, strlen(json));
+    
+    free(json);
+    cJSON_Delete(root);
+    return ESP_OK;
+}
+
+/**
+ * @brief API 文件删除 handler
+ */
+static esp_err_t api_files_delete_handler(httpd_req_t *req)
+{
+    char path[512] = {0};
+    char query[512];
+    
+    if (httpd_req_get_url_query_str(req, query, sizeof(query)) == ESP_OK) {
+        httpd_query_key_value(query, "path", path, sizeof(path));
+    }
+    
+    if (strlen(path) == 0) {
+        httpd_resp_send_err(req, HTTPD_400_BAD_REQUEST, "Missing path parameter");
+        return ESP_FAIL;
+    }
+    
+    esp_err_t err = file_manager_delete(path);
+    
+    cJSON *root = cJSON_CreateObject();
+    cJSON_AddBoolToObject(root, "success", err == ESP_OK);
+    if (err != ESP_OK) {
+        cJSON_AddStringToObject(root, "message", "Delete failed");
+    }
+    
+    char *json = cJSON_PrintUnformatted(root);
+    httpd_resp_set_type(req, "application/json");
+    httpd_resp_send(req, json, strlen(json));
+    
+    free(json);
+    cJSON_Delete(root);
+    return ESP_OK;
+}
+
+/**
+ * @brief API 文件系统信息 handler
+ */
+static esp_err_t api_fs_info_handler(httpd_req_t *req)
+{
+    fs_info_t info;
+    esp_err_t err = file_manager_get_fs_info(&info);
+    
+    cJSON *root = cJSON_CreateObject();
+    if (err == ESP_OK) {
+        cJSON_AddNumberToObject(root, "total_bytes", info.total_bytes);
+        cJSON_AddNumberToObject(root, "used_bytes", info.used_bytes);
+        cJSON_AddNumberToObject(root, "free_bytes", info.free_bytes);
+        cJSON_AddNumberToObject(root, "file_count", info.file_count);
+        cJSON_AddNumberToObject(root, "dir_count", info.dir_count);
+    }
+    cJSON_AddBoolToObject(root, "ready", file_manager_is_ready());
+    
+    char *json = cJSON_PrintUnformatted(root);
+    httpd_resp_set_type(req, "application/json");
+    httpd_resp_send(req, json, strlen(json));
+    
+    free(json);
+    cJSON_Delete(root);
+    return ESP_OK;
+}
+
+/**
+ * @brief API 格式化存储 handler
+ */
+static esp_err_t api_fs_format_handler(httpd_req_t *req)
+{
+    esp_err_t err = file_manager_format();
+    
+    cJSON *root = cJSON_CreateObject();
+    cJSON_AddBoolToObject(root, "success", err == ESP_OK);
+    if (err != ESP_OK) {
+        cJSON_AddStringToObject(root, "message", "Format failed");
+    }
+    
+    char *json = cJSON_PrintUnformatted(root);
+    httpd_resp_set_type(req, "application/json");
+    httpd_resp_send(req, json, strlen(json));
+    
+    free(json);
+    cJSON_Delete(root);
+    return ESP_OK;
+}
+
+/**
  * @brief CORS 预检 handler
  */
 static esp_err_t api_options_handler(httpd_req_t *req)
@@ -316,18 +538,16 @@ static void ws_on_disconnect(int sockfd)
  */
 static void ws_on_message(int sockfd, const uint8_t *data, size_t len, ws_frame_type_t type)
 {
-    ESP_LOGI(TAG, "WebSocket message from fd=%d: %s", sockfd, (char*)data);
+    ESP_LOGD(TAG, "WebSocket message from fd=%d: %s", sockfd, (char*)data);
     
     // 处理订阅请求
     cJSON *msg = cJSON_Parse((char*)data);
     if (msg) {
-        cJSON *type = cJSON_GetObjectItem(msg, "type");
-        if (type && cJSON_IsString(type)) {
-            if (strcmp(type->valuestring, "subscribe") == 0) {
-                // 发送确认
+        cJSON *msg_type = cJSON_GetObjectItem(msg, "type");
+        if (msg_type && cJSON_IsString(msg_type)) {
+            if (strcmp(msg_type->valuestring, "subscribe") == 0) {
                 websocket_send_text(sockfd, "{\"type\":\"subscribed\"}");
-            } else if (strcmp(type->valuestring, "ping") == 0) {
-                // 发送 pong
+            } else if (strcmp(msg_type->valuestring, "ping") == 0) {
                 websocket_send_text(sockfd, "{\"type\":\"pong\"}");
             }
         }
@@ -401,7 +621,13 @@ static const httpd_uri_t uri_handlers[] = {
         .user_ctx = NULL
     },
     {
-        .uri = "/index.html",
+        .uri = "/app",
+        .method = HTTP_GET,
+        .handler = static_file_handler,
+        .user_ctx = NULL
+    },
+    {
+        .uri = "/app/*",
         .method = HTTP_GET,
         .handler = static_file_handler,
         .user_ctx = NULL
@@ -420,6 +646,12 @@ static const httpd_uri_t uri_handlers[] = {
     },
     {
         .uri = "/assets/*",
+        .method = HTTP_GET,
+        .handler = static_file_handler,
+        .user_ctx = NULL
+    },
+    {
+        .uri = "/view/*",
         .method = HTTP_GET,
         .handler = static_file_handler,
         .user_ctx = NULL
@@ -461,6 +693,38 @@ static const httpd_uri_t uri_handlers[] = {
         .handler = api_logs_handler,
         .user_ctx = NULL
     },
+    // 文件管理 API
+    {
+        .uri = "/api/files/list",
+        .method = HTTP_GET,
+        .handler = api_files_list_handler,
+        .user_ctx = NULL
+    },
+    {
+        .uri = "/api/files/upload",
+        .method = HTTP_POST,
+        .handler = api_files_upload_handler,
+        .user_ctx = NULL
+    },
+    {
+        .uri = "/api/files/delete",
+        .method = HTTP_DELETE,
+        .handler = api_files_delete_handler,
+        .user_ctx = NULL
+    },
+    // 文件系统 API
+    {
+        .uri = "/api/fs/info",
+        .method = HTTP_GET,
+        .handler = api_fs_info_handler,
+        .user_ctx = NULL
+    },
+    {
+        .uri = "/api/fs/format",
+        .method = HTTP_POST,
+        .handler = api_fs_format_handler,
+        .user_ctx = NULL
+    },
     {
         .uri = "/api/*",
         .method = HTTP_OPTIONS,
@@ -476,17 +740,24 @@ esp_err_t http_server_start(void)
         return ESP_OK;
     }
 
+    // 初始化文件管理器
+    esp_err_t err = file_manager_init();
+    if (err != ESP_OK) {
+        ESP_LOGW(TAG, "File manager init failed: %s", esp_err_to_name(err));
+        // 继续运行，HTTP 服务仍然可用
+    }
+
     httpd_config_t config = HTTPD_DEFAULT_CONFIG();
     config.server_port = 80;
     config.stack_size = 8192;
     config.task_priority = 5;
-    config.max_uri_handlers = 16;
+    config.max_uri_handlers = 24;
     config.max_open_sockets = 7;
     config.lru_purge_enable = true;
 
     ESP_LOGI(TAG, "Starting HTTP server on port %d", config.server_port);
 
-    esp_err_t err = httpd_start(&s_server, &config);
+    err = httpd_start(&s_server, &config);
     if (err != ESP_OK) {
         ESP_LOGE(TAG, "Failed to start server: %s", esp_err_to_name(err));
         return err;
