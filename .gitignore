@@ -1,3 +1,5 @@
 .trae/
 .uploads/
 docs/
+# Firmware build output directories
+firmware*/

@@ -70,11 +70,11 @@ menu "Radar Configuration"
 
     config RADAR_UART_TX_PIN
         int "UART TX pin"
-        default 1
+        default 0
 
     config RADAR_UART_RX_PIN
         int "UART RX pin"
-        default 2
+        default 1
 
     config RADAR_UART_BAUD_RATE
         int "UART baud rate (0 = use radar default)"
