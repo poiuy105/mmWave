@@ -858,6 +858,12 @@ static const httpd_uri_t uri_handlers[] = {
         .user_ctx = NULL
     },
     {
+        .uri = "/index.html",
+        .method = HTTP_GET,
+        .handler = static_file_handler,
+        .user_ctx = NULL
+    },
+    {
         .uri = "/app",
         .method = HTTP_GET,
         .handler = static_file_handler,
@@ -993,7 +999,44 @@ static const httpd_uri_t uri_handlers[] = {
         .handler = api_options_handler,
         .user_ctx = NULL
     },
-    // Catch-all: 处理所有未匹配的 GET 请求（如 /index.html, /favicon.ico 等）
+    // 显式路由：所有前端静态文件
+    {
+        .uri = "/style.css",
+        .method = HTTP_GET,
+        .handler = static_file_handler,
+        .user_ctx = NULL
+    },
+    {
+        .uri = "/websocket.js",
+        .method = HTTP_GET,
+        .handler = static_file_handler,
+        .user_ctx = NULL
+    },
+    {
+        .uri = "/api.js",
+        .method = HTTP_GET,
+        .handler = static_file_handler,
+        .user_ctx = NULL
+    },
+    {
+        .uri = "/radar.js",
+        .method = HTTP_GET,
+        .handler = static_file_handler,
+        .user_ctx = NULL
+    },
+    {
+        .uri = "/canvas.js",
+        .method = HTTP_GET,
+        .handler = static_file_handler,
+        .user_ctx = NULL
+    },
+    {
+        .uri = "/main.js",
+        .method = HTTP_GET,
+        .handler = static_file_handler,
+        .user_ctx = NULL
+    },
+    // Catch-all: 处理所有未匹配的 GET 请求
     {
         .uri = "/*",
         .method = HTTP_GET,
