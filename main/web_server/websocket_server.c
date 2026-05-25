@@ -385,8 +385,7 @@ esp_err_t websocket_init(httpd_handle_t server, const ws_config_t *config)
         .uri = "/ws",
         .method = HTTP_GET,
         .handler = ws_handler,
-        .user_ctx = NULL,
-        .is_websocket = true  // 启用 WebSocket 协议支持
+        .user_ctx = NULL
     };
     
     esp_err_t err = httpd_register_uri_handler(server, &ws_uri);
