@@ -12,6 +12,7 @@
 #include <dirent.h>
 #include <stdio.h>
 #include <errno.h>
+#include <unistd.h>
 
 static const char *TAG = "FILE_MGR";
 
