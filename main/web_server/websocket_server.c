@@ -9,8 +9,40 @@
 #include <stdlib.h>
 #include <unistd.h>
 #include <sys/socket.h>
+#include "mbedtls/sha1.h"
+#include "mbedtls/base64.h"
 
 static const char *TAG = "WS_SERVER";
+
+// WebSocket magic string (RFC 6455)
+static const char WS_MAGIC[] = "258EAFA5-E914-47DA-95CA-C5AB0DC85B11";
+
+/**
+ * @brief 计算 Sec-WebSocket-Accept
+ * @param client_key 客户端发送的 Sec-WebSocket-Key
+ * @param accept_key 输出缓冲区
+ * @param accept_key_len 缓冲区大小
+ */
+static void compute_accept_key(const char *client_key, char *accept_key, size_t accept_key_len)
+{
+    char concat[256];
+    uint8_t sha1_hash[20];
+    size_t olen;
+    
+    // client_key + magic
+    int len = snprintf(concat, sizeof(concat), "%s%s", client_key, WS_MAGIC);
+    
+    // SHA1
+    mbedtls_sha1_context ctx;
+    mbedtls_sha1_init(&ctx);
+    mbedtls_sha1_starts(&ctx);
+    mbedtls_sha1_update(&ctx, (const uint8_t *)concat, len);
+    mbedtls_sha1_finish(&ctx, sha1_hash);
+    mbedtls_sha1_free(&ctx);
+    
+    // Base64 encode
+    mbedtls_base64_encode((uint8_t *)accept_key, accept_key_len, &olen, sha1_hash, 20);
+}
 
 #define MAX_WS_CLIENTS 4
 #define WS_BUF_SIZE 1024
@@ -284,17 +316,16 @@ static esp_err_t ws_handler(httpd_req_t *req)
     }
     
     // 计算 Sec-WebSocket-Accept
-    // 简化实现：直接返回固定值（实际应该计算 SHA1）
-    const char *magic = "258EAFA5-E914-47DA-95CA-C5AB0DC85B11";
     char accept_key[64] = {0};
-    // TODO: 实现正确的 WebSocket 握手
+    compute_accept_key(ws_key, accept_key, sizeof(accept_key));
+    ESP_LOGI(TAG, "WS key: %s, Accept: %s", ws_key, accept_key);
     
     // 发送握手响应
     httpd_resp_set_status(req, "101 Switching Protocols");
     httpd_resp_set_type(req, "Upgrade");
     httpd_resp_set_hdr(req, "Upgrade", "websocket");
     httpd_resp_set_hdr(req, "Connection", "Upgrade");
-    httpd_resp_set_hdr(req, "Sec-WebSocket-Accept", "s3pPLMBiTxaQ9kYGzzhZRbK+xOo=");
+    httpd_resp_set_hdr(req, "Sec-WebSocket-Accept", accept_key);
     httpd_resp_set_hdr(req, "Sec-WebSocket-Version", "13");
     
     esp_err_t err = httpd_resp_send(req, NULL, 0);
