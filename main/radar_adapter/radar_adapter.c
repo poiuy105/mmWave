@@ -518,7 +518,7 @@ uint32_t radar_adapter_get_capabilities(void)
     if (s_radar_info.has_install_mode) caps |= RADAR_CAP_INSTALL_MODE;
     if (s_radar_info.has_region_filter) caps |= RADAR_CAP_REGION_FILTER;
     if (s_radar_info.has_sensitivity) caps |= RADAR_CAP_SENSITIVITY;
-    if (s_radar_info.has_sleep_monitoring) caps |= RADAR_CAP_SLEEP_MONITORING;
+    if (s_radar_info.has_sleep_monitoring) caps |= RADAR_CAP_SLEEP_MONITOR;
     
     // 大多数雷达支持检测范围设置
 #if defined(CONFIG_RADAR_LD2460) || defined(CONFIG_RADAR_LD2450) || \
