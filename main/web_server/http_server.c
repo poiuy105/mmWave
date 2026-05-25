@@ -409,12 +409,13 @@ static esp_err_t api_files_upload_handler(httpd_req_t *req)
         return ESP_FAIL;
     }
     
-    // URL 解码：%2F -> /
-    char *decoded_path = httpd_uri_decode(path);
-    if (decoded_path) {
-        strncpy(path, decoded_path, sizeof(path) - 1);
-        path[sizeof(path) - 1] = '\0';
-        free(decoded_path);
+    // URL 解码：%2F -> / 等
+    for (int i = 0; path[i] != '\0'; i++) {
+        if (path[i] == '%' && path[i+1] && path[i+2]) {
+            char hex[3] = { path[i+1], path[i+2], '\0' };
+            path[i] = (char)strtol(hex, NULL, 16);
+            memmove(&path[i+1], &path[i+3], strlen(&path[i+3]) + 1);
+        }
     }
     
     int content_len = req->content_len;
