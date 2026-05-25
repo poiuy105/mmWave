@@ -102,6 +102,11 @@ static esp_err_t static_file_handler(httpd_req_t *req)
         }
     }
     
+    // /view/ 路径 -> 去掉前缀，直接映射到 /storage/www/
+    if (strncmp(uri, "/view/", 6) == 0) {
+        uri = uri + 5;  // 去掉 /view 前缀，保留 /
+    }
+    
     // 默认首页
     if (strcmp(uri, "/") == 0) {
         uri = "/index.html";
@@ -986,6 +991,13 @@ static const httpd_uri_t uri_handlers[] = {
         .uri = "/api/*",
         .method = HTTP_OPTIONS,
         .handler = api_options_handler,
+        .user_ctx = NULL
+    },
+    // Catch-all: 处理所有未匹配的 GET 请求（如 /index.html, /favicon.ico 等）
+    {
+        .uri = "/*",
+        .method = HTTP_GET,
+        .handler = static_file_handler,
         .user_ctx = NULL
     }
 };
