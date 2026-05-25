@@ -32,25 +32,16 @@ esp_err_t file_manager_init(void)
 
     ESP_LOGI(TAG, "Initializing file manager...");
 
-    // 挂载 FATFS 分区
-    const esp_vfs_fat_mount_config_t mount_config = {
-        .max_files = 10,
-        .format_if_mount_failed = true,  // 如果挂载失败则格式化
-        .allocation_unit_size = 4096
-    };
-
-    esp_err_t err = esp_vfs_fat_spiflash_mount_rw_wl(STORAGE_MOUNT_POINT, "storage", 
-                                                       &mount_config, &s_wl_handle);
-    if (err != ESP_OK) {
-        ESP_LOGE(TAG, "Failed to mount FATFS: %s", esp_err_to_name(err));
-        return err;
+    // FATFS 已由 fatfs_init() 挂载，这里只检查是否可用
+    struct stat st;
+    if (stat(STORAGE_MOUNT_POINT, &st) != 0) {
+        ESP_LOGE(TAG, "Storage not mounted at %s", STORAGE_MOUNT_POINT);
+        return ESP_ERR_NOT_FOUND;
     }
 
     // 确保 www 目录存在
     char www_path[64];
     snprintf(www_path, sizeof(www_path), "%s/www", STORAGE_MOUNT_POINT);
-    
-    struct stat st;
     if (stat(www_path, &st) != 0) {
         ESP_LOGI(TAG, "Creating www directory...");
         mkdir(www_path, 0755);
@@ -303,39 +294,23 @@ esp_err_t file_manager_format(void)
         return ESP_ERR_INVALID_STATE;
     }
 
-    ESP_LOGW(TAG, "Formatting storage partition...");
+    ESP_LOGW(TAG, "Clearing www directory...");
 
-    // 先卸载
-    esp_err_t err = esp_vfs_fat_spiflash_unmount_rw_wl(STORAGE_MOUNT_POINT, s_wl_handle);
-    if (err != ESP_OK) {
-        ESP_LOGE(TAG, "Failed to unmount: %s", esp_err_to_name(err));
-        return err;
-    }
-
-    s_wl_handle = WL_INVALID_HANDLE;
-    s_initialized = false;
-
-    // 重新挂载（会自动格式化）
-    const esp_vfs_fat_mount_config_t mount_config = {
-        .max_files = 10,
-        .format_if_mount_failed = true,
-        .allocation_unit_size = 4096
-    };
-
-    err = esp_vfs_fat_spiflash_mount_rw_wl(STORAGE_MOUNT_POINT, "storage", 
-                                            &mount_config, &s_wl_handle);
-    if (err != ESP_OK) {
-        ESP_LOGE(TAG, "Failed to remount after format: %s", esp_err_to_name(err));
-        return err;
-    }
-
-    // 重新创建 www 目录
+    // 不重新格式化分区，只删除 www 目录下的所有内容
+    // 避免与 fatfs_init.c 的挂载状态冲突
     char www_path[64];
     snprintf(www_path, sizeof(www_path), "%s/www", STORAGE_MOUNT_POINT);
-    mkdir(www_path, 0755);
 
-    s_initialized = true;
-    ESP_LOGI(TAG, "Storage partition formatted successfully");
+    // 先删除 www 目录及其内容
+    file_manager_rmdir(www_path);
+
+    // 重新创建空的 www 目录
+    if (mkdir(www_path, 0755) != 0) {
+        ESP_LOGE(TAG, "Failed to recreate www directory");
+        return ESP_ERR_NOT_FOUND;
+    }
+
+    ESP_LOGI(TAG, "Storage cleared successfully");
     return ESP_OK;
 }
 
