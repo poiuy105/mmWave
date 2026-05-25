@@ -29,6 +29,7 @@ idf_component_register(
         json
         radar
         esp_timer
+        mbedtls
 )
 
 # 链接数学库
