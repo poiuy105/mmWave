@@ -1,770 +1,513 @@
-[12:58:03]I (92238) MAIN: Free heap: 128812 bytes
-[12:58:11]I (20669) MAIN: Free heap: 128892 bytes
-[12:58:11]I (20669) MAIN: Min free heap: 121048 bytes
-[12:58:18]I (28359) HTTP_SERVER: Served embedded upload page
-[12:58:21]I (30669) MAIN: Free heap: 127680 bytes
-[12:58:21]I (30669) MAIN: Min free heap: 115868 bytes
-[12:58:31]I (40669) MAIN: Free heap: 127680 bytes
-[12:58:31]I (40669) MAIN: Min free heap: 115868 bytes
-[12:58:33]I (42887) HTTP_SERVER: Uploading to %2Fstorage%2Fwww%2Findex.html (8587 bytes)
-[12:58:33]E (42888) HTTP_SERVER: Failed to create file: %2Fstorage%2Fwww%2Findex.html
-[12:58:33]Guru Meditation Error: Core  0 panic'ed (Stack protection fault). 
-[12:58:33]
-[12:58:33]Detected in task "httpd" at 0x4038858c
-[12:58:33]Stack pointer: 0x3fcc0350
-[12:58:33]Stack bounds: 0x3fcc036c - 0x3fcc2360
-[12:58:33]
-[12:58:33]
-[12:58:33]Core  0 register dump:
-[12:58:33]MEPC    : 0x4038859c  RA      : 0x40388734  SP      : 0x3fcc0350  GP      : 0x3fc96000  
-[12:58:33]TP      : 0x3fcc2360  T0      : 0x4005890e  T1      : 0x40000000  T2      : 0xffffffff  
-[12:58:33]S0/FP   : 0x3fca21d8  S1      : 0xffffffff  A0      : 0x3fca21d8  A1      : 0xffffffff  
-[12:58:33]A2      : 0x00000004  A3      : 0x00000000  A4      : 0x00000001  A5      : 0x00000000  
-[12:58:33]A6      : 0x42007f22  A7      : 0x0000000a  S2      : 0x00000000  S3      : 0xffffffff  
-[12:58:33]S4      : 0x3fc9d994  S5      : 0x3fcc05d0  S6      : 0x3c0d470f  S7      : 0x00000000  
-[12:58:33]S8      : 0x00000001  S9      : 0x00000018  S10     : 0x00000000  S11     : 0x3fcc05e4  
-[12:58:33]T3      : 0x00000000  T4      : 0x00000000  T5      : 0x00000000  T6      : 0x00000000  
-[12:58:33]MSTATUS : 0x00001881  MTVEC   : 0x40380001  MCAUSE  : 0x0000001b  MTVAL   : 0x0000eb8d  
-[12:58:33]MHARTID : 0x00000000  
-[12:58:33]
-[12:58:33]Stack memory:
-[12:58:33]3fcc0350: 0x3fcc0014 0x3fcc0014 0x3fcc0014 0xffffffff 0x3fcc0014 0x3fcc0014 0x00002000 0xa5a5a5a5
-[12:58:33]3fcc0370: 0x00000000 0xffffffff 0x3fca21d8 0x40388734 0x00000004 0x3fca21d8 0x3fc959ac 0x403818ce
-[12:58:33]3fcc0390: 0x3fcc2360 0x4005890e 0x40000000 0x00000000 0x00000048 0x00000000 0x00000000 0x0000005d
-[12:58:33]3fcc03b0: 0x0000005d 0x00000000 0x00000000 0x403819e2 0x0000004c 0x3fcbe71c 0x3fca2230 0x42007f56
-[12:58:33]3fcc03d0: 0x3fc9d994 0x00000004 0x3fcc05e4 0x3fcbe774 0x0000005d 0x3fc9d994 0x00000000 0x4200cd0a
-[12:58:33]3fcc03f0: 0x00000004 0x3fc9d8e4 0x3fcc044c 0x3fcbe774 0x3fc9d994 0x3fc9ce18 0x0000005d 0x4200bd66
-[12:58:33]3fcc0410: 0x0000005d 0x3fc9d994 0x00000003 0x4200cd0a 0x00000001 0x3fcbe774 0x3fc9d8e4 0x3fc9d994
-[12:58:33]3fcc0430: 0x0000005d 0x3fcbe774 0x3fc9d74c 0x420a082e 0x00000000 0xffffffff 0x3fc9d8e4 0x3fcbe774
-[12:58:33]3fcc0450: 0x00000001 0x3fcbe774 0x3fc9d74c 0x420a08a0 0x00000001 0x00000001 0x3fc9d74c 0x420a0e6e
-[12:58:33]3fcc0470: 0x0000004c 0x3fcbe774 0x3fc9d74c 0x3fcc05e4 0x00000000 0x00000018 0x00000005 0x00000073
-[12:58:33]3fcc0490: 0x00000005 0x3c0d4710 0x00000015 0x00000000 0x00000000 0x3c0d470f 0x3fcc05d0 0x420ad00a
-[12:58:33]3fcc04b0: 0xa5a5a5a5 0xa5a5a5a5 0x00000001 0x420acee4 0x00000000 0x3fc9d74c 0x3fcbe774 0x3c0d470f
-[12:58:33]3fcc04d0: 0x00000000 0x00000000 0x00000000 0x00000000 0x00000000 0x00000001 0x0000005d 0x00000015
-[12:58:33]3fcc04f0: 0x00000000 0x3c0cc7bc 0x00000000 0x00000000 0xa5a5a5a5 0x3fc9d74c 0x3fcbe774 0x3c0c5c25
-[12:58:33]3fcc0510: 0x00000000 0x00000000 0x00000000 0x00000000 0x00000000 0x00000001 0x0000004c 0x0000001d
-[12:58:33]3fcc0530: 0x00000000 0x3c0cc7bc 0x00000000 0x00000000 0xa5a5a5a5 0xa5a5a5a5 0xa5a5a5a5 0xa5a5a5a5
-[12:58:33]3fcc0550: 0xa5a5a5a5 0xa5a5a5a5 0xa5a5a5a5 0xa5a5a5a5 0xa5a5a5a5 0xa5a5a5a5 0xa5a5a5a5 0xa5a5a5a5
-[12:58:33]3fcc0570: 0x00000000 0xa5a5a5a5 0x00000000 0xa5a5a5a5 0xa5a5a5a5 0xa5a5a5a5 0xa5a5a5a5 0xa5a5a5a5
-[12:58:33]3fcc0590: 0xa5a5a5a5 0xa5a5a5a5 0xa5a5a5a5 0x3fcc0990 0xa5a5a5a5 0xa5a5a5a5 0x00a5a5a5 0xa5a5a5a5
-[12:58:33]3fcc05b0: 0x00000005 0x00000000 0x00000000 0xa5a5a5a5 0xa5a5a5a5 0xa5a5a5a5 0xa5a5a5a5 0xa5a5a5a5
-[12:58:33]3fcc05d0: 0x3fcc05dc 0x00000001 0x00000001 0x3c0d470f 0x00000001 0x3c0c5c28 0x00000015 0xa5a5a5a5
-[12:58:33]3fcc05f0: 0x00000003 0x00000000 0xa5a5a5a5 0xa5a5a5a5 0xa5a5a5a5 0xa5a5a5a5 0xa5a5a5a5 0xa5a5a5a5
-[12:58:33]3fcc0610: 0x3fcc061c 0x00000000 0x00000000 0x3c0c5c25 0x00000001 0x3fcc1fd0 0x0000001d 0xa5a5a5a5
-[12:58:33]3fcc0630: 0xa5a5a5a5 0xa5a5a5a5 0xa5a5a5a5 0xa5a5a5a5 0xa5a5a5a5 0xa5a5a5a5 0xa5a5a5a5 0xa5a5a5a5
-[12:58:33]3fcc0650: 0xa5a5a5a5 0xa5a5a5a5 0xa5a5a5a5 0xa5a5a5a5 0xa5a5a5a5 0xa5a5a5a5 0xa5a5a5a5 0xa5a5a5a5
-[12:58:33]3fcc0670: 0xa5a5a5a5 0xa5a5a5a5 0x34a5a5a5 0x30393832 0xffffffff 0xa5a5a5a5 0xa5a5a5a5 0xa5a5a5a5
-[12:58:33]3fcc0690: 0xa5a5a5a5 0xa5a5a5a5 0xa5a5a5a5 0xa5a5a5a5 0xa5a5a5a5 0xa5a5a5a5 0xa5a5a5a5 0xa5a5a5a5
-[12:58:33]3fcc06b0: 0xa5a5a5a5 0xa5a5a5a5 0x34a5a5a5 0x38383832 0xffffffff 0xa5a5a5a5 0xa5a5a5a5 0xa5a5a5a5
-[12:58:33]3fcc06d0: 0xa5a5a5a5 0xa5a5a5a5 0xa5a5a5a5 0xa5a5a5a5 0xa5a5a5a5 0xa5a5a5a5 0xa5a5a5a5 0xa5a5a5a5
-[12:58:33]3fcc06f0: 0xa5a5a5a5 0xa5a5a5a5 0xa5a5a5a5 0xa5a5a5a5 0x0000a78a 0xa5a5a5a5 0xa5a5a5a5 0xa5a5a5a5
-[12:58:33]3fcc0710: 0x3c0d4364 0xa5a5a5a5 0xa5a5a5a5 0xa5a5a5a5 0x3c0dcddc 0xa5a5a5a5 0xa5a5a5a5 0xa5a5a5a5
-[12:58:33]3fcc0730: 0x3c0d46b0 0xa5a5a5a5 0xa5a5a5a5 0xa5a5a5a5 0x3c0c5c28 0xa5a5a5a5 0xa5a5a5a5 0xa5a5a5a5
-[12:58:33]
-[12:58:33]
-[12:58:33]
-[12:58:33]ELF file SHA256: 26f25b2f4
-[12:58:33]
-[12:58:33]Rebooting...
-[12:58:33]ESP-ROM:esp32c3-api1-20210207
-[12:58:33]Build:Feb  7 2021
-[12:58:33]rst:0xc (RTC_SW_CPU_RST),boot:0xf (SPI_FAST_FLASH_BOOT)
-[12:58:33]Saved PC:0x4038086e
-[12:58:33]SPIWP:0xee
-[12:58:33]mode:DIO, clock div:1
-[12:58:33]load:0x3fcd5820,len:0x158c
-[12:58:33]load:0x403cc710,len:0xc84
-[12:58:33]load:0x403ce710,len:0x2f64
-[12:58:33]entry 0x403cc71a
-[12:58:33]I (15) boot: ESP-IDF v5.4.4 2nd stage bootloader
-[12:58:33]I (15) boot: compile time May 25 2026 04:53:09
-[12:58:33]I (16) boot: chip revision: v0.4
-[12:58:33]I (16) boot: efuse block revision: v1.3
-[12:58:33]I (19) boot.esp32c3: SPI Speed      : 80MHz
-[12:58:33]I (23) boot.esp32c3: SPI Mode       : DIO
-[12:58:33]I (27) boot.esp32c3: SPI Flash Size : 4MB
-[12:58:33]I (30) boot: Enabling RNG early entropy source...
-[12:58:33]I (35) boot: Partition Table:
-[12:58:33]I (37) boot: ## Label            Usage          Type ST Offset   Length
-[12:58:33]I (44) boot:  0 nvs              WiFi data        01 02 00009000 00004000
-[12:58:33]I (50) boot:  1 otadata          OTA data         01 00 0000d000 00002000
-[12:58:33]I (57) boot:  2 phy_init         RF data          01 01 0000f000 00001000
-[12:58:33]I (63) boot:  3 factory          factory app      00 00 00010000 00100000
-[12:58:33]I (70) boot:  4 storage          Unknown data     01 82 00110000 000e0000
-[12:58:33]I (76) boot: End of partition table
-[12:58:33]I (80) boot: Defaulting to factory image
-[12:58:33]I (83) esp_image: segment 0: paddr=00010020 vaddr=3c0c0020 size=24c98h (150680) map
-[12:58:33]I (115) esp_image: segment 1: paddr=00034cc0 vaddr=3fc95800 size=032dch ( 13020) load
-[12:58:33]I (117) esp_image: segment 2: paddr=00037fa4 vaddr=40380000 size=08074h ( 32884) load
-[12:58:33]I (125) esp_image: segment 3: paddr=00040020 vaddr=42000020 size=b4104h (737540) map
-[12:58:33]I (244) esp_image: segment 4: paddr=000f412c vaddr=40388074 size=0d73ch ( 55100) load
-[12:58:33]I (254) esp_image: segment 5: paddr=00101870 vaddr=50000000 size=0001ch (    28) load
-[12:58:33]I (261) boot: Loaded app from partition at offset 0x10000
-[12:58:33]I (261) boot: Disabling RNG early entropy source...
-[12:58:33]I (272) cpu_start: Unicore app
-[12:58:33]I (280) cpu_start: GPIO 20 and 21 are used as console UART I/O pins
-[12:58:33]I (280) cpu_start: Pro cpu start user code
-[12:58:33]I (281) cpu_start: cpu freq: 160000000 Hz
-[12:58:33]I (282) app_init: Application information:
-[12:58:33]I (286) app_init: Project name:     ld_radar_monitor
-[12:58:33]I (291) app_init: App version:      3c2132b
-[12:58:33]I (295) app_init: Compile time:     May 25 2026 04:53:03
-[12:58:33]I (300) app_init: ELF file SHA256:  26f25b2f4...
-[12:58:33]I (304) app_init: ESP-IDF:          v5.4.4
-[12:58:33]I (308) efuse_init: Min chip rev:     v0.3
-[12:58:33]I (312) efuse_init: Max chip rev:     v1.99 
-[12:58:33]I (316) efuse_init: Chip rev:         v0.4
-[12:58:33]I (320) heap_init: Initializing. RAM available for dynamic allocation:
-[12:58:33]I (326) heap_init: At 3FC9D0A0 len 00022F60 (139 KiB): RAM
-[12:58:33]I (331) heap_init: At 3FCC0000 len 0001C710 (113 KiB): Retention RAM
-[12:58:33]I (337) heap_init: At 3FCDC710 len 00002950 (10 KiB): Retention RAM
-[12:58:33]I (343) heap_init: At 5000001C len 00001FCC (7 KiB): RTCRAM
-[12:58:33]I (349) spi_flash: detected chip: generic
-[12:58:33]I (352) spi_flash: flash io: dio
-[12:58:33]I (356) sleep_gpio: Configure to isolate all GPIO pins in sleep state
-[12:58:34]I (361) sleep_gpio: Enable automatic switching of GPIO sleep configuration
-[12:58:34]I (368) main_task: Started on CPU0
-[12:58:34]I (371) main_task: Calling app_main()
-[12:58:34]I (374) MAIN: =================================
-[12:58:34]I (378) MAIN: LD Radar Web Monitor Starting...
-[12:58:34]I (382) MAIN: Version: 1.0.0
-[12:58:34]I (385) MAIN: =================================
-[12:58:34]I (397) MAIN: NVS initialized
-[12:58:34]I (397) FATFS: Mounting FATFS...
-[12:58:34]I (398) FATFS: FATFS mounted at /storage
-[12:58:34]I (400) MAIN: FATFS initialized
-[12:58:34]I (401) RADAR_ADAPT: Initializing radar adapter for LD2460...
-[12:58:34]I (407) uart: queue free spaces: 16
-[12:58:34]W (410) ld2460: Rx Break
-[12:58:34]I (412) ld2460: LD2460 driver initialized (UART1, 115200 baud, TX=GPIO0, RX=GPIO1)
-[12:58:34]I (420) RADAR_ADAPT: Radar adapter initialized successfully
-[12:58:34]I (425) RADAR_ADAPT:   Type: LD2460
-[12:58:34]I (428) RADAR_ADAPT:   Max targets: 8
-[12:58:34]I (431) RADAR_ADAPT:   3D support: No
-[12:58:34]I (435) RADAR_ADAPT:   Install mode: Yes
-[12:58:34]I (438) MAIN: Radar initialized: HLK-LD2460 (2T4R Multi-target Tracking)
-[12:58:34]I (446) pp: pp rom version: 9387209
-[12:58:34]I (448) net80211: net80211 rom version: 9387209
-[12:58:34]I (454) wifi:wifi driver task: 3fcb63e0, prio:23, stack:6656, core=0
-[12:58:34]I (464) wifi:wifi firmware version: 8896d66
-[12:58:34]I (464) wifi:wifi certification version: v7.0
-[12:58:34]I (466) wifi:config NVS flash: enabled
-[12:58:34]I (470) wifi:config nano formatting: disabled
-[12:58:34]I (474) wifi:Init data frame dynamic rx buffer num: 32
-[12:58:34]I (479) wifi:Init static rx mgmt buffer num: 5
-[12:58:34]I (483) wifi:Init management short buffer num: 32
-[12:58:34]I (487) wifi:Init dynamic tx buffer num: 32
-[12:58:34]I (491) wifi:Init static tx FG buffer num: 2
-[12:58:34]I (495) wifi:Init static rx buffer size: 1600
-[12:58:34]I (499) wifi:Init static rx buffer num: 10
-[12:58:34]I (503) wifi:Init dynamic rx buffer num: 32
-[12:58:34]I (508) wifi_init: rx ba win: 6
-[12:58:34]I (510) wifi_init: accept mbox: 6
-[12:58:34]I (513) wifi_init: tcpip mbox: 32
-[12:58:34]I (516) wifi_init: udp mbox: 6
-[12:58:34]I (519) wifi_init: tcp mbox: 6
-[12:58:34]I (521) wifi_init: tcp tx win: 5760
-[12:58:34]I (525) wifi_init: tcp rx win: 5760
-[12:58:34]I (528) wifi_init: tcp mss: 1440
-[12:58:34]I (531) wifi_init: WiFi IRAM OP enabled
-[12:58:34]I (534) wifi_init: WiFi RX IRAM OP enabled
-[12:58:34]I (539) phy_init: phy_version 1232,d493f299,Aug 25 2025,19:01:20
-[12:58:34]I (578) wifi:mode : sta (c0:4e:30:9b:df:c8)
-[12:58:34]I (578) wifi:enable tsf
-[12:58:34]I (581) MAIN: WiFi STA initialized, connecting to SSID:FUCK_cao
-[12:58:34]I (582) FILE_MGR: Initializing file manager...
-[12:58:34]I (584) FILE_MGR: File manager initialized successfully
-[12:58:34]I (588) HTTP_SERVER: Starting HTTP server on port 80
-[12:58:34]I (595) WS_SERVER: WebSocket server initialized
-[12:58:34]I (597) HTTP_SERVER: Radar broadcast timer started (10Hz)
-[12:58:34]I (602) HTTP_SERVER: HTTP server started successfully
-[12:58:34]I (607) MAIN: HTTP server started
-[12:58:34]I (610) MAIN: =================================
-[12:58:34]I (614) MAIN: System Ready!
-[12:58:34]I (617) MAIN: Connecting to WiFi: FUCK_cao
-[12:58:34]I (620) MAIN: =================================
-[12:58:34]I (627) wifi:new:<11,2>, old:<1,0>, ap:<255,255>, sta:<11,2>, prof:1, snd_ch_cfg:0x0
-[12:58:34]I (633) wifi:state: init -> auth (0xb0)
-[12:58:34]I (639) wifi:state: auth -> assoc (0x0)
-[12:58:34]I (643) wifi:state: assoc -> run (0x10)
-[12:58:34]I (1250) wifi:<ba-add>idx:0 (ifx:0, 64:09:80:0e:d5:a7), tid:0, ssn:2, winSize:64
-[12:58:34]I (1251) wifi:connected with FUCK_cao, aid = 4, channel 11, 40D, bssid = 64:09:80:0e:d5:a7
-[12:58:34]I (1255) wifi:security: WPA2-PSK, phy: bgn, rssi: -6, cipher(pairwise:0x3, group:0x3), pmf:0
-[12:58:34]I (1264) wifi:pm start, type: 1
-[12:58:34]
-[12:58:34]I (1266) wifi:dp: 1, bi: 102400, li: 3, scale listen interval from 307200 us to 307200 us
-[12:58:34]I (1274) wifi:set rx beacon pti, rx_bcn_pti: 0, bcn_timeout: 25000, mt_pti: 0, mt_time: 10000
-[12:58:34]I (1342) wifi:AP's beacon interval = 102400 us, DTIM period = 1
-[12:58:35]I (2290) esp_netif_handlers: sta ip: 192.168.123.187, mask: 255.255.255.0, gw: 192.168.123.1
-[12:58:35]I (2291) MAIN: Got IP: 192.168.123.187
-[12:58:36]I (2490) HTTP_SERVER: UploadingGuru Meditation Error: Core  0 panic'ed (Stack protection fault). 
-[12:58:36]
-[12:58:36]Detected in task "httpd" at 0x403801de
-[12:58:36]Stack pointer: 0x3fc99480
-[12:58:36]Stack bounds: 0x3fc98e80 - 0x3fc99480
-[12:58:36]
-[12:58:36]
-[12:58:36]Core  0 register dump:
-[12:58:36]MEPC    : 0x40380262  RA      : 0x40380228  SP      : 0x3fc99480  GP      : 0x3fc96000  
-[12:58:36]TP      : 0x3fcc2360  T0      : 0x600c2194  T1      : 0x600c2128  T2      : 0x00000002  
-[12:58:36]S0/FP   : 0x403860c2  S1      : 0x80000005  A0      : 0x600ce000  A1      : 0x00000300  
-[12:58:36]A2      : 0x600ce000  A3      : 0x40000000  A4      : 0x60000000  A5      : 0x00000000  
-[12:58:36]A6      : 0x60023000  A7      : 0x0000000a  S2      : 0x00001881  S3      : 0x00000001  
-[12:58:36]S4      : 0x600ce000  S5      : 0x3fcc0610  S6      : 0x3c0c5bf3  S7      : 0x00000000  
-[12:58:36]S8      : 0x00000008  S9      : 0x00000006  S10     : 0xffffffff  S11     : 0x3fcc0624  
-[12:58:36]T3      : 0x00000000  T4      : 0x2d747065  T5      : 0x6363410a  T6      : 0x0d2f3738  
-[12:58:36]MSTATUS : 0x00001881  MTVEC   : 0x40380001  MCAUSE  : 0x0000001b  MTVAL   : 0x0000850a  
-[12:58:36]MHARTID : 0x00000000  
-[12:58:36]
-[12:58:36]Stack memory:
-[12:58:36]3fc99480: 0x60023000 0x403860c2 0x403860ce 0x00000000 0x3fc9948c 0x00000000 0x00000000 0x00000000
-[12:58:36]3fc994a0: 0x3fc994a4 0xffffffff 0x3fc994a4 0x3fc994a4 0x00000000 0x3fc994b8 0xffffffff 0x3fc994b8
-[12:58:36]3fc994c0: 0x3fc994b8 0x00000001 0x00000001 0x00000000 0x0001ffff 0x00000000 0x00000000 0x00000000
-[12:58:36]3fc994e0: 0x00000000 0x3fc994e0 0x00000000 0x00000000 0x00000000 0x3fc994f8 0xffffffff 0x3fc994f8
-[12:58:36]3fc99500: 0x3fc994f8 0x00000000 0x3fc9950c 0xffffffff 0x3fc9950c 0x3fc9950c 0x00000001 0x00000001
-[12:58:36]3fc99520: 0x00000000 0x0001ffff 0x00000000 0x00000000 0x00000000 0x60023000 0x403860c2 0x403860ce
-[12:58:36]3fc99540: 0x3fc9d530 0x3fc9d558 0x3fc9d580 0x3fc9d5a8 0x3fcaf35c 0x3fcb1998 0x00000000 0x00000000
-[12:58:36]3fc99560: 0x4200eab4 0x4200ea7a 0x4200ecd8 0x00001000 0x00000005 0xffffffff 0x00000000 0x00000000
-[12:58:36]3fc99580: 0xffffffff 0x00000000 0x00000000 0xffffffff 0x00000000 0x00000000 0xffffffff 0x00000000
-[12:58:36]3fc995a0: 0x00000000 0x00000000 0x00000101 0x00000000 0x00000000 0x00000000 0x00000000 0x00000000
-[12:58:36]3fc995c0: 0x00000000 0x00000000 0x00000000 0x00000000 0x00000000 0x00000000 0x00000000 0x00000000
-[12:58:36]3fc995e0: 0x00000000 0x00000000 0x00000000 0x00000000 0x00000000 0x00000000 0x00000000 0x00000000
-[12:58:36]3fc99600: 0x00000000 0x00000000 0x00000000 0x00000000 0x00000000 0x00000000 0x00000000 0x00000000
-[12:58:36]3fc99620: 0x00000000 0x00000000 0x00000000 0x00000000 0x00000000 0x00000000 0x00000000 0x00000000
-[12:58:36]3fc99640: 0x00000000 0x00000000 0x00000000 0x00000000 0x00000000 0x00000000 0x00000000 0x00000000
-[12:58:36]3fc99660: 0x00000000 0x00000000 0x00000000 0x00000000 0x00000000 0x00000000 0x00000000 0x00000000
-[12:58:36]3fc99680: 0x00000000 0x00000000 0x00000000 0x00000000 0x00000000 0x00000000 0x00000000 0x00000000
-[12:58:36]3fc996a0: 0x00000000 0x00000000 0x00000000 0x00000000 0x00000000 0x00000000 0x3fcaf3dc 0x00000000
-[12:58:36]3fc996c0: 0x00000000 0x3fca29b4 0x3fca2abc 0x00000000 0x00000000 0x00000000 0x00000000 0x00000000
-[12:58:36]3fc996e0: 0x00000000 0x00000000 0x00000000 0x00000000 0x00000000 0x00000000 0x00000000 0x00000000
-[12:58:36]3fc99700: 0x00000000 0x00000000 0x00000000 0x403837a4 0x00000000 0x4038159a 0x00000000 0x40381c7a
-[12:58:36]3fc99720: 0x00000000 0x40383392 0x3fc9ceac 0x40389092 0x3fc99480 0x00000000 0x00000000 0x4201f41e
-[12:58:36]3fc99740: 0x00000000 0x4200886e 0x3fcaf5b4 0x403836b4 0x00000000 0x00000000 0x00000000 0x00000000
-[12:58:36]3fc99760: 0x00000000 0x00000000 0x00000000 0x00000000 0x00000000 0x00000000 0x00000000 0x00000000
-[12:58:36]3fc99780: 0x00000000 0x00000000 0x00000000 0x00000000 0x00000000 0x00000000 0x00000000 0x00000000
-[12:58:36]3fc997a0: 0x00000000 0x00000000 0x00000000 0x00000000 0x00000000 0x00000000 0x00000000 0x00000000
-[12:58:36]3fc997c0: 0x00000000 0x00000000 0x00000000 0x00000000 0x00000000 0x00000000 0x00000000 0x00000000
-[12:58:36]3fc997e0: 0x00000000 0x00000000 0x00000000 0x00000000 0x00000000 0x00000000 0x00000000 0x00000000
-[12:58:36]3fc99800: 0x00000000 0x00000001 0x00000009 0x00000000 0x00800000 0x00800000 0x000f0000 0x00710000
-[12:58:36]3fc99820: 0x0000001b 0x00000001 0x3fca2418 0x3fca246c 0x3fca23c0 0x40381d58 0x40383480 0x00000000
-[12:58:36]3fc99840: 0x00000000 0x00000000 0x00000000 0x00000000 0x00000000 0x4201f2e4 0x00000000 0x00000000
-[12:58:36]3fc99860: 0x00000000 0x00000000 0x00000000 0x00000000 0x00000000 0x00000001 0x6001f000 0x3fc9ed98
-[12:58:36]
-[12:58:36]
-[12:58:36]
-[12:58:36]ELF file SHA256: 26f25b2f4
-[12:58:36]
-[12:58:36]Rebooting...
-[12:58:36]ESP-ROM:esp32c3-api1-20210207
-[12:58:36]Build:Feb  7 2021
-[12:58:36]rst:0xc (RTC_SW_CPU_RST),boot:0xf (SPI_FAST_FLASH_BOOT)
-[12:58:36]Saved PC:0x4038086e
-[12:58:36]SPIWP:0xee
-[12:58:36]mode:DIO, clock div:1
-[12:58:36]load:0x3fcd5820,len:0x158c
-[12:58:36]load:0x403cc710,len:0xc84
-[12:58:36]load:0x403ce710,len:0x2f64
-[12:58:36]entry 0x403cc71a
-[12:58:36]I (15) boot: ESP-IDF v5.4.4 2nd stage bootloader
-[12:58:36]I (15) boot: compile time May 25 2026 04:53:09
-[12:58:36]I (16) boot: chip revision: v0.4
-[12:58:36]I (16) boot: efuse block revision: v1.3
-[12:58:36]I (19) boot.esp32c3: SPI Speed      : 80MHz
-[12:58:36]I (23) boot.esp32c3: SPI Mode       : DIO
-[12:58:36]I (27) boot.esp32c3: SPI Flash Size : 4MB
-[12:58:36]I (30) boot: Enabling RNG early entropy source...
-[12:58:36]I (35) boot: Partition Table:
-[12:58:36]I (38) boot: ## Label            Usage          Type ST Offset   Length
-[12:58:36]I (44) boot:  0 nvs              WiFi data        01 02 00009000 00004000
-[12:58:36]I (50) boot:  1 otadata          OTA data         01 00 0000d000 00002000
-[12:58:36]I (57) boot:  2 phy_init         RF data          01 01 0000f000 00001000
-[12:58:36]I (63) boot:  3 factory          factory app      00 00 00010000 00100000
-[12:58:36]I (70) boot:  4 storage          Unknown data     01 82 00110000 000e0000
-[12:58:36]I (76) boot: End of partition table
-[12:58:36]I (80) boot: Defaulting to factory image
-[12:58:36]I (83) esp_image: segment 0: paddr=00010020 vaddr=3c0c0020 size=24c98h (150680) map
-[12:58:36]I (115) esp_image: segment 1: paddr=00034cc0 vaddr=3fc95800 size=032dch ( 13020) load
-[12:58:36]I (118) esp_image: segment 2: paddr=00037fa4 vaddr=40380000 size=08074h ( 32884) load
-[12:58:36]I (125) esp_image: segment 3: paddr=00040020 vaddr=42000020 size=b4104h (737540) map
-[12:58:36]I (244) esp_image: segment 4: paddr=000f412c vaddr=40388074 size=0d73ch ( 55100) load
-[12:58:36]I (254) esp_image: segment 5: paddr=00101870 vaddr=50000000 size=0001ch (    28) load
-[12:58:36]I (261) boot: Loaded app from partition at offset 0x10000
-[12:58:36]I (261) boot: Disabling RNG early entropy source...
-[12:58:36]I (272) cpu_start: Unicore app
-[12:58:36]I (280) cpu_start: GPIO 20 and 21 are used as console UART I/O pins
-[12:58:36]I (281) cpu_start: Pro cpu start user code
-[12:58:36]I (281) cpu_start: cpu freq: 160000000 Hz
-[12:58:36]I (282) app_init: Application information:
-[12:58:36]I (286) app_init: Project name:     ld_radar_monitor
-[12:58:36]I (291) app_init: App version:      3c2132b
-[12:58:36]I (295) app_init: Compile time:     May 25 2026 04:53:03
-[12:58:36]I (300) app_init: ELF file SHA256:  26f25b2f4...
-[12:58:36]I (304) app_init: ESP-IDF:          v5.4.4
-[12:58:36]I (308) efuse_init: Min chip rev:     v0.3
-[12:58:36]I (312) efuse_init: Max chip rev:     v1.99 
-[12:58:36]I (316) efuse_init: Chip rev:         v0.4
-[12:58:36]I (320) heap_init: Initializing. RAM available for dynamic allocation:
-[12:58:36]I (326) heap_init: At 3FC9D0A0 len 00022F60 (139 KiB): RAM
-[12:58:36]I (331) heap_init: At 3FCC0000 len 0001C710 (113 KiB): Retention RAM
-[12:58:36]I (337) heap_init: At 3FCDC710 len 00002950 (10 KiB): Retention RAM
-[12:58:36]I (343) heap_init: At 5000001C len 00001FCC (7 KiB): RTCRAM
-[12:58:36]I (349) spi_flash: detected chip: generic
-[12:58:36]I (352) spi_flash: flash io: dio
-[12:58:36]I (356) sleep_gpio: Configure to isolate all GPIO pins in sleep state
-[12:58:36]I (361) sleep_gpio: Enable automatic switching of GPIO sleep configuration
-[12:58:36]I (368) main_task: Started on CPU0
-[12:58:36]I (371) main_task: Calling app_main()
-[12:58:36]I (374) MAIN: =================================
-[12:58:36]I (378) MAIN: LD Radar Web Monitor Starting...
-[12:58:36]I (382) MAIN: Version: 1.0.0
-[12:58:36]I (385) MAIN: =================================
-[12:58:36]I (397) MAIN: NVS initialized
-[12:58:36]I (397) FATFS: Mounting FATFS...
-[12:58:36]I (398) FATFS: FATFS mounted at /storage
-[12:58:36]I (400) MAIN: FATFS initialized
-[12:58:36]I (401) RADAR_ADAPT: Initializing radar adapter for LD2460...
-[12:58:36]I (407) uart: queue free spaces: 16
-[12:58:36]W (410) ld2460: Rx Break
-[12:58:36]I (412) ld2460: LD2460 driver initialized (UART1, 115200 baud, TX=GPIO0, RX=GPIO1)
-[12:58:36]I (420) RADAR_ADAPT: Radar adapter initialized successfully
-[12:58:36]I (425) RADAR_ADAPT:   Type: LD2460
-[12:58:36]I (428) RADAR_ADAPT:   Max targets: 8
-[12:58:36]I (431) RADAR_ADAPT:   3D support: No
-[12:58:36]I (435) RADAR_ADAPT:   Install mode: Yes
-[12:58:36]I (438) MAIN: Radar initialized: HLK-LD2460 (2T4R Multi-target Tracking)
-[12:58:36]I (446) pp: pp rom version: 9387209
-[12:58:36]I (448) net80211: net80211 rom version: 9387209
-[12:58:36]I (454) wifi:wifi driver task: 3fcb63e0, prio:23, stack:6656, core=0
-[12:58:36]I (464) wifi:wifi firmware version: 8896d66
-[12:58:36]I (464) wifi:wifi certification version: v7.0
-[12:58:36]I (466) wifi:config NVS flash: enabled
-[12:58:36]I (470) wifi:config nano formatting: disabled
-[12:58:36]I (474) wifi:Init data frame dynamic rx buffer num: 32
-[12:58:36]I (479) wifi:Init static rx mgmt buffer num: 5
-[12:58:36]I (483) wifi:Init management short buffer num: 32
-[12:58:36]I (487) wifi:Init dynamic tx buffer num: 32
-[12:58:37]I (491) wifi:Init static tx FG buffer num: 2
-[12:58:37]I (495) wifi:Init static rx buffer size: 1600
-[12:58:37]I (499) wifi:Init static rx buffer num: 10
-[12:58:37]I (503) wifi:Init dynamic rx buffer num: 32
-[12:58:37]I (508) wifi_init: rx ba win: 6
-[12:58:37]I (510) wifi_init: accept mbox: 6
-[12:58:37]I (513) wifi_init: tcpip mbox: 32
-[12:58:37]I (516) wifi_init: udp mbox: 6
-[12:58:37]I (519) wifi_init: tcp mbox: 6
-[12:58:37]I (521) wifi_init: tcp tx win: 5760
-[12:58:37]I (525) wifi_init: tcp rx win: 5760
-[12:58:37]I (528) wifi_init: tcp mss: 1440
-[12:58:37]I (531) wifi_init: WiFi IRAM OP enabled
-[12:58:37]I (534) wifi_init: WiFi RX IRAM OP enabled
-[12:58:37]I (539) phy_init: phy_version 1232,d493f299,Aug 25 2025,19:01:20
-[12:58:37]I (576) wifi:mode : sta (c0:4e:30:9b:df:c8)
-[12:58:37]I (577) wifi:enable tsf
-[12:58:37]I (580) MAIN: WiFi STA initialized, connecting to SSID:FUCK_cao
-[12:58:37]I (580) FILE_MGR: Initializing file manager...
-[12:58:37]I (583) wifi:new:<11,2>, old:<1,0>, ap:<255,255>, sta:<11,2>, prof:1, snd_ch_cfg:0x0
-[12:58:37]I (590) wifi:state: init -> auth (0xb0)
-[12:58:37]I (594) FILE_MGR: File manager initialized successfully
-[12:58:37]I (596) wifi:state: auth -> assoc (0x0)
-[12:58:37]I (602) HTTP_SERVER: Starting HTTP server on port 80
-[12:58:37]I (604) wifi:state: assoc -> run (0x10)
-[12:58:37]I (612) WS_SERVER: WebSocket server initialized
-[12:58:37]I (614) HTTP_SERVER: Radar broadcast timer started (10Hz)
-[12:58:37]I (619) HTTP_SERVER: HTTP server started successfully
-[12:58:37]I (623) MAIN: HTTP server started
-[12:58:37]I (626) MAIN: =================================
-[12:58:37]I (631) MAIN: System Ready!
-[12:58:37]I (633) MAIN: Connecting to WiFi: FUCK_cao
-[12:58:37]I (637) MAIN: =================================
-[12:58:37]I (935) wifi:<ba-add>idx:0 (ifx:0, 64:09:80:0e:d5:a7), tid:0, ssn:2, winSize:64
-[12:58:37]I (937) wifi:connected with FUCK_cao, aid = 4, channel 11, 40D, bssid = 64:09:80:0e:d5:a7
-[12:58:37]I (939) wifi:security: WPA2-PSK, phy: bgn, rssi: -5, cipher(pairwise:0x3, group:0x3), pmf:0
-[12:58:37]I (949) wifi:pm start, type: 1
-[12:58:37]
-[12:58:37]I (950) wifi:dp: 1, bi: 102400, li: 3, scale listen interval from 307200 us to 307200 us
-[12:58:37]I (958) wifi:set rx beacon pti, rx_bcn_pti: 0, bcn_timeout: 25000, mt_pti: 0, mt_time: 10000
-[12:58:37]I (1033) wifi:AP's beacon interval = 102400 us, DTIM period = 1
-[12:58:38]I (1974) esp_netif_handlers: sta ip: 192.168.123.187, mask: 255.255.255.0, gw: 192.168.123.1
-[12:58:38]I (1975) MAIN: Got IP: 192.168.123.187
-[12:58:38]I (2463) HTTP_SERVER: Uploading to %2Fstorage%2Fwww%2Findex.html (8587 bytes)
-[12:58:38]E (2463) HTTP_SERVER: Failed to create file: %2Fstorage%2Fwww%2Findex.html
-[12:58:39]Guru Meditation Error: Core  0 panic'ed (Stack protection fault). 
-[12:58:39]
-[12:58:39]Detected in task "httpd" at 0x4038858c
-[12:58:39]Stack pointer: 0x3fcc0350
-[12:58:39]Stack bounds: 0x3fcc036c - 0x3fcc2360
-[12:58:39]
-[12:58:39]
-[12:58:39]Core  0 register dump:
-[12:58:39]MEPC    : 0x4038859c  RA      : 0x40388734  SP      : 0x3fcc0350  GP      : 0x3fc96000  
-[12:58:39]TP      : 0x3fcc2360  T0      : 0x4005890e  T1      : 0x20000000  T2      : 0xffffffff  
-[12:58:39]S0/FP   : 0x3fca21d8  S1      : 0xffffffff  A0      : 0x3fca21d8  A1      : 0xffffffff  
-[12:58:39]A2      : 0x00000004  A3      : 0x00000000  A4      : 0x00000001  A5      : 0x00000000  
-[12:58:39]A6      : 0x42007f22  A7      : 0x0000000a  S2      : 0x00000000  S3      : 0xffffffff  
-[12:58:39]S4      : 0x3fc9d994  S5      : 0x3fcc05d0  S6      : 0x3c0d470f  S7      : 0x00000000  
-[12:58:39]S8      : 0x00000001  S9      : 0x00000018  S10     : 0x00000000  S11     : 0x3fcc05e4  
-[12:58:39]T3      : 0x00000000  T4      : 0x00000000  T5      : 0x00000000  T6      : 0x00000000  
-[12:58:39]MSTATUS : 0x00001881  MTVEC   : 0x40380001  MCAUSE  : 0x0000001b  MTVAL   : 0x0000eb8d  
-[12:58:39]MHARTID : 0x00000000  
-[12:58:39]
-[12:58:39]Stack memory:
-[12:58:39]3fcc0350: 0x3fcc0014 0x3fcc0014 0x3fcc0014 0xffffffff 0x3fcc0014 0x3fcc0014 0x00002000 0xa5a5a5a5
-[12:58:39]3fcc0370: 0x00000000 0xffffffff 0x3fca21d8 0x40388734 0x00000004 0x3fca21d8 0x3fc959ac 0x403818ce
-[12:58:39]3fcc0390: 0x3fcc2360 0x4005890e 0x20000000 0x00000000 0x00000044 0x00000000 0x00000000 0x0000005c
-[12:58:39]3fcc03b0: 0x0000005c 0x00000000 0x00000000 0x403819e2 0x0000004b 0x3fcbe71c 0x3fca2230 0x42007f56
-[12:58:39]3fcc03d0: 0x3fc9d994 0x00000004 0x3fcc05e4 0x3fcbe774 0x0000005c 0x3fc9d994 0x00000000 0x4200cd0a
-[12:58:39]3fcc03f0: 0x00000004 0x3fc9d8e4 0x3fcc044c 0x3fcbe774 0x3fc9d994 0x3fc9ce18 0x0000005c 0x4200bd66
-[12:58:39]3fcc0410: 0x0000005c 0x3fc9d994 0x00000003 0x4200cd0a 0x00000001 0x3fcbe774 0x3fc9d8e4 0x3fc9d994
-[12:58:39]3fcc0430: 0x0000005c 0x3fcbe774 0x3fc9d74c 0x420a082e 0x00000000 0xffffffff 0x3fc9d8e4 0x3fcbe774
-[12:58:39]3fcc0450: 0x00000001 0x3fcbe774 0x3fc9d74c 0x420a08a0 0x00000001 0x00000001 0x3fc9d74c 0x420a0e6e
-[12:58:39]3fcc0470: 0x0000004b 0x3fcbe774 0x3fc9d74c 0x3fcc05e4 0x00000000 0x00000018 0x00000005 0x00000073
-[12:58:39]3fcc0490: 0x00000004 0x3c0d4710 0x00000015 0x00000000 0x00000000 0x3c0d470f 0x3fcc05d0 0x420ad00a
-[12:58:39]3fcc04b0: 0xa5a5a5a5 0xa5a5a5a5 0x00000001 0x420acee4 0x00000000 0x3fc9d74c 0x3fcbe774 0x3c0d470f
-[12:58:39]3fcc04d0: 0x00000000 0x00000000 0x00000000 0x00000000 0x00000000 0x00000001 0x0000005c 0x00000015
-[12:58:39]3fcc04f0: 0x00000000 0x3c0cc7bc 0x00000000 0x00000000 0xa5a5a5a5 0x3fc9d74c 0x3fcbe774 0x3c0c5c25
-[12:58:39]3fcc0510: 0x00000000 0x00000000 0x00000000 0x00000000 0x00000000 0x00000001 0x0000004b 0x0000001d
-[12:58:39]3fcc0530: 0x00000000 0x3c0cc7bc 0x00000000 0x00000000 0xa5a5a5a5 0xa5a5a5a5 0xa5a5a5a5 0xa5a5a5a5
-[12:58:39]3fcc0550: 0xa5a5a5a5 0xa5a5a5a5 0xa5a5a5a5 0xa5a5a5a5 0xa5a5a5a5 0xa5a5a5a5 0xa5a5a5a5 0xa5a5a5a5
-[12:58:39]3fcc0570: 0x00000000 0xa5a5a5a5 0x00000000 0xa5a5a5a5 0xa5a5a5a5 0xa5a5a5a5 0xa5a5a5a5 0xa5a5a5a5
-[12:58:39]3fcc0590: 0xa5a5a5a5 0xa5a5a5a5 0xa5a5a5a5 0x3fcc0990 0xa5a5a5a5 0xa5a5a5a5 0x00a5a5a5 0xa5a5a5a5
-[12:58:39]3fcc05b0: 0x00000005 0x00000000 0x00000000 0xa5a5a5a5 0xa5a5a5a5 0xa5a5a5a5 0xa5a5a5a5 0xa5a5a5a5
-[12:58:39]3fcc05d0: 0x3fcc05dc 0x00000001 0x00000001 0x3c0d470f 0x00000001 0x3c0c5c28 0x00000015 0xa5a5a5a5
-[12:58:39]3fcc05f0: 0x00000003 0x00000000 0xa5a5a5a5 0xa5a5a5a5 0xa5a5a5a5 0xa5a5a5a5 0xa5a5a5a5 0xa5a5a5a5
-[12:58:39]3fcc0610: 0x3fcc061c 0x00000000 0x00000000 0x3c0c5c25 0x00000001 0x3fcc1fd0 0x0000001d 0xa5a5a5a5
-[12:58:39]3fcc0630: 0xa5a5a5a5 0xa5a5a5a5 0xa5a5a5a5 0xa5a5a5a5 0xa5a5a5a5 0xa5a5a5a5 0xa5a5a5a5 0xa5a5a5a5
-[12:58:39]3fcc0650: 0xa5a5a5a5 0xa5a5a5a5 0xa5a5a5a5 0xa5a5a5a5 0xa5a5a5a5 0xa5a5a5a5 0xa5a5a5a5 0xa5a5a5a5
-[12:58:39]3fcc0670: 0xa5a5a5a5 0xa5a5a5a5 0xa5a5a5a5 0x35363432 0xffffffff 0xa5a5a5a5 0xa5a5a5a5 0xa5a5a5a5
-[12:58:39]3fcc0690: 0xa5a5a5a5 0xa5a5a5a5 0xa5a5a5a5 0xa5a5a5a5 0xa5a5a5a5 0xa5a5a5a5 0xa5a5a5a5 0xa5a5a5a5
-[12:58:39]3fcc06b0: 0xa5a5a5a5 0xa5a5a5a5 0xa5a5a5a5 0x33363432 0xffffffff 0xa5a5a5a5 0xa5a5a5a5 0xa5a5a5a5
-[12:58:39]3fcc06d0: 0xa5a5a5a5 0xa5a5a5a5 0xa5a5a5a5 0xa5a5a5a5 0xa5a5a5a5 0xa5a5a5a5 0xa5a5a5a5 0xa5a5a5a5
-[12:58:39]3fcc06f0: 0xa5a5a5a5 0xa5a5a5a5 0xa5a5a5a5 0xa5a5a5a5 0x000009a1 0xa5a5a5a5 0xa5a5a5a5 0xa5a5a5a5
-[12:58:39]3fcc0710: 0x3c0d4364 0xa5a5a5a5 0xa5a5a5a5 0xa5a5a5a5 0x3c0dcddc 0xa5a5a5a5 0xa5a5a5a5 0xa5a5a5a5
-[12:58:39]3fcc0730: 0x3c0d46b0 0xa5a5a5a5 0xa5a5a5a5 0xa5a5a5a5 0x3c0c5c28 0xa5a5a5a5 0xa5a5a5a5 0xa5a5a5a5
-[12:58:39]
-[12:58:39]
-[12:58:39]
-[12:58:39]ELF file SHA256: 26f25b2f4
-[12:58:39]
-[12:58:39]Rebooting...
-[12:58:39]ESP-ROM:esp32c3-api1-20210207
-[12:58:39]Build:Feb  7 2021
-[12:58:39]rst:0xc (RTC_SW_CPU_RST),boot:0xf (SPI_FAST_FLASH_BOOT)
-[12:58:39]Saved PC:0x4038086e
-[12:58:39]SPIWP:0xee
-[12:58:39]mode:DIO, clock div:1
-[12:58:39]load:0x3fcd5820,len:0x158c
-[12:58:39]load:0x403cc710,len:0xc84
-[12:58:39]load:0x403ce710,len:0x2f64
-[12:58:39]entry 0x403cc71a
-[12:58:39]I (15) boot: ESP-IDF v5.4.4 2nd stage bootloader
-[12:58:39]I (15) boot: compile time May 25 2026 04:53:09
-[12:58:39]I (16) boot: chip revision: v0.4
-[12:58:39]I (16) boot: efuse block revision: v1.3
-[12:58:39]I (19) boot.esp32c3: SPI Speed      : 80MHz
-[12:58:39]I (23) boot.esp32c3: SPI Mode       : DIO
-[12:58:39]I (27) boot.esp32c3: SPI Flash Size : 4MB
-[12:58:39]I (30) boot: Enabling RNG early entropy source...
-[12:58:39]I (35) boot: Partition Table:
-[12:58:39]I (38) boot: ## Label            Usage          Type ST Offset   Length
-[12:58:39]I (44) boot:  0 nvs              WiFi data        01 02 00009000 00004000
-[12:58:39]I (50) boot:  1 otadata          OTA data         01 00 0000d000 00002000
-[12:58:39]I (57) boot:  2 phy_init         RF data          01 01 0000f000 00001000
-[12:58:39]I (63) boot:  3 factory          factory app      00 00 00010000 00100000
-[12:58:39]I (70) boot:  4 storage          Unknown data     01 82 00110000 000e0000
-[12:58:39]I (76) boot: End of partition table
-[12:58:39]I (80) boot: Defaulting to factory image
-[12:58:39]I (83) esp_image: segment 0: paddr=00010020 vaddr=3c0c0020 size=24c98h (150680) map
-[12:58:39]I (115) esp_image: segment 1: paddr=00034cc0 vaddr=3fc95800 size=032dch ( 13020) load
-[12:58:39]I (117) esp_image: segment 2: paddr=00037fa4 vaddr=40380000 size=08074h ( 32884) load
-[12:58:39]I (125) esp_image: segment 3: paddr=00040020 vaddr=42000020 size=b4104h (737540) map
-[12:58:39]I (244) esp_image: segment 4: paddr=000f412c vaddr=40388074 size=0d73ch ( 55100) load
-[12:58:39]I (254) esp_image: segment 5: paddr=00101870 vaddr=50000000 size=0001ch (    28) load
-[12:58:39]I (261) boot: Loaded app from partition at offset 0x10000
-[12:58:39]I (261) boot: Disabling RNG early entropy source...
-[12:58:39]I (272) cpu_start: Unicore app
-[12:58:39]I (280) cpu_start: GPIO 20 and 21 are used as console UART I/O pins
-[12:58:39]I (281) cpu_start: Pro cpu start user code
-[12:58:39]I (281) cpu_start: cpu freq: 160000000 Hz
-[12:58:39]I (282) app_init: Application information:
-[12:58:39]I (286) app_init: Project name:     ld_radar_monitor
-[12:58:39]I (291) app_init: App version:      3c2132b
-[12:58:39]I (295) app_init: Compile time:     May 25 2026 04:53:03
-[12:58:39]I (300) app_init: ELF file SHA256:  26f25b2f4...
-[12:58:39]I (304) app_init: ESP-IDF:          v5.4.4
-[12:58:39]I (308) efuse_init: Min chip rev:     v0.3
-[12:58:39]I (312) efuse_init: Max chip rev:     v1.99 
-[12:58:39]I (316) efuse_init: Chip rev:         v0.4
-[12:58:39]I (320) heap_init: Initializing. RAM available for dynamic allocation:
-[12:58:39]I (326) heap_init: At 3FC9D0A0 len 00022F60 (139 KiB): RAM
-[12:58:39]I (331) heap_init: At 3FCC0000 len 0001C710 (113 KiB): Retention RAM
-[12:58:39]I (337) heap_init: At 3FCDC710 len 00002950 (10 KiB): Retention RAM
-[12:58:39]I (343) heap_init: At 5000001C len 00001FCC (7 KiB): RTCRAM
-[12:58:39]I (349) spi_flash: detected chip: generic
-[12:58:39]I (352) spi_flash: flash io: dio
-[12:58:39]I (356) sleep_gpio: Configure to isolate all GPIO pins in sleep state
-[12:58:39]I (361) sleep_gpio: Enable automatic switching of GPIO sleep configuration
-[12:58:39]I (368) main_task: Started on CPU0
-[12:58:39]I (371) main_task: Calling app_main()
-[12:58:39]I (374) MAIN: =================================
-[12:58:39]I (378) MAIN: LD Radar Web Monitor Starting...
-[12:58:39]I (382) MAIN: Version: 1.0.0
-[12:58:39]I (385) MAIN: =================================
-[12:58:39]I (397) MAIN: NVS initialized
-[12:58:39]I (397) FATFS: Mounting FATFS...
-[12:58:39]I (398) FATFS: FATFS mounted at /storage
-[12:58:39]I (400) MAIN: FATFS initialized
-[12:58:39]I (401) RADAR_ADAPT: Initializing radar adapter for LD2460...
-[12:58:39]I (407) uart: queue free spaces: 16
-[12:58:39]W (410) ld2460: Rx Break
-[12:58:39]I (412) ld2460: LD2460 driver initialized (UART1, 115200 baud, TX=GPIO0, RX=GPIO1)
-[12:58:39]I (420) RADAR_ADAPT: Radar adapter initialized successfully
-[12:58:39]I (425) RADAR_ADAPT:   Type: LD2460
-[12:58:39]I (428) RADAR_ADAPT:   Max targets: 8
-[12:58:39]I (431) RADAR_ADAPT:   3D support: No
-[12:58:39]I (435) RADAR_ADAPT:   Install mode: Yes
-[12:58:39]I (438) MAIN: Radar initialized: HLK-LD2460 (2T4R Multi-target Tracking)
-[12:58:39]I (446) pp: pp rom version: 9387209
-[12:58:39]I (448) net80211: net80211 rom version: 9387209
-[12:58:39]I (454) wifi:wifi driver task: 3fcb63e0, prio:23, stack:6656, core=0
-[12:58:39]I (464) wifi:wifi firmware version: 8896d66
-[12:58:39]I (464) wifi:wifi certification version: v7.0
-[12:58:39]I (466) wifi:config NVS flash: enabled
-[12:58:39]I (470) wifi:config nano formatting: disabled
-[12:58:39]I (474) wifi:Init data frame dynamic rx buffer num: 32
-[12:58:39]I (479) wifi:Init static rx mgmt buffer num: 5
-[12:58:39]I (483) wifi:Init management short buffer num: 32
-[12:58:39]I (487) wifi:Init dynamic tx buffer num: 32
-[12:58:39]I (491) wifi:Init static tx FG buffer num: 2
-[12:58:39]I (495) wifi:Init static rx buffer size: 1600
-[12:58:39]I (499) wifi:Init static rx buffer num: 10
-[12:58:39]I (503) wifi:Init dynamic rx buffer num: 32
-[12:58:39]I (508) wifi_init: rx ba win: 6
-[12:58:39]I (510) wifi_init: accept mbox: 6
-[12:58:39]I (513) wifi_init: tcpip mbox: 32
-[12:58:39]I (516) wifi_init: udp mbox: 6
-[12:58:39]I (519) wifi_init: tcp mbox: 6
-[12:58:39]I (521) wifi_init: tcp tx win: 5760
-[12:58:39]I (525) wifi_init: tcp rx win: 5760
-[12:58:39]I (528) wifi_init: tcp mss: 1440
-[12:58:39]I (531) wifi_init: WiFi IRAM OP enabled
-[12:58:39]I (534) wifi_init: WiFi RX IRAM OP enabled
-[12:58:39]I (539) phy_init: phy_version 1232,d493f299,Aug 25 2025,19:01:20
-[12:58:39]I (577) wifi:mode : sta (c0:4e:30:9b:df:c8)
-[12:58:39]I (577) wifi:enable tsf
-[12:58:39]I (580) MAIN: WiFi STA initialized, connecting to SSID:FUCK_cao
-[12:58:39]I (581) FILE_MGR: Initializing file manager...
-[12:58:39]I (584) wifi:new:<11,2>, old:<1,0>, ap:<255,255>, sta:<11,2>, prof:1, snd_ch_cfg:0x0
-[12:58:39]I (590) wifi:state: init -> auth (0xb0)
-[12:58:39]I (594) FILE_MGR: File manager initialized successfully
-[12:58:39]I (597) wifi:state: auth -> assoc (0x0)
-[12:58:39]I (602) HTTP_SERVER: Starting HTTP server on port 80
-[12:58:39]I (604) wifi:state: assoc -> run (0x10)
-[12:58:39]I (613) WS_SERVER: WebSocket server initialized
-[12:58:39]I (614) HTTP_SERVER: Radar broadcast timer started (10Hz)
-[12:58:39]I (619) HTTP_SERVER: HTTP server started successfully
-[12:58:39]I (624) MAIN: HTTP server started
-[12:58:39]I (627) MAIN: =================================
-[12:58:39]I (631) MAIN: System Ready!
-[12:58:39]I (634) MAIN: Connecting to WiFi: FUCK_cao
-[12:58:39]I (637) MAIN: =================================
-[12:58:40]I (862) wifi:connected with FUCK_cao, aid = 4, channel 11, 40D, bssid = 64:09:80:0e:d5:a7
-[12:58:40]I (863) wifi:security: WPA2-PSK, phy: bgn, rssi: -5, cipher(pairwise:0x3, group:0x3), pmf:0
-[12:58:40]I (869) wifi:pm start, type: 1
-[12:58:40]
-[12:58:40]I (870) wifi:dp: 1, bi: 102400, li: 3, scale listen interval from 307200 us to 307200 us
-[12:58:40]I (878) wifi:set rx beacon pti, rx_bcn_pti: 0, bcn_timeout: 25000, mt_pti: 0, mt_time: 10000
-[12:58:40]I (888) wifi:<ba-add>idx:0 (ifx:0, 64:09:80:0e:d5:a7), tid:0, ssn:2, winSize:64
-[12:58:41]I (949) wifi:AP's beacon interval = 102400 us, DTIM period = 1
-[12:58:41]I (1900) esp_netif_handlers: sta ip: 192.168.123.187, mask: 255.255.255.0, gw: 192.168.123.1
-[12:58:41]I (1901) MAIN: Got IP: 192.168.123.187
-[12:58:44]I (4660) HTTP_SERVER: Uploading to %2Fstorage%2Fwww%2Fapi.js (5980 bytes)
-[12:58:44]E (4661) HTTP_SERVER: Failed to create file: %2Fstorage%2Fwww%2Fapi.js
-[12:58:44]Guru Meditation Error: Core  0 panic'ed (Stack protection fault). 
-[12:58:44]
-[12:58:44]Detected in task "httpd" at 0x4038858c
-[12:58:44]Stack pointer: 0x3fcc0350
-[12:58:44]Stack bounds: 0x3fcc036c - 0x3fcc2360
-[12:58:44]
-[12:58:44]
-[12:58:44]Core  0 register dump:
-[12:58:44]MEPC    : 0x4038859c  RA      : 0x40388734  SP      : 0x3fcc0350  GP      : 0x3fc96000  
-[12:58:44]TP      : 0x3fcc2360  T0      : 0x4005890e  T1      : 0x40000000  T2      : 0xffffffff  
-[12:58:44]S0/FP   : 0x3fca21d8  S1      : 0xffffffff  A0      : 0x3fca21d8  A1      : 0xffffffff  
-[12:58:44]A2      : 0x00000004  A3      : 0x00000000  A4      : 0x00000001  A5      : 0x00000000  
-[12:58:44]A6      : 0x42007f22  A7      : 0x0000000a  S2      : 0x00000000  S3      : 0xffffffff  
-[12:58:44]S4      : 0x3fc9d994  S5      : 0x3fcc05d0  S6      : 0x3c0d470f  S7      : 0x00000000  
-[12:58:44]S8      : 0x00000001  S9      : 0x00000018  S10     : 0x00000000  S11     : 0x3fcc05e4  
-[12:58:44]T3      : 0x00000000  T4      : 0x00000000  T5      : 0x00000000  T6      : 0x00000000  
-[12:58:44]MSTATUS : 0x00001881  MTVEC   : 0x40380001  MCAUSE  : 0x0000001b  MTVAL   : 0x0000eb8d  
-[12:58:44]MHARTID : 0x00000000  
-[12:58:44]
-[12:58:44]Stack memory:
-[12:58:44]3fcc0350: 0x3fcc0014 0x3fcc0014 0x3fcc0014 0xffffffff 0x3fcc0014 0x3fcc0014 0x00002000 0xa5a5a5a5
-[12:58:44]3fcc0370: 0x00000000 0xffffffff 0x3fca21d8 0x40388734 0x00000004 0x3fca21d8 0x3fc959ac 0x403818ce
-[12:58:44]3fcc0390: 0x0000006a 0x0000006a 0x00000000 0x00000000 0x041d6c5b 0x00000000 0x000fffff 0x0000005c
-[12:58:44]3fcc03b0: 0x0000005c 0x00000000 0x00000000 0x403819e2 0x00000047 0x3fcbe71c 0x3fca2230 0x42007f56
-[12:58:44]3fcc03d0: 0x00000001 0x00000004 0x3fcc05e4 0x3fcbe774 0x0000005c 0x3fc9d994 0x00000000 0x4200cd0a
-[12:58:44]3fcc03f0: 0x00000004 0x3fc9d8e4 0x3fcc044c 0x3fcbe774 0x3fc9d994 0x3fc9ce18 0x0000005c 0x4200bd66
-[12:58:44]3fcc0410: 0x0000005c 0x3fc9d994 0x00000003 0x4200cd0a 0x00000001 0x3fcbe774 0x3fc9d8e4 0x3fc9d994
-[12:58:44]3fcc0430: 0x0000005c 0x3fcbe774 0x3fc9d74c 0x420a082e 0x00000000 0xffffffff 0x3fc9d8e4 0x3fcbe774
-[12:58:44]3fcc0450: 0x00000001 0x3fcbe774 0x3fc9d74c 0x420a08a0 0x00000001 0x00000001 0x3fc9d74c 0x420a0e6e
-[12:58:44]3fcc0470: 0x00000047 0x3fcbe774 0x3fc9d74c 0x3fcc05e4 0x00000000 0x00000018 0x00000005 0x00000073
-[12:58:44]3fcc0490: 0x00000004 0x3c0d4710 0x00000015 0x00000000 0x00000000 0x3c0d470f 0x3fcc05d0 0x420ad00a
-[12:58:44]3fcc04b0: 0x00000004 0x00000008 0x00000001 0x420acee4 0x00000000 0x3fc9d74c 0x3fcbe774 0x3c0d470f
-[12:58:44]3fcc04d0: 0x00000000 0x00000000 0x00000000 0x00000000 0x00000000 0x00000001 0x0000005c 0x00000015
-[12:58:44]3fcc04f0: 0x00000000 0x3c0cc7bc 0x00000000 0x00000000 0xa5a5a5a5 0x3fc9d74c 0x3fcbe774 0x3c0c5c25
-[12:58:44]3fcc0510: 0x00000000 0x00000000 0x00000000 0x00000000 0x00000000 0x00000001 0x00000047 0x00000019
-[12:58:44]3fcc0530: 0x00000000 0x3c0cc7bc 0x00000000 0x00000000 0xa5a5a5a5 0xa5a5a5a5 0xa5a5a5a5 0xa5a5a5a5
-[12:58:44]3fcc0550: 0xa5a5a5a5 0xa5a5a5a5 0xa5a5a5a5 0xa5a5a5a5 0xa5a5a5a5 0xa5a5a5a5 0xa5a5a5a5 0xa5a5a5a5
-[12:58:44]3fcc0570: 0x00000000 0xa5a5a5a5 0x00000000 0xa5a5a5a5 0xa5a5a5a5 0xa5a5a5a5 0xa5a5a5a5 0xa5a5a5a5
-[12:58:44]3fcc0590: 0xa5a5a5a5 0xa5a5a5a5 0xa5a5a5a5 0x3fcc0990 0xa5a5a5a5 0xa5a5a5a5 0x00a5a5a5 0xa5a5a5a5
-[12:58:44]3fcc05b0: 0x00000005 0x00000000 0x00000000 0xa5a5a5a5 0xa5a5a5a5 0xa5a5a5a5 0xa5a5a5a5 0xa5a5a5a5
-[12:58:44]3fcc05d0: 0x3fcc05dc 0x00000001 0x00000001 0x3c0d470f 0x00000001 0x3c0c5c28 0x00000015 0xa5a5a5a5
-[12:58:44]3fcc05f0: 0x00000003 0x00000000 0xa5a5a5a5 0xa5a5a5a5 0xa5a5a5a5 0xa5a5a5a5 0xa5a5a5a5 0xa5a5a5a5
-[12:58:44]3fcc0610: 0x3fcc061c 0x00000000 0x00000000 0x3c0c5c25 0x00000001 0x3fcc1fd0 0x00000019 0xa5a5a5a5
-[12:58:44]3fcc0630: 0xa5a5a5a5 0xa5a5a5a5 0xa5a5a5a5 0xa5a5a5a5 0xa5a5a5a5 0xa5a5a5a5 0xa5a5a5a5 0xa5a5a5a5
-[12:58:44]3fcc0650: 0xa5a5a5a5 0xa5a5a5a5 0xa5a5a5a5 0xa5a5a5a5 0xa5a5a5a5 0xa5a5a5a5 0xa5a5a5a5 0xa5a5a5a5
-[12:58:44]3fcc0670: 0xa5a5a5a5 0xa5a5a5a5 0xa5a5a5a5 0x33363634 0xffffffff 0xa5a5a5a5 0xa5a5a5a5 0xa5a5a5a5
-[12:58:44]3fcc0690: 0xa5a5a5a5 0xa5a5a5a5 0xa5a5a5a5 0xa5a5a5a5 0xa5a5a5a5 0xa5a5a5a5 0xa5a5a5a5 0xa5a5a5a5
-[12:58:44]3fcc06b0: 0xa5a5a5a5 0xa5a5a5a5 0xa5a5a5a5 0x31363634 0xffffffff 0xa5a5a5a5 0xa5a5a5a5 0xa5a5a5a5
-[12:58:44]3fcc06d0: 0xa5a5a5a5 0xa5a5a5a5 0xa5a5a5a5 0xa5a5a5a5 0xa5a5a5a5 0xa5a5a5a5 0xa5a5a5a5 0xa5a5a5a5
-[12:58:44]3fcc06f0: 0xa5a5a5a5 0xa5a5a5a5 0xa5a5a5a5 0xa5a5a5a5 0x00001237 0xa5a5a5a5 0xa5a5a5a5 0xa5a5a5a5
-[12:58:44]3fcc0710: 0x3c0d4364 0xa5a5a5a5 0xa5a5a5a5 0xa5a5a5a5 0x3c0dcddc 0xa5a5a5a5 0xa5a5a5a5 0xa5a5a5a5
-[12:58:44]3fcc0730: 0x3c0d46b0 0xa5a5a5a5 0xa5a5a5a5 0xa5a5a5a5 0x3c0c5c28 0xa5a5a5a5 0xa5a5a5a5 0xa5a5a5a5
-[12:58:44]
-[12:58:44]
-[12:58:44]
-[12:58:44]ELF file SHA256: 26f25b2f4
-[12:58:44]
-[12:58:44]Rebooting...
-[12:58:44]ESP-ROM:esp32c3-api1-20210207
-[12:58:44]Build:Feb  7 2021
-[12:58:44]rst:0xc (RTC_SW_CPU_RST),boot:0xf (SPI_FAST_FLASH_BOOT)
-[12:58:44]Saved PC:0x4038086e
-[12:58:44]SPIWP:0xee
-[12:58:44]mode:DIO, clock div:1
-[12:58:44]load:0x3fcd5820,len:0x158c
-[12:58:44]load:0x403cc710,len:0xc84
-[12:58:44]load:0x403ce710,len:0x2f64
-[12:58:44]entry 0x403cc71a
-[12:58:44]I (15) boot: ESP-IDF v5.4.4 2nd stage bootloader
-[12:58:44]I (15) boot: compile time May 25 2026 04:53:09
-[12:58:44]I (16) boot: chip revision: v0.4
-[12:58:44]I (16) boot: efuse block revision: v1.3
-[12:58:44]I (19) boot.esp32c3: SPI Speed      : 80MHz
-[12:58:44]I (23) boot.esp32c3: SPI Mode       : DIO
-[12:58:44]I (27) boot.esp32c3: SPI Flash Size : 4MB
-[12:58:44]I (31) boot: Enabling RNG early entropy source...
-[12:58:44]I (35) boot: Partition Table:
-[12:58:44]I (38) boot: ## Label            Usage          Type ST Offset   Length
-[12:58:44]I (44) boot:  0 nvs              WiFi data        01 02 00009000 00004000
-[12:58:44]I (50) boot:  1 otadata          OTA data         01 00 0000d000 00002000
-[12:58:44]I (57) boot:  2 phy_init         RF data          01 01 0000f000 00001000
-[12:58:44]I (63) boot:  3 factory          factory app      00 00 00010000 00100000
-[12:58:44]I (70) boot:  4 storage          Unknown data     01 82 00110000 000e0000
-[12:58:44]I (76) boot: End of partition table
-[12:58:44]I (80) boot: Defaulting to factory image
-[12:58:44]I (83) esp_image: segment 0: paddr=00010020 vaddr=3c0c0020 size=24c98h (150680) map
-[12:58:44]I (115) esp_image: segment 1: paddr=00034cc0 vaddr=3fc95800 size=032dch ( 13020) load
-[12:58:44]I (118) esp_image: segment 2: paddr=00037fa4 vaddr=40380000 size=08074h ( 32884) load
-[12:58:44]I (125) esp_image: segment 3: paddr=00040020 vaddr=42000020 size=b4104h (737540) map
-[12:58:44]I (244) esp_image: segment 4: paddr=000f412c vaddr=40388074 size=0d73ch ( 55100) load
-[12:58:44]I (254) esp_image: segment 5: paddr=00101870 vaddr=50000000 size=0001ch (    28) load
-[12:58:44]I (261) boot: Loaded app from partition at offset 0x10000
-[12:58:44]I (261) boot: Disabling RNG early entropy source...
-[12:58:44]I (272) cpu_start: Unicore app
-[12:58:44]I (280) cpu_start: GPIO 20 and 21 are used as console UART I/O pins
-[12:58:44]I (281) cpu_start: Pro cpu start user code
-[12:58:44]I (281) cpu_start: cpu freq: 160000000 Hz
-[12:58:44]I (283) app_init: Application information:
-[12:58:44]I (286) app_init: Project name:     ld_radar_monitor
-[12:58:44]I (291) app_init: App version:      3c2132b
-[12:58:44]I (295) app_init: Compile time:     May 25 2026 04:53:03
-[12:58:44]I (300) app_init: ELF file SHA256:  26f25b2f4...
-[12:58:44]I (304) app_init: ESP-IDF:          v5.4.4
-[12:58:44]I (308) efuse_init: Min chip rev:     v0.3
-[12:58:44]I (312) efuse_init: Max chip rev:     v1.99 
-[12:58:44]I (316) efuse_init: Chip rev:         v0.4
-[12:58:44]I (320) heap_init: Initializing. RAM available for dynamic allocation:
-[12:58:44]I (326) heap_init: At 3FC9D0A0 len 00022F60 (139 KiB): RAM
-[12:58:44]I (331) heap_init: At 3FCC0000 len 0001C710 (113 KiB): Retention RAM
-[12:58:44]I (337) heap_init: At 3FCDC710 len 00002950 (10 KiB): Retention RAM
-[12:58:44]I (343) heap_init: At 5000001C len 00001FCC (7 KiB): RTCRAM
-[12:58:44]I (349) spi_flash: detected chip: generic
-[12:58:44]I (352) spi_flash: flash io: dio
-[12:58:44]I (356) sleep_gpio: Configure to isolate all GPIO pins in sleep state
-[12:58:44]I (362) sleep_gpio: Enable automatic switching of GPIO sleep configuration
-[12:58:44]I (368) main_task: Started on CPU0
-[12:58:44]I (371) main_task: Calling app_main()
-[12:58:44]I (374) MAIN: =================================
-[12:58:44]I (378) MAIN: LD Radar Web Monitor Starting...
-[12:58:44]I (382) MAIN: Version: 1.0.0
-[12:58:44]I (385) MAIN: =================================
-[12:58:44]I (397) MAIN: NVS initialized
-[12:58:44]I (397) FATFS: Mounting FATFS...
-[12:58:44]I (398) FATFS: FATFS mounted at /storage
-[12:58:44]I (400) MAIN: FATFS initialized
-[12:58:44]I (401) RADAR_ADAPT: Initializing radar adapter for LD2460...
-[12:58:44]I (407) uart: queue free spaces: 16
-[12:58:44]W (410) ld2460: Rx Break
-[12:58:44]I (412) ld2460: LD2460 driver initialized (UART1, 115200 baud, TX=GPIO0, RX=GPIO1)
-[12:58:44]I (420) RADAR_ADAPT: Radar adapter initialized successfully
-[12:58:44]I (425) RADAR_ADAPT:   Type: LD2460
-[12:58:44]I (428) RADAR_ADAPT:   Max targets: 8
-[12:58:44]I (431) RADAR_ADAPT:   3D support: No
-[12:58:44]I (435) RADAR_ADAPT:   Install mode: Yes
-[12:58:44]I (438) MAIN: Radar initialized: HLK-LD2460 (2T4R Multi-target Tracking)
-[12:58:44]I (446) pp: pp rom version: 9387209
-[12:58:44]I (448) net80211: net80211 rom version: 9387209
-[12:58:44]I (454) wifi:wifi driver task: 3fcb63e0, prio:23, stack:6656, core=0
-[12:58:44]I (464) wifi:wifi firmware version: 8896d66
-[12:58:44]I (464) wifi:wifi certification version: v7.0
-[12:58:44]I (466) wifi:config NVS flash: enabled
-[12:58:44]I (470) wifi:config nano formatting: disabled
-[12:58:44]I (474) wifi:Init data frame dynamic rx buffer num: 32
-[12:58:44]I (479) wifi:Init static rx mgmt buffer num: 5
-[12:58:44]I (483) wifi:Init management short buffer num: 32
-[12:58:44]I (487) wifi:Init dynamic tx buffer num: 32
-[12:58:44]I (491) wifi:Init static tx FG buffer num: 2
-[12:58:44]I (495) wifi:Init static rx buffer size: 1600
-[12:58:44]I (499) wifi:Init static rx buffer num: 10
-[12:58:44]I (503) wifi:Init dynamic rx buffer num: 32
-[12:58:44]I (508) wifi_init: rx ba win: 6
-[12:58:44]I (510) wifi_init: accept mbox: 6
-[12:58:44]I (513) wifi_init: tcpip mbox: 32
-[12:58:44]I (516) wifi_init: udp mbox: 6
-[12:58:44]I (519) wifi_init: tcp mbox: 6
-[12:58:44]I (521) wifi_init: tcp tx win: 5760
-[12:58:44]I (525) wifi_init: tcp rx win: 5760
-[12:58:44]I (528) wifi_init: tcp mss: 1440
-[12:58:44]I (531) wifi_init: WiFi IRAM OP enabled
-[12:58:44]I (534) wifi_init: WiFi RX IRAM OP enabled
-[12:58:44]I (539) phy_init: phy_version 1232,d493f299,Aug 25 2025,19:01:20
-[12:58:44]I (576) wifi:mode : sta (c0:4e:30:9b:df:c8)
-[12:58:44]I (577) wifi:enable tsf
-[12:58:44]I (580) MAIN: WiFi STA initialized, connecting to SSID:FUCK_cao
-[12:58:44]I (580) FILE_MGR: Initializing file manager...
-[12:58:44]I (583) wifi:new:<11,2>, old:<1,0>, ap:<255,255>, sta:<11,2>, prof:1, snd_ch_cfg:0x0
-[12:58:44]I (589) wifi:state: init -> auth (0xb0)
-[12:58:44]I (594) FILE_MGR: File manager initialized successfully
-[12:58:45]I (596) wifi:state: auth -> assoc (0x0)
-[12:58:45]I (602) HTTP_SERVER: Starting HTTP server on port 80
-[12:58:45]I (604) wifi:state: assoc -> run (0x10)
-[12:58:45]I (612) WS_SERVER: WebSocket server initialized
-[12:58:45]I (613) HTTP_SERVER: Radar broadcast timer started (10Hz)
-[12:58:45]I (618) HTTP_SERVER: HTTP server started successfully
-[12:58:45]I (623) MAIN: HTTP server started
-[12:58:45]I (626) MAIN: =================================
-[12:58:45]I (631) MAIN: System Ready!
-[12:58:45]I (633) MAIN: Connecting to WiFi: FUCK_cao
-[12:58:45]I (637) MAIN: =================================
-[12:58:45]I (957) wifi:<ba-add>idx:0 (ifx:0, 64:09:80:0e:d5:a7), tid:0, ssn:2, winSize:64
-[12:58:45]I (959) wifi:connected with FUCK_cao, aid = 4, channel 11, 40D, bssid = 64:09:80:0e:d5:a7
-[12:58:45]I (962) wifi:security: WPA2-PSK, phy: bgn, rssi: -5, cipher(pairwise:0x3, group:0x3), pmf:0
-[12:58:45]I (971) wifi:pm start, type: 1
-[12:58:45]
-[12:58:45]I (973) wifi:dp: 1, bi: 102400, li: 3, scale listen interval from 307200 us to 307200 us
-[12:58:45]I (981) wifi:set rx beacon pti, rx_bcn_pti: 0, bcn_timeout: 25000, mt_pti: 0, mt_time: 10000
-[12:58:45]I (1023) wifi:AP's beacon interval = 102400 us, DTIM period = 1
-[12:58:46]I (1997) esp_netif_handlers: sta ip: 192.168.123.187, mask: 255.255.255.0, gw: 192.168.123.1
-[12:58:46]I (1998) MAIN: Got IP: 192.168.123.187
+[13:58:00]
+[13:58:00]assert failed: xQueueSemaphoreTake queue.c:1709 (( pxQueue ))
+[13:58:00]Core  0 register dump:
+[13:58:00]MEPC    : 0x403808b6  RA      : 0x403878b2  SP      : 0x3fca2d50  GP      : 0x3fc96000  
+[13:58:00]TP      : 0x3fca3060  T0      : 0x37363534  T1      : 0x7271706f  T2      : 0x33323130  
+[13:58:00]S0/FP   : 0x0000008a  S1      : 0x00000001  A0      : 0x3fca2d8c  A1      : 0x3fc97c45  
+[13:58:00]A2      : 0x00000001  A3      : 0x00000029  A4      : 0x00000001  A5      : 0x3fc9e000  
+[13:58:00]A6      : 0x7a797877  A7      : 0x76757473  S2      : 0x00000009  S3      : 0x3fca2e9d  
+[13:58:00]S4      : 0x3fc97c44  S5      : 0x00000000  S6      : 0x00000000  S7      : 0x00000000  
+[13:58:00]S8      : 0x00000000  S9      : 0x00000000  S10     : 0x00000000  S11     : 0x00000000  
+[13:58:00]T3      : 0x6e6d6c6b  T4      : 0x6a696867  T5      : 0x66656463  T6      : 0x62613938  
+[13:58:00]MSTATUS : 0x00001881  MTVEC   : 0x40380001  MCAUSE  : 0x00000002  MTVAL   : 0x00000000  
+[13:58:00]MHARTID : 0x00000000  
+[13:58:00]
+[13:58:00]Stack memory:
+[13:58:00]3fca2d50: 0xa5a5a5a5 0xa5a5a5a5 0x3c0d99e0 0x403908d6 0x3fc97c2c 0x3c0d99e0 0x3fc98318 0x3c0c398a
+[13:58:00]3fca2d70: 0x3fc97c3c 0x3fca2d84 0x3fc97c40 0x3c0c3c0c 0x3fc97c44 0x39303731 0xa5a5a500 0x65737361
+[13:58:00]3fca2d90: 0x66207472 0x656c6961 0x78203a64 0x75657551 0x6d655365 0x6f687061 0x61546572 0x7120656b
+[13:58:00]3fca2db0: 0x65756575 0x313a632e 0x20393037 0x70202828 0x65755178 0x29206575 0xa5a50029 0xa5a5a5a5
+[13:58:00]3fca2dd0: 0xa5a5a5a5 0xa5a5a5a5 0xa5a5a5a5 0xa5a5a5a5 0xa5a5a5a5 0xa5a5a5a5 0xa5a5a5a5 0xa5a5a5a5
+[13:58:00]3fca2df0: 0xa5a5a5a5 0xa5a5a5a5 0xa5a5a5a5 0xa5a5a5a5 0xa5a5a5a5 0xa5a5a5a5 0xa5a5a5a5 0xa5a5a5a5
+[13:58:00]3fca2e10: 0xa5a5a5a5 0xa5a5a5a5 0xa5a5a5a5 0xa5a5a5a5 0xa5a5a5a5 0xa5a5a5a5 0xa5a5a5a5 0xa5a5a5a5
+[13:58:00]3fca2e30: 0xa5a5a5a5 0xa5a5a5a5 0xa5a5a5a5 0xa5a5a5a5 0xa5a5a5a5 0xa5a5a5a5 0xa5a5a5a5 0xa5a5a5a5
+[13:58:00]3fca2e50: 0xa5a5a5a5 0x00000000 0x00000000 0xa5000000 0xa5a5a5a5 0xa5a5a5a5 0x00000000 0x00000000
+[13:58:00]3fca2e70: 0x00000150 0x00000150 0x00000000 0x403885ce 0xa5a5a5a5 0xa5a5a5a5 0xa5a5a5a5 0xffffffff
+[13:58:00]3fca2e90: 0xa5a5a5a5 0xa5a5a5a5 0xa5a5a5a5 0xa5a5a5a5 0x00000150 0x00000150 0x3fcbfc64 0x42011092
+[13:58:00]3fca2eb0: 0xa5a5a5a5 0xa5a5a5a5 0x3fcbfc64 0x4200eb0c 0xa5a5a5a5 0xa5a5a5a5 0xa5a5a5a5 0xa5a5a5a5
+[13:58:00]3fca2ed0: 0xa5a5a5a5 0xa5a5a5a5 0xa5a5a5a5 0xa5a5a5a5 0xa5a5a5a5 0xa5a5a5a5 0xa5a5a5a5 0xa5a5a5a5
+[13:58:00]3fca2ef0: 0xa5a5a5a5 0xa5a5a5a5 0xa5a5a5a5 0xa5a5a5a5 0xa5a5a5a5 0xa5a5a5a5 0xa5a5a5a5 0xa5a5a5a5
+[13:58:00]3fca2f10: 0xa5a5a5a5 0xa5a5a5a5 0xa5a5a5a5 0xa5a5a5a5 0xa5a5a5a5 0xa5a5a5a5 0xa5a5a5a5 0xa5a5a5a5
+[13:58:00]3fca2f30: 0xa5a5a5a5 0xa5a5a5a5 0xa5a5a5a5 0xa5a5a5a5 0xa5a5a5a5 0xa5a5a5a5 0xa5a5a5a5 0xa5a5a5a5
+[13:58:00]3fca2f50: 0xa5a5a5a5 0xa5a5a5a5 0xa5a5a5a5 0xa5a5a5a5 0x4038344e 0x40388c66 0x3fca2fe0 0x3fc96000
+[13:58:00]3fca2f70: 0x3fca3060 0x00000000 0x00000000 0x00000000 0x00000000 0x000000ed 0x00000001 0x00000001
+[13:58:00]3fca2f90: 0x3fca3088 0x00000004 0x00000001 0x403884e4 0x3fc9a8cc 0x00000000 0x00000150 0x00000000
+[13:58:00]3fca2fb0: 0x00000000 0x00000000 0x00000000 0x00000000 0x00000000 0x00000000 0x00000000 0x00000000
+[13:58:00]3fca2fd0: 0x00000150 0x00000150 0x3fcbfc64 0x4038926e 0x00000150 0x00000150 0x00000000 0x4038932a
+[13:58:00]3fca2ff0: 0x00000001 0x000000ec 0x3fcbfc64 0x00000000 0x00000000 0x00000000 0x00000000 0x403894b8
+[13:58:00]3fca3010: 0x00000000 0x00000000 0x00000000 0x00000000 0x00000000 0x00000000 0x00000000 0x403889a4
+[13:58:00]3fca3030: 0x00000000 0x00000000 0x00000000 0x00000000 0x00000000 0x00000000 0x00000000 0x00000000
+[13:58:00]3fca3050: 0x00000000 0xa5a5a5a5 0xa5a5a5a5 0xa5a5a5a5 0xa5a5a5a5 0xa5a5a5a5 0xa5a5a5a5 0x00000150
+[13:58:00]3fca3070: 0x3fca2f60 0x00000150 0x3fc98ca4 0x3fc98ca4 0x3fca3070 0x3fc98c9c 0x00000018 0x3fc9a8cc
+[13:58:00]3fca3090: 0x3fc9a8cc 0x3fca3070 0x00000000 0x00000001 0x3fca286c 0x20726d54 0x00637653 0x00000000
+[13:58:00]3fca30b0: 0x00000000 0x3fca3060 0x00000001 0x00000000 0x00000000 0x00000000 0x00000000 0x3fc9e6e4
+[13:58:00]3fca30d0: 0x3fc9e74c 0x3fc9e7b4 0x00000000 0x00000000 0x00000001 0x00000000 0x00000000 0x00000000
+[13:58:00]3fca30f0: 0x420060b4 0x00000000 0x00000000 0x00000000 0x00000000 0x00000000 0x00000000 0x00000000
+[13:58:00]3fca3110: 0x00000000 0x00000000 0x00000000 0x00000000 0x00000000 0x00000000 0x00000000 0x00000000
+[13:58:00]3fca3130: 0x00000000 0x00000000 0x00000000 0x00000000 0x00000000 0x00000000 0x00000000 0x00000000
+[13:58:00]
+[13:58:00]
+[13:58:00]
+[13:58:00]ELF file SHA256: 420827ec9
+[13:58:00]
+[13:58:00]Rebooting...
+[13:58:00]ESP-ROM:esp32c3-api1-20210207
+[13:58:00]Build:Feb  7 2021
+[13:58:00]rst:0xc (RTC_SW_CPU_RST),boot:0xf (SPI_FAST_FLASH_BOOT)
+[13:58:00]Saved PC:0x4038086e
+[13:58:00]SPIWP:0xee
+[13:58:00]mode:DIO, clock div:1
+[13:58:00]load:0x3fcd5820,len:0x158c
+[13:58:00]load:0x403cc710,len:0xc84
+[13:58:00]load:0x403ce710,len:0x2f64
+[13:58:00]entry 0x403cc71a
+[13:58:00]I (15) boot: ESP-IDF v5.4.4 2nd stage bootloader
+[13:58:00]I (15) boot: compile time May 25 2026 05:41:34
+[13:58:00]I (15) boot: chip revision: v0.4
+[13:58:00]I (16) boot: efuse block revision: v1.3
+[13:58:00]I (19) boot.esp32c3: SPI Speed      : 80MHz
+[13:58:00]I (23) boot.esp32c3: SPI Mode       : DIO
+[13:58:00]I (27) boot.esp32c3: SPI Flash Size : 4MB
+[13:58:00]I (30) boot: Enabling RNG early entropy source...
+[13:58:00]I (35) boot: Partition Table:
+[13:58:00]I (37) boot: ## Label            Usage          Type ST Offset   Length
+[13:58:00]I (44) boot:  0 nvs              WiFi data        01 02 00009000 00004000
+[13:58:00]I (50) boot:  1 otadata          OTA data         01 00 0000d000 00002000
+[13:58:00]I (57) boot:  2 phy_init         RF data          01 01 0000f000 00001000
+[13:58:00]I (63) boot:  3 factory          factory app      00 00 00010000 00100000
+[13:58:00]I (70) boot:  4 storage          Unknown data     01 82 00110000 000e0000
+[13:58:00]I (76) boot: End of partition table
+[13:58:00]I (80) boot: Defaulting to factory image
+[13:58:00]I (83) esp_image: segment 0: paddr=00010020 vaddr=3c0c0020 size=24cb0h (150704) map
+[13:58:00]I (115) esp_image: segment 1: paddr=00034cd8 vaddr=3fc95800 size=032dch ( 13020) load
+[13:58:00]I (117) esp_image: segment 2: paddr=00037fbc vaddr=40380000 size=0805ch ( 32860) load
+[13:58:00]I (125) esp_image: segment 3: paddr=00040020 vaddr=42000020 size=b4178h (737656) map
+[13:58:00]I (244) esp_image: segment 4: paddr=000f41a0 vaddr=4038805c size=0d754h ( 55124) load
+[13:58:00]I (254) esp_image: segment 5: paddr=001018fc vaddr=50000000 size=0001ch (    28) load
+[13:58:00]I (261) boot: Loaded app from partition at offset 0x10000
+[13:58:00]I (261) boot: Disabling RNG early entropy source...
+[13:58:00]I (272) cpu_start: Unicore app
+[13:58:00]I (280) cpu_start: GPIO 20 and 21 are used as console UART I/O pins
+[13:58:00]I (281) cpu_start: Pro cpu start user code
+[13:58:00]I (281) cpu_start: cpu freq: 160000000 Hz
+[13:58:00]I (283) app_init: Application information:
+[13:58:00]I (286) app_init: Project name:     ld_radar_monitor
+[13:58:00]I (291) app_init: App version:      635e248
+[13:58:00]I (295) app_init: Compile time:     May 25 2026 05:41:28
+[13:58:00]I (300) app_init: ELF file SHA256:  420827ec9...
+[13:58:00]I (304) app_init: ESP-IDF:          v5.4.4
+[13:58:00]I (308) efuse_init: Min chip rev:     v0.3
+[13:58:00]I (312) efuse_init: Max chip rev:     v1.99 
+[13:58:00]I (316) efuse_init: Chip rev:         v0.4
+[13:58:00]I (320) heap_init: Initializing. RAM available for dynamic allocation:
+[13:58:00]I (326) heap_init: At 3FC9E0A0 len 00021F60 (135 KiB): RAM
+[13:58:00]I (331) heap_init: At 3FCC0000 len 0001C710 (113 KiB): Retention RAM
+[13:58:00]I (337) heap_init: At 3FCDC710 len 00002950 (10 KiB): Retention RAM
+[13:58:00]I (343) heap_init: At 5000001C len 00001FCC (7 KiB): RTCRAM
+[13:58:00]I (349) spi_flash: detected chip: generic
+[13:58:00]I (352) spi_flash: flash io: dio
+[13:58:00]I (356) sleep_gpio: Configure to isolate all GPIO pins in sleep state
+[13:58:00]I (362) sleep_gpio: Enable automatic switching of GPIO sleep configuration
+[13:58:00]I (368) main_task: Started on CPU0
+[13:58:00]I (371) main_task: Calling app_main()
+[13:58:00]I (374) MAIN: =================================
+[13:58:00]I (378) MAIN: LD Radar Web Monitor Starting...
+[13:58:00]I (382) MAIN: Version: 1.0.0
+[13:58:00]I (385) MAIN: =================================
+[13:58:00]I (396) MAIN: NVS initialized
+[13:58:00]I (397) FATFS: Mounting FATFS...
+[13:58:00]I (398) FATFS: FATFS mounted at /storage
+[13:58:00]I (399) MAIN: FATFS initialized
+[13:58:00]I (401) RADAR_ADAPT: Initializing radar adapter for LD2460...
+[13:58:00]I (407) uart: queue free spaces: 16
+[13:58:00]W (410) ld2460: Rx Break
+[13:58:00]I (412) ld2460: LD2460 driver initialized (UART1, 115200 baud, TX=GPIO0, RX=GPIO1)
+[13:58:00]I (420) RADAR_ADAPT: Radar adapter initialized successfully
+[13:58:00]I (425) RADAR_ADAPT:   Type: LD2460
+[13:58:00]I (428) RADAR_ADAPT:   Max targets: 8
+[13:58:00]I (431) RADAR_ADAPT:   3D support: No
+[13:58:00]I (435) RADAR_ADAPT:   Install mode: Yes
+[13:58:00]I (438) MAIN: Radar initialized: HLK-LD2460 (2T4R Multi-target Tracking)
+[13:58:00]I (446) pp: pp rom version: 9387209
+[13:58:00]I (448) net80211: net80211 rom version: 9387209
+[13:58:00]I (454) wifi:wifi driver task: 3fcb73e0, prio:23, stack:6656, core=0
+[13:58:00]I (463) wifi:wifi firmware version: 8896d66
+[13:58:00]I (464) wifi:wifi certification version: v7.0
+[13:58:00]I (466) wifi:config NVS flash: enabled
+[13:58:00]I (470) wifi:config nano formatting: disabled
+[13:58:00]I (474) wifi:Init data frame dynamic rx buffer num: 32
+[13:58:00]I (479) wifi:Init static rx mgmt buffer num: 5
+[13:58:00]I (483) wifi:Init management short buffer num: 32
+[13:58:00]I (487) wifi:Init dynamic tx buffer num: 32
+[13:58:00]I (491) wifi:Init static tx FG buffer num: 2
+[13:58:00]I (495) wifi:Init static rx buffer size: 1600
+[13:58:00]I (499) wifi:Init static rx buffer num: 10
+[13:58:00]I (503) wifi:Init dynamic rx buffer num: 32
+[13:58:00]I (508) wifi_init: rx ba win: 6
+[13:58:00]I (510) wifi_init: accept mbox: 6
+[13:58:00]I (513) wifi_init: tcpip mbox: 32
+[13:58:00]I (516) wifi_init: udp mbox: 6
+[13:58:00]I (519) wifi_init: tcp mbox: 6
+[13:58:00]I (521) wifi_init: tcp tx win: 5760
+[13:58:00]I (525) wifi_init: tcp rx win: 5760
+[13:58:00]I (528) wifi_init: tcp mss: 1440
+[13:58:00]I (531) wifi_init: WiFi IRAM OP enabled
+[13:58:00]I (534) wifi_init: WiFi RX IRAM OP enabled
+[13:58:00]I (539) phy_init: phy_version 1232,d493f299,Aug 25 2025,19:01:20
+[13:58:00]I (576) wifi:mode : sta (c0:4e:30:9b:df:c8)
+[13:58:00]I (576) wifi:enable tsf
+[13:58:00]I (579) MAIN: WiFi STA initialized, connecting to SSID:FUCK_cao
+[13:58:00]I (579) FILE_MGR: Initializing file manager...
+[13:58:00]I (581) FILE_MGR: File manager initialized successfully
+[13:58:00]I (586) HTTP_SERVER: Starting HTTP server on port 80
+[13:58:00]W (593) httpd_uri: httpd_register_uri_handler: no slots left for registering handler
+[13:58:00]W (598) HTTP_SERVER: WebSocket init failed: ESP_ERR_HTTPD_HANDLERS_FULL
+[13:58:00]I (604) HTTP_SERVER: Radar broadcast timer started (10Hz)
+[13:58:00]I (609) HTTP_SERVER: HTTP server started successfully
+[13:58:00]I (614) MAIN: HTTP server started
+[13:58:00]I (617) MAIN: =================================
+[13:58:00]I (621) MAIN: System Ready!
+[13:58:00]I (624) MAIN: Connecting to WiFi: FUCK_cao
+[13:58:00]I (628) MAIN: =================================
+[13:58:00]
+[13:58:00]assert failed: xQueueSemaphoreTake queue.c:1709 (( pxQueue ))
+[13:58:00]Core  0 register dump:
+[13:58:00]MEPC    : 0x403808b6  RA      : 0x403878b2  SP      : 0x3fca2d50  GP      : 0x3fc96000  
+[13:58:00]TP      : 0x3fca3060  T0      : 0x37363534  T1      : 0x7271706f  T2      : 0x33323130  
+[13:58:00]S0/FP   : 0x0000008a  S1      : 0x00000001  A0      : 0x3fca2d8c  A1      : 0x3fc97c45  
+[13:58:00]A2      : 0x00000001  A3      : 0x00000029  A4      : 0x00000001  A5      : 0x3fc9e000  
+[13:58:00]A6      : 0x7a797877  A7      : 0x76757473  S2      : 0x00000009  S3      : 0x3fca2e9d  
+[13:58:00]S4      : 0x3fc97c44  S5      : 0x00000000  S6      : 0x00000000  S7      : 0x00000000  
+[13:58:00]S8      : 0x00000000  S9      : 0x00000000  S10     : 0x00000000  S11     : 0x00000000  
+[13:58:00]T3      : 0x6e6d6c6b  T4      : 0x6a696867  T5      : 0x66656463  T6      : 0x62613938  
+[13:58:00]MSTATUS : 0x00001881  MTVEC   : 0x40380001  MCAUSE  : 0x00000002  MTVAL   : 0x00000000  
+[13:58:00]MHARTID : 0x00000000  
+[13:58:00]
+[13:58:00]Stack memory:
+[13:58:00]3fca2d50: 0xa5a5a5a5 0xa5a5a5a5 0x3c0d99e0 0x403908d6 0x3fc97c2c 0x3c0d99e0 0x3fc98318 0x3c0c398a
+[13:58:00]3fca2d70: 0x3fc97c3c 0x3fca2d84 0x3fc97c40 0x3c0c3c0c 0x3fc97c44 0x39303731 0xa5a5a500 0x65737361
+[13:58:00]3fca2d90: 0x66207472 0x656c6961 0x78203a64 0x75657551 0x6d655365 0x6f687061 0x61546572 0x7120656b
+[13:58:00]3fca2db0: 0x65756575 0x313a632e 0x20393037 0x70202828 0x65755178 0x29206575 0xa5a50029 0xa5a5a5a5
+[13:58:00]3fca2dd0: 0xa5a5a5a5 0xa5a5a5a5 0xa5a5a5a5 0xa5a5a5a5 0xa5a5a5a5 0xa5a5a5a5 0xa5a5a5a5 0xa5a5a5a5
+[13:58:00]3fca2df0: 0xa5a5a5a5 0xa5a5a5a5 0xa5a5a5a5 0xa5a5a5a5 0xa5a5a5a5 0xa5a5a5a5 0xa5a5a5a5 0xa5a5a5a5
+[13:58:00]3fca2e10: 0xa5a5a5a5 0xa5a5a5a5 0xa5a5a5a5 0xa5a5a5a5 0xa5a5a5a5 0xa5a5a5a5 0xa5a5a5a5 0xa5a5a5a5
+[13:58:00]3fca2e30: 0xa5a5a5a5 0xa5a5a5a5 0xa5a5a5a5 0xa5a5a5a5 0xa5a5a5a5 0xa5a5a5a5 0xa5a5a5a5 0xa5a5a5a5
+[13:58:00]3fca2e50: 0xa5a5a5a5 0x00000000 0x00000000 0xa5000000 0xa5a5a5a5 0xa5a5a5a5 0x00000000 0x00000000
+[13:58:00]3fca2e70: 0x00000150 0x00000150 0x00000000 0x403885ce 0xa5a5a5a5 0xa5a5a5a5 0xa5a5a5a5 0xffffffff
+[13:58:00]3fca2e90: 0xa5a5a5a5 0xa5a5a5a5 0xa5a5a5a5 0xa5a5a5a5 0x00000150 0x00000150 0x3fcbfc64 0x42011092
+[13:58:00]3fca2eb0: 0xa5a5a5a5 0xa5a5a5a5 0x3fcbfc64 0x4200eb0c 0xa5a5a5a5 0xa5a5a5a5 0xa5a5a5a5 0xa5a5a5a5
+[13:58:00]3fca2ed0: 0xa5a5a5a5 0xa5a5a5a5 0xa5a5a5a5 0xa5a5a5a5 0xa5a5a5a5 0xa5a5a5a5 0xa5a5a5a5 0xa5a5a5a5
+[13:58:00]3fca2ef0: 0xa5a5a5a5 0xa5a5a5a5 0xa5a5a5a5 0xa5a5a5a5 0xa5a5a5a5 0xa5a5a5a5 0xa5a5a5a5 0xa5a5a5a5
+[13:58:00]3fca2f10: 0xa5a5a5a5 0xa5a5a5a5 0xa5a5a5a5 0xa5a5a5a5 0xa5a5a5a5 0xa5a5a5a5 0xa5a5a5a5 0xa5a5a5a5
+[13:58:00]3fca2f30: 0xa5a5a5a5 0xa5a5a5a5 0xa5a5a5a5 0xa5a5a5a5 0xa5a5a5a5 0xa5a5a5a5 0xa5a5a5a5 0xa5a5a5a5
+[13:58:00]3fca2f50: 0xa5a5a5a5 0xa5a5a5a5 0xa5a5a5a5 0xa5a5a5a5 0x4038344e 0x40388c66 0x3fca2fe0 0x3fc96000
+[13:58:00]3fca2f70: 0x3fca3060 0x00000000 0x00000000 0x00000000 0x00000000 0x000000ed 0x00000001 0x00000001
+[13:58:00]3fca2f90: 0x3fca3088 0x00000004 0x00000001 0x403884e4 0x3fc9a8cc 0x00000000 0x00000150 0x00000000
+[13:58:00]3fca2fb0: 0x00000000 0x00000000 0x00000000 0x00000000 0x00000000 0x00000000 0x00000000 0x00000000
+[13:58:00]3fca2fd0: 0x00000150 0x00000150 0x3fcbfc64 0x4038926e 0x00000150 0x00000150 0x00000000 0x4038932a
+[13:58:00]3fca2ff0: 0x00000001 0x000000ec 0x3fcbfc64 0x00000000 0x00000000 0x00000000 0x00000000 0x403894b8
+[13:58:00]3fca3010: 0x00000000 0x00000000 0x00000000 0x00000000 0x00000000 0x00000000 0x00000000 0x403889a4
+[13:58:00]3fca3030: 0x00000000 0x00000000 0x00000000 0x00000000 0x00000000 0x00000000 0x00000000 0x00000000
+[13:58:00]3fca3050: 0x00000000 0xa5a5a5a5 0xa5a5a5a5 0xa5a5a5a5 0xa5a5a5a5 0xa5a5a5a5 0xa5a5a5a5 0x00000150
+[13:58:00]3fca3070: 0x3fca2f60 0x00000150 0x3fc98ca4 0x3fc98ca4 0x3fca3070 0x3fc98c9c 0x00000018 0x3fc9a8cc
+[13:58:00]3fca3090: 0x3fc9a8cc 0x3fca3070 0x00000000 0x00000001 0x3fca286c 0x20726d54 0x00637653 0x00000000
+[13:58:00]3fca30b0: 0x00000000 0x3fca3060 0x00000001 0x00000000 0x00000000 0x00000000 0x00000000 0x3fc9e6e4
+[13:58:00]3fca30d0: 0x3fc9e74c 0x3fc9e7b4 0x00000000 0x00000000 0x00000001 0x00000000 0x00000000 0x00000000
+[13:58:00]3fca30f0: 0x420060b4 0x00000000 0x00000000 0x00000000 0x00000000 0x00000000 0x00000000 0x00000000
+[13:58:00]3fca3110: 0x00000000 0x00000000 0x00000000 0x00000000 0x00000000 0x00000000 0x00000000 0x00000000
+[13:58:00]3fca3130: 0x00000000 0x00000000 0x00000000 0x00000000 0x00000000 0x00000000 0x00000000 0x00000000
+[13:58:00]
+[13:58:00]
+[13:58:00]
+[13:58:00]ELF file SHA256: 420827ec9
+[13:58:00]
+[13:58:00]Rebooting...
+[13:58:00]ESP-ROM:esp32c3-api1-20210207
+[13:58:00]Build:Feb  7 2021
+[13:58:00]rst:0xc (RTC_SW_CPU_RST),boot:0xf (SPI_FAST_FLASH_BOOT)
+[13:58:00]Saved PC:0x4038086e
+[13:58:00]SPIWP:0xee
+[13:58:00]mode:DIO, clock div:1
+[13:58:00]load:0x3fcd5820,len:0x158c
+[13:58:00]load:0x403cc710,len:0xc84
+[13:58:00]load:0x403ce710,len:0x2f64
+[13:58:00]entry 0x403cc71a
+[13:58:00]I (15) boot: ESP-IDF v5.4.4 2nd stage bootloader
+[13:58:00]I (15) boot: compile time May 25 2026 05:41:34
+[13:58:00]I (16) boot: chip revision: v0.4
+[13:58:00]I (16) boot: efuse block revision: v1.3
+[13:58:00]I (19) boot.esp32c3: SPI Speed      : 80MHz
+[13:58:00]I (23) boot.esp32c3: SPI Mode       : DIO
+[13:58:00]I (27) boot.esp32c3: SPI Flash Size : 4MB
+[13:58:00]I (30) boot: Enabling RNG early entropy source...
+[13:58:00]I (35) boot: Partition Table:
+[13:58:00]I (37) boot: ## Label            Usage          Type ST Offset   Length
+[13:58:00]I (44) boot:  0 nvs              WiFi data        01 02 00009000 00004000
+[13:58:00]I (50) boot:  1 otadata          OTA data         01 00 0000d000 00002000
+[13:58:00]I (57) boot:  2 phy_init         RF data          01 01 0000f000 00001000
+[13:58:00]I (63) boot:  3 factory          factory app      00 00 00010000 00100000
+[13:58:00]I (70) boot:  4 storage          Unknown data     01 82 00110000 000e0000
+[13:58:00]I (76) boot: End of partition table
+[13:58:00]I (80) boot: Defaulting to factory image
+[13:58:00]I (83) esp_image: segment 0: paddr=00010020 vaddr=3c0c0020 size=24cb0h (150704) map
+[13:58:00]I (115) esp_image: segment 1: paddr=00034cd8 vaddr=3fc95800 size=032dch ( 13020) load
+[13:58:00]I (117) esp_image: segment 2: paddr=00037fbc vaddr=40380000 size=0805ch ( 32860) load
+[13:58:00]I (125) esp_image: segment 3: paddr=00040020 vaddr=42000020 size=b4178h (737656) map
+[13:58:01]I (244) esp_image: segment 4: paddr=000f41a0 vaddr=4038805c size=0d754h ( 55124) load
+[13:58:01]I (254) esp_image: segment 5: paddr=001018fc vaddr=50000000 size=0001ch (    28) load
+[13:58:01]I (261) boot: Loaded app from partition at offset 0x10000
+[13:58:01]I (261) boot: Disabling RNG early entropy source...
+[13:58:01]I (272) cpu_start: Unicore app
+[13:58:01]I (280) cpu_start: GPIO 20 and 21 are used as console UART I/O pins
+[13:58:01]I (281) cpu_start: Pro cpu start user code
+[13:58:01]I (281) cpu_start: cpu freq: 160000000 Hz
+[13:58:01]I (283) app_init: Application information:
+[13:58:01]I (286) app_init: Project name:     ld_radar_monitor
+[13:58:01]I (291) app_init: App version:      635e248
+[13:58:01]I (295) app_init: Compile time:     May 25 2026 05:41:28
+[13:58:01]I (300) app_init: ELF file SHA256:  420827ec9...
+[13:58:01]I (304) app_init: ESP-IDF:          v5.4.4
+[13:58:01]I (308) efuse_init: Min chip rev:     v0.3
+[13:58:01]I (312) efuse_init: Max chip rev:     v1.99 
+[13:58:01]I (316) efuse_init: Chip rev:         v0.4
+[13:58:01]I (320) heap_init: Initializing. RAM available for dynamic allocation:
+[13:58:01]I (326) heap_init: At 3FC9E0A0 len 00021F60 (135 KiB): RAM
+[13:58:01]I (331) heap_init: At 3FCC0000 len 0001C710 (113 KiB): Retention RAM
+[13:58:01]I (337) heap_init: At 3FCDC710 len 00002950 (10 KiB): Retention RAM
+[13:58:01]I (343) heap_init: At 5000001C len 00001FCC (7 KiB): RTCRAM
+[13:58:01]I (350) spi_flash: detected chip: generic
+[13:58:01]I (352) spi_flash: flash io: dio
+[13:58:01]I (356) sleep_gpio: Configure to isolate all GPIO pins in sleep state
+[13:58:01]I (362) sleep_gpio: Enable automatic switching of GPIO sleep configuration
+[13:58:01]I (368) main_task: Started on CPU0
+[13:58:01]I (371) main_task: Calling app_main()
+[13:58:01]I (374) MAIN: =================================
+[13:58:01]I (378) MAIN: LD Radar Web Monitor Starting...
+[13:58:01]I (382) MAIN: Version: 1.0.0
+[13:58:01]I (385) MAIN: =================================
+[13:58:01]I (396) MAIN: NVS initialized
+[13:58:01]I (397) FATFS: Mounting FATFS...
+[13:58:01]I (398) FATFS: FATFS mounted at /storage
+[13:58:01]I (399) MAIN: FATFS initialized
+[13:58:01]I (401) RADAR_ADAPT: Initializing radar adapter for LD2460...
+[13:58:01]I (407) uart: queue free spaces: 16
+[13:58:01]W (410) ld2460: Rx Break
+[13:58:01]I (412) ld2460: LD2460 driver initialized (UART1, 115200 baud, TX=GPIO0, RX=GPIO1)
+[13:58:01]I (420) RADAR_ADAPT: Radar adapter initialized successfully
+[13:58:01]I (425) RADAR_ADAPT:   Type: LD2460
+[13:58:01]I (428) RADAR_ADAPT:   Max targets: 8
+[13:58:01]I (431) RADAR_ADAPT:   3D support: No
+[13:58:01]I (435) RADAR_ADAPT:   Install mode: Yes
+[13:58:01]I (438) MAIN: Radar initialized: HLK-LD2460 (2T4R Multi-target Tracking)
+[13:58:01]I (446) pp: pp rom version: 9387209
+[13:58:01]I (448) net80211: net80211 rom version: 9387209
+[13:58:01]I (454) wifi:wifi driver task: 3fcb73e0, prio:23, stack:6656, core=0
+[13:58:01]I (463) wifi:wifi firmware version: 8896d66
+[13:58:01]I (464) wifi:wifi certification version: v7.0
+[13:58:01]I (466) wifi:config NVS flash: enabled
+[13:58:01]I (470) wifi:config nano formatting: disabled
+[13:58:01]I (474) wifi:Init data frame dynamic rx buffer num: 32
+[13:58:01]I (479) wifi:Init static rx mgmt buffer num: 5
+[13:58:01]I (483) wifi:Init management short buffer num: 32
+[13:58:01]I (487) wifi:Init dynamic tx buffer num: 32
+[13:58:01]I (491) wifi:Init static tx FG buffer num: 2
+[13:58:01]I (495) wifi:Init static rx buffer size: 1600
+[13:58:01]I (499) wifi:Init static rx buffer num: 10
+[13:58:01]I (503) wifi:Init dynamic rx buffer num: 32
+[13:58:01]I (508) wifi_init: rx ba win: 6
+[13:58:01]I (510) wifi_init: accept mbox: 6
+[13:58:01]I (513) wifi_init: tcpip mbox: 32
+[13:58:01]I (516) wifi_init: udp mbox: 6
+[13:58:01]I (519) wifi_init: tcp mbox: 6
+[13:58:01]I (521) wifi_init: tcp tx win: 5760
+[13:58:01]I (525) wifi_init: tcp rx win: 5760
+[13:58:01]I (528) wifi_init: tcp mss: 1440
+[13:58:01]I (531) wifi_init: WiFi IRAM OP enabled
+[13:58:01]I (534) wifi_init: WiFi RX IRAM OP enabled
+[13:58:01]I (539) phy_init: phy_version 1232,d493f299,Aug 25 2025,19:01:20
+[13:58:01]I (574) wifi:mode : sta (c0:4e:30:9b:df:c8)
+[13:58:01]I (575) wifi:enable tsf
+[13:58:01]I (577) MAIN: WiFi STA initialized, connecting to SSID:FUCK_cao
+[13:58:01]I (578) FILE_MGR: Initializing file manager...
+[13:58:01]I (580) FILE_MGR: File manager initialized successfully
+[13:58:01]I (584) HTTP_SERVER: Starting HTTP server on port 80
+[13:58:01]W (591) httpd_uri: httpd_register_uri_handler: no slots left for registering handler
+[13:58:01]W (597) HTTP_SERVER: WebSocket init failed: ESP_ERR_HTTPD_HANDLERS_FULL
+[13:58:01]I (603) HTTP_SERVER: Radar broadcast timer started (10Hz)
+[13:58:01]I (608) HTTP_SERVER: HTTP server started successfully
+[13:58:01]I (613) MAIN: HTTP server started
+[13:58:01]I (616) MAIN: =================================
+[13:58:01]I (620) MAIN: System Ready!
+[13:58:01]I (623) MAIN: Connecting to WiFi: FUCK_cao
+[13:58:01]I (626) MAIN: =================================
+[13:58:01]
+[13:58:01]assert failed: xQueueSemaphoreTake queue.c:1709 (( pxQueue ))
+[13:58:01]Core  0 register dump:
+[13:58:01]MEPC    : 0x403808b6  RA      : 0x403878b2  SP      : 0x3fca2d50  GP      : 0x3fc96000  
+[13:58:01]TP      : 0x3fca3060  T0      : 0x37363534  T1      : 0x7271706f  T2      : 0x33323130  
+[13:58:01]S0/FP   : 0x0000008a  S1      : 0x00000001  A0      : 0x3fca2d8c  A1      : 0x3fc97c45  
+[13:58:01]A2      : 0x00000001  A3      : 0x00000029  A4      : 0x00000001  A5      : 0x3fc9e000  
+[13:58:01]A6      : 0x7a797877  A7      : 0x76757473  S2      : 0x00000009  S3      : 0x3fca2e9d  
+[13:58:01]S4      : 0x3fc97c44  S5      : 0x00000000  S6      : 0x00000000  S7      : 0x00000000  
+[13:58:01]S8      : 0x00000000  S9      : 0x00000000  S10     : 0x00000000  S11     : 0x00000000  
+[13:58:01]T3      : 0x6e6d6c6b  T4      : 0x6a696867  T5      : 0x66656463  T6      : 0x62613938  
+[13:58:01]MSTATUS : 0x00001881  MTVEC   : 0x40380001  MCAUSE  : 0x00000002  MTVAL   : 0x00000000  
+[13:58:01]MHARTID : 0x00000000  
+[13:58:01]
+[13:58:01]Stack memory:
+[13:58:01]3fca2d50: 0xa5a5a5a5 0xa5a5a5a5 0x3c0d99e0 0x403908d6 0x3fc97c2c 0x3c0d99e0 0x3fc98318 0x3c0c398a
+[13:58:01]3fca2d70: 0x3fc97c3c 0x3fca2d84 0x3fc97c40 0x3c0c3c0c 0x3fc97c44 0x39303731 0xa5a5a500 0x65737361
+[13:58:01]3fca2d90: 0x66207472 0x656c6961 0x78203a64 0x75657551 0x6d655365 0x6f687061 0x61546572 0x7120656b
+[13:58:01]3fca2db0: 0x65756575 0x313a632e 0x20393037 0x70202828 0x65755178 0x29206575 0xa5a50029 0xa5a5a5a5
+[13:58:01]3fca2dd0: 0xa5a5a5a5 0xa5a5a5a5 0xa5a5a5a5 0xa5a5a5a5 0xa5a5a5a5 0xa5a5a5a5 0xa5a5a5a5 0xa5a5a5a5
+[13:58:01]3fca2df0: 0xa5a5a5a5 0xa5a5a5a5 0xa5a5a5a5 0xa5a5a5a5 0xa5a5a5a5 0xa5a5a5a5 0xa5a5a5a5 0xa5a5a5a5
+[13:58:01]3fca2e10: 0xa5a5a5a5 0xa5a5a5a5 0xa5a5a5a5 0xa5a5a5a5 0xa5a5a5a5 0xa5a5a5a5 0xa5a5a5a5 0xa5a5a5a5
+[13:58:01]3fca2e30: 0xa5a5a5a5 0xa5a5a5a5 0xa5a5a5a5 0xa5a5a5a5 0xa5a5a5a5 0xa5a5a5a5 0xa5a5a5a5 0xa5a5a5a5
+[13:58:01]3fca2e50: 0xa5a5a5a5 0x00000000 0x00000000 0xa5000000 0xa5a5a5a5 0xa5a5a5a5 0x00000000 0x00000000
+[13:58:01]3fca2e70: 0x0000014f 0x0000014f 0x00000000 0x403885ce 0xa5a5a5a5 0xa5a5a5a5 0xa5a5a5a5 0xffffffff
+[13:58:01]3fca2e90: 0xa5a5a5a5 0xa5a5a5a5 0xa5a5a5a5 0xa5a5a5a5 0x0000014f 0x0000014f 0x3fcbfc64 0x42011092
+[13:58:01]3fca2eb0: 0xa5a5a5a5 0xa5a5a5a5 0x3fcbfc64 0x4200eb0c 0xa5a5a5a5 0xa5a5a5a5 0xa5a5a5a5 0xa5a5a5a5
+[13:58:01]3fca2ed0: 0xa5a5a5a5 0xa5a5a5a5 0xa5a5a5a5 0xa5a5a5a5 0xa5a5a5a5 0xa5a5a5a5 0xa5a5a5a5 0xa5a5a5a5
+[13:58:01]3fca2ef0: 0xa5a5a5a5 0xa5a5a5a5 0xa5a5a5a5 0xa5a5a5a5 0xa5a5a5a5 0xa5a5a5a5 0xa5a5a5a5 0xa5a5a5a5
+[13:58:01]3fca2f10: 0xa5a5a5a5 0xa5a5a5a5 0xa5a5a5a5 0xa5a5a5a5 0xa5a5a5a5 0xa5a5a5a5 0xa5a5a5a5 0xa5a5a5a5
+[13:58:01]3fca2f30: 0xa5a5a5a5 0xa5a5a5a5 0xa5a5a5a5 0xa5a5a5a5 0xa5a5a5a5 0xa5a5a5a5 0xa5a5a5a5 0xa5a5a5a5
+[13:58:01]3fca2f50: 0xa5a5a5a5 0xa5a5a5a5 0xa5a5a5a5 0xa5a5a5a5 0x4038344e 0x40388c66 0x3fca2fe0 0x3fc96000
+[13:58:01]3fca2f70: 0x3fca3060 0x00000000 0x00000000 0x00000000 0x00000000 0x000000ec 0x00000001 0x00000001
+[13:58:01]3fca2f90: 0x3fca3088 0x00000004 0x00000001 0x403884e4 0x3fc9a8cc 0x00000000 0x0000014f 0x00000000
+[13:58:01]3fca2fb0: 0x00000000 0x00000000 0x00000000 0x00000000 0x00000000 0x00000000 0x00000000 0x00000000
+[13:58:01]3fca2fd0: 0x0000014f 0x0000014f 0x3fcbfc64 0x4038926e 0x0000014f 0x0000014f 0x00000000 0x4038932a
+[13:58:01]3fca2ff0: 0x00000001 0x000000eb 0x3fcbfc64 0x00000000 0x00000000 0x00000000 0x00000000 0x403894b8
+[13:58:01]3fca3010: 0x00000000 0x00000000 0x00000000 0x00000000 0x00000000 0x00000000 0x00000000 0x403889a4
+[13:58:01]3fca3030: 0x00000000 0x00000000 0x00000000 0x00000000 0x00000000 0x00000000 0x00000000 0x00000000
+[13:58:01]3fca3050: 0x00000000 0xa5a5a5a5 0xa5a5a5a5 0xa5a5a5a5 0xa5a5a5a5 0xa5a5a5a5 0xa5a5a5a5 0x00000150
+[13:58:01]3fca3070: 0x3fca2f60 0x0000014f 0x3fc98ca4 0x3fc98ca4 0x3fca3070 0x3fc98c9c 0x00000018 0x3fc9a8cc
+[13:58:01]3fca3090: 0x3fc9a8cc 0x3fca3070 0x00000000 0x00000001 0x3fca286c 0x20726d54 0x00637653 0x00000000
+[13:58:01]3fca30b0: 0x00000000 0x3fca3060 0x00000001 0x00000000 0x00000000 0x00000000 0x00000000 0x3fc9e6e4
+[13:58:01]3fca30d0: 0x3fc9e74c 0x3fc9e7b4 0x00000000 0x00000000 0x00000001 0x00000000 0x00000000 0x00000000
+[13:58:01]3fca30f0: 0x420060b4 0x00000000 0x00000000 0x00000000 0x00000000 0x00000000 0x00000000 0x00000000
+[13:58:01]3fca3110: 0x00000000 0x00000000 0x00000000 0x00000000 0x00000000 0x00000000 0x00000000 0x00000000
+[13:58:01]3fca3130: 0x00000000 0x00000000 0x00000000 0x00000000 0x00000000 0x00000000 0x00000000 0x00000000
+[13:58:01]
+[13:58:01]
+[13:58:01]
+[13:58:01]ELF file SHA256: 420827ec9
+[13:58:01]
+[13:58:01]Rebooting...
+[13:58:01]ESP-ROM:esp32c3-api1-20210207
+[13:58:01]Build:Feb  7 2021
+[13:58:01]rst:0xc (RTC_SW_CPU_RST),boot:0xf (SPI_FAST_FLASH_BOOT)
+[13:58:01]Saved PC:0x4038086e
+[13:58:01]SPIWP:0xee
+[13:58:01]mode:DIO, clock div:1
+[13:58:01]load:0x3fcd5820,len:0x158c
+[13:58:01]load:0x403cc710,len:0xc84
+[13:58:01]load:0x403ce710,len:0x2f64
+[13:58:01]entry 0x403cc71a
+[13:58:01]I (15) boot: ESP-IDF v5.4.4 2nd stage bootloader
+[13:58:01]I (15) boot: compile time May 25 2026 05:41:34
+[13:58:01]I (16) boot: chip revision: v0.4
+[13:58:01]I (16) boot: efuse block revision: v1.3
+[13:58:01]I (19) boot.esp32c3: SPI Speed      : 80MHz
+[13:58:01]I (23) boot.esp32c3: SPI Mode       : DIO
+[13:58:01]I (27) boot.esp32c3: SPI Flash Size : 4MB
+[13:58:01]I (30) boot: Enabling RNG early entropy source...
+[13:58:01]I (35) boot: Partition Table:
+[13:58:01]I (37) boot: ## Label            Usage          Type ST Offset   Length
+[13:58:01]I (44) boot:  0 nvs              WiFi data        01 02 00009000 00004000
+[13:58:01]I (50) boot:  1 otadata          OTA data         01 00 0000d000 00002000
+[13:58:01]I (57) boot:  2 phy_init         RF data          01 01 0000f000 00001000
+[13:58:01]I (63) boot:  3 factory          factory app      00 00 00010000 00100000
+[13:58:01]I (70) boot:  4 storage          Unknown data     01 82 00110000 000e0000
+[13:58:01]I (76) boot: End of partition table
+[13:58:01]I (80) boot: Defaulting to factory image
+[13:58:01]I (83) esp_image: segment 0: paddr=00010020 vaddr=3c0c0020 size=24cb0h (150704) map
+[13:58:01]I (115) esp_image: segment 1: paddr=00034cd8 vaddr=3fc95800 size=032dch ( 13020) load
+[13:58:01]I (117) esp_image: segment 2: paddr=00037fbc vaddr=40380000 size=0805ch ( 32860) load
+[13:58:01]I (125) esp_image: segment 3: paddr=00040020 vaddr=42000020 size=b4178h (737656) map
+[13:58:02]I (244) esp_image: segment 4: paddr=000f41a0 vaddr=4038805c size=0d754h ( 55124) load
+[13:58:02]I (254) esp_image: segment 5: paddr=001018fc vaddr=50000000 size=0001ch (    28) load
+[13:58:02]I (261) boot: Loaded app from partition at offset 0x10000
+[13:58:02]I (261) boot: Disabling RNG early entropy source...
+[13:58:02]I (272) cpu_start: Unicore app
+[13:58:02]I (280) cpu_start: GPIO 20 and 21 are used as console UART I/O pins
+[13:58:02]I (281) cpu_start: Pro cpu start user code
+[13:58:02]I (281) cpu_start: cpu freq: 160000000 Hz
+[13:58:02]I (283) app_init: Application information:
+[13:58:02]I (286) app_init: Project name:     ld_radar_monitor
+[13:58:02]I (291) app_init: App version:      635e248
+[13:58:02]I (295) app_init: Compile time:     May 25 2026 05:41:28
+[13:58:02]I (300) app_init: ELF file SHA256:  420827ec9...
+[13:58:02]I (304) app_init: ESP-IDF:          v5.4.4
+[13:58:02]I (308) efuse_init: Min chip rev:     v0.3
+[13:58:02]I (312) efuse_init: Max chip rev:     v1.99 
+[13:58:02]I (316) efuse_init: Chip rev:         v0.4
+[13:58:02]I (320) heap_init: Initializing. RAM available for dynamic allocation:
+[13:58:02]I (326) heap_init: At 3FC9E0A0 len 00021F60 (135 KiB): RAM
+[13:58:02]I (331) heap_init: At 3FCC0000 len 0001C710 (113 KiB): Retention RAM
+[13:58:02]I (337) heap_init: At 3FCDC710 len 00002950 (10 KiB): Retention RAM
+[13:58:02]I (343) heap_init: At 5000001C len 00001FCC (7 KiB): RTCRAM
+[13:58:02]I (350) spi_flash: detected chip: generic
+[13:58:02]I (352) spi_flash: flash io: dio
+[13:58:02]I (356) sleep_gpio: Configure to isolate all GPIO pins in sleep state
+[13:58:02]I (362) sleep_gpio: Enable automatic switching of GPIO sleep configuration
+[13:58:02]I (368) main_task: Started on CPU0
+[13:58:02]I (371) main_task: Calling app_main()
+[13:58:02]I (374) MAIN: =================================
+[13:58:02]I (378) MAIN: LD Radar Web Monitor Starting...
+[13:58:02]I (382) MAIN: Version: 1.0.0
+[13:58:02]I (385) MAIN: =================================
+[13:58:02]I (396) MAIN: NVS initialized
+[13:58:02]I (397) FATFS: Mounting FATFS...
+[13:58:02]I (398) FATFS: FATFS mounted at /storage
+[13:58:02]I (399) MAIN: FATFS initialized
+[13:58:02]I (401) RADAR_ADAPT: Initializing radar adapter for LD2460...
+[13:58:02]I (407) uart: queue free spaces: 16
+[13:58:02]W (410) ld2460: Rx Break
+[13:58:02]I (412) ld2460: LD2460 driver initialized (UART1, 115200 baud, TX=GPIO0, RX=GPIO1)
+[13:58:02]I (420) RADAR_ADAPT: Radar adapter initialized successfully
+[13:58:02]I (425) RADAR_ADAPT:   Type: LD2460
+[13:58:02]I (428) RADAR_ADAPT:   Max targets: 8
+[13:58:02]I (431) RADAR_ADAPT:   3D support: No
+[13:58:02]I (435) RADAR_ADAPT:   Install mode: Yes
+[13:58:02]I (438) MAIN: Radar initialized: HLK-LD2460 (2T4R Multi-target Tracking)
+[13:58:02]I (446) pp: pp rom version: 9387209
+[13:58:02]I (448) net80211: net80211 rom version: 9387209
+[13:58:02]I (454) wifi:wifi driver task: 3fcb73e0, prio:23, stack:6656, core=0
+[13:58:02]I (463) wifi:wifi firmware version: 8896d66
+[13:58:02]I (464) wifi:wifi certification version: v7.0
+[13:58:02]I (466) wifi:config NVS flash: enabled
+[13:58:02]I (470) wifi:config nano formatting: disabled
+[13:58:02]I (474) wifi:Init data frame dynamic rx buffer num: 32
+[13:58:02]I (479) wifi:Init static rx mgmt buffer num: 5
+[13:58:02]I (483) wifi:Init management short buffer num: 32
+[13:58:02]I (487) wifi:Init dynamic tx buffer num: 32
+[13:58:02]I (491) wifi:Init static tx FG buffer num: 2
+[13:58:02]I (495) wifi:Init static rx buffer size: 1600
+[13:58:02]I (499) wifi:Init static rx buffer num: 10
+[13:58:02]I (503) wifi:Init dynamic rx buffer num: 32
+[13:58:02]I (508) wifi_init: rx ba win: 6
+[13:58:02]I (510) wifi_init: accept mbox: 6
+[13:58:02]I (513) wifi_init: tcpip mbox: 32
+[13:58:02]I (516) wifi_init: udp mbox: 6
+[13:58:02]I (519) wifi_init: tcp mbox: 6
+[13:58:02]I (521) wifi_init: tcp tx win: 5760
+[13:58:02]I (525) wifi_init: tcp rx win: 5760
+[13:58:02]I (528) wifi_init: tcp mss: 1440
+[13:58:02]I (531) wifi_init: WiFi IRAM OP enabled
+[13:58:02]I (534) wifi_init: WiFi RX IRAM OP enabled
+[13:58:02]I (539) phy_init: phy_version 1232,d493f299,Aug 25 2025,19:01:20
+[13:58:02]I (575) wifi:mode : sta (c0:4e:30:9b:df:c8)
+[13:58:02]I (576) wifi:enable tsf
+[13:58:02]I (578) MAIN: WiFi STA initialized, connecting to SSID:FUCK_cao
+[13:58:02]I (579) FILE_MGR: Initializing file manager...
+[13:58:02]I (581) FILE_MGR: File manager initialized successfully
+[13:58:02]I (585) HTTP_SERVER: Starting HTTP server on port 80
+[13:58:02]W (592) httpd_uri: httpd_register_uri_handler: no slots left for registering handler
+[13:58:02]W (598) HTTP_SERVER: WebSocket init failed: ESP_ERR_HTTPD_HANDLERS_FULL
+[13:58:02]I (604) HTTP_SERVER: Radar broadcast timer started (10Hz)
+[13:58:02]I (609) HTTP_SERVER: HTTP server started successfully
+[13:58:02]I (614) MAIN: HTTP server started
+[13:58:02]I (617) MAIN: =================================
+[13:58:02]I (621) MAIN: System Ready!
+[13:58:02]I (623) MAIN: Connecting to WiFi: FUCK_cao
+[13:58:02]I (627) MAIN: =================================

@@ -417,6 +417,9 @@ esp_err_t websocket_broadcast(const uint8_t *data, size_t len, ws_frame_type_t t
 
 esp_err_t websocket_broadcast_text(const char *text)
 {
+    if (s_mutex == NULL) {
+        return ESP_ERR_INVALID_STATE;
+    }
     return websocket_broadcast((const uint8_t*)text, strlen(text), WS_FRAME_TEXT);
 }
 
@@ -433,6 +436,10 @@ esp_err_t websocket_close(int sockfd)
 
 int websocket_get_client_count(void)
 {
+    if (s_mutex == NULL) {
+        return 0;
+    }
+    
     int count = 0;
     
     xSemaphoreTake(s_mutex, portMAX_DELAY);

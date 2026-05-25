@@ -1020,7 +1020,7 @@ esp_err_t http_server_start(void)
     config.server_port = 80;
     config.stack_size = 12288;
     config.task_priority = 5;
-    config.max_uri_handlers = 24;
+    config.max_uri_handlers = 32;
     config.max_open_sockets = 7;
     config.lru_purge_enable = true;
 
