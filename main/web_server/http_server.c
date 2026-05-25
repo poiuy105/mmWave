@@ -65,11 +65,6 @@ static const char* get_mime_type(const char *filename)
 
 /**
  * @brief 静态文件处理 handler
- * 
- * 优先级：
- * 1. FATFS 中的文件 (/storage/www/*)
- * 2. 内嵌的雷达监控页面 (/app/)
- * 3. 内嵌的文件管理页面 (/)
  */
 static esp_err_t static_file_handler(httpd_req_t *req)
 {
