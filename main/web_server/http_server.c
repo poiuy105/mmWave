@@ -409,6 +409,14 @@ static esp_err_t api_files_upload_handler(httpd_req_t *req)
         return ESP_FAIL;
     }
     
+    // URL 解码：%2F -> /
+    char *decoded_path = esp_httpd_uri_decode(path);
+    if (decoded_path) {
+        strncpy(path, decoded_path, sizeof(path) - 1);
+        path[sizeof(path) - 1] = '\0';
+        free(decoded_path);
+    }
+    
     int content_len = req->content_len;
     ESP_LOGI(TAG, "Uploading to %s (%d bytes)", path, content_len);
     
@@ -440,7 +448,7 @@ static esp_err_t api_files_upload_handler(httpd_req_t *req)
     }
     
     #define UPLOAD_CHUNK_SIZE 4096
-    uint8_t chunk[UPLOAD_CHUNK_SIZE];
+    static uint8_t chunk[UPLOAD_CHUNK_SIZE];
     int remaining = content_len;
     int total_written = 0;
     
@@ -997,7 +1005,7 @@ esp_err_t http_server_start(void)
 
     httpd_config_t config = HTTPD_DEFAULT_CONFIG();
     config.server_port = 80;
-    config.stack_size = 8192;
+    config.stack_size = 12288;
     config.task_priority = 5;
     config.max_uri_handlers = 24;
     config.max_open_sockets = 7;
