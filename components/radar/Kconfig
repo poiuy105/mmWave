@@ -4,12 +4,6 @@ menu "Radar Configuration"
         prompt "Select radar type"
         default RADAR_LD2460
 
-        config RADAR_NMEA
-            bool "NMEA Radar (GPS style)"
-            help
-                NMEA protocol radar, e.g. GPS receivers.
-                Uses text-based protocol with line delimiters.
-
         config RADAR_LD2450
             bool "HLK-LD2450 (1T2R Multi-target Tracking)"
             help

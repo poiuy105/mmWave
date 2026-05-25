@@ -133,22 +133,6 @@ extern "C" {
     #define RADAR_EVENT_BASE         ESP_LD2460_EVENT
     #define RADAR_EVENT_TARGET       LD2460_EVENT_TARGET_UPDATE
 
-#elif defined(CONFIG_RADAR_NMEA)
-    #include "nmea_parser.h"
-
-    typedef nmea_parser_config_t  radar_config_t;
-    typedef nmea_parser_handle_t  radar_handle_t;
-    typedef nmea_event_id_t       radar_event_id_t;
-    typedef gps_t                 radar_data_t;
-
-    #define RADAR_CONFIG_DEFAULT()    NMEA_PARSER_CONFIG_DEFAULT()
-    #define RADAR_INIT(cfg)           nmea_parser_init(cfg)
-    #define RADAR_DEINIT(hdl)         nmea_parser_deinit(hdl)
-    #define RADAR_ADD_HANDLER(h, fn, arg)  nmea_parser_add_handler(h, fn, arg)
-    #define RADAR_RM_HANDLER(h, fn)       nmea_parser_remove_handler(h, fn)
-    #define RADAR_EVENT_BASE         ESP_NMEA_EVENT
-    #define RADAR_EVENT_TARGET       GPS_UPDATE
-
 #else
     #error "No radar type selected. Please select a radar type in menuconfig (Radar Configuration)."
 #endif

@@ -19,9 +19,6 @@ set(LD2452_SRCS src/ld2452/radar_ld2452.c)
 # R60ABD1 radar driver sources
 set(R60ABD1_SRCS src/r60abd1/radar_r60abd1.c)
 
-# NMEA radar driver sources (original code, in main/ for now)
-set(NMEA_SRCS ${CMAKE_SOURCE_DIR}/main/nmea_parser.c)
-
 # Select sources based on configured radar type
 if(CONFIG_RADAR_LD2460)
     set(RADAR_SRCS ${LD2460_SRCS})
@@ -44,9 +41,6 @@ elseif(CONFIG_RADAR_LD2452)
 elseif(CONFIG_RADAR_R60ABD1)
     set(RADAR_SRCS ${R60ABD1_SRCS})
     set(RADAR_INCLUDES include src/r60abd1)
-elseif(CONFIG_RADAR_NMEA)
-    set(RADAR_SRCS ${NMEA_SRCS})
-    set(RADAR_INCLUDES include ${CMAKE_SOURCE_DIR}/main)
 endif()
 
 idf_component_register(SRCS ${RADAR_SRCS}
