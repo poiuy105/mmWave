@@ -28,6 +28,7 @@ idf_component_register(
         wear_levelling
         json
         radar
+        esp_timer
 )
 
 # 链接数学库
