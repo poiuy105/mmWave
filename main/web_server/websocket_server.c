@@ -153,9 +153,8 @@ static esp_err_t ws_handler(httpd_req_t *req)
         return ret;
     }
 
-    /* 如果帧有 FIN 标记，处理完整帧 */
-    if (ws_pkt.len == 0 && ws_pkt.fragment_offset != 0) {
-        /* 分片帧的中间/结束分片，暂不处理 */
+    /* 如果帧长度为 0，跳过（可能是分片帧的中间分片） */
+    if (ws_pkt.len == 0) {
         return ESP_OK;
     }
 
