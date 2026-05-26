@@ -784,7 +784,7 @@ static void ws_on_disconnect(int sockfd)
 /**
  * @brief WebSocket 消息回调
  */
-static void ws_on_message(int sockfd, const uint8_t *data, size_t len, ws_frame_type_t type)
+static void ws_on_message(int sockfd, const uint8_t *data, size_t len, httpd_ws_type_t type)
 {
     ESP_LOGD(TAG, "WebSocket message from fd=%d: %s", sockfd, (char*)data);
     
@@ -1117,8 +1117,6 @@ esp_err_t http_server_start(void)
         .on_connect = ws_on_connect,
         .on_disconnect = ws_on_disconnect,
         .on_message = ws_on_message,
-        .task_stack_size = 4096,
-        .task_priority = 5
     };
 
     err = websocket_init(s_server, &ws_conf);
