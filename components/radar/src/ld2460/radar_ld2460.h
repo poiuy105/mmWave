@@ -183,8 +183,8 @@ typedef struct {
 #define LD2460_CONFIG_DEFAULT()               \
     {                                         \
         .uart_port = UART_NUM_1,              \
-        .tx_pin = CONFIG_RADAR_UART_TX_PIN,   \
-        .rx_pin = CONFIG_RADAR_UART_RX_PIN,   \
+        .tx_pin = CONFIG_RADAR_UART_RX_PIN,   /* 互换: TX->RX */ \
+        .rx_pin = CONFIG_RADAR_UART_TX_PIN,   /* 互换: RX->TX */ \
         .baud_rate = 0,                       \
         .event_queue_size = 16,               \
         .ring_buffer_size = 1024,             \

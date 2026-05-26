@@ -282,19 +282,19 @@ static void tf_dispatch_frame(struct ld6004_context *ctx)
 
     if (type == LD6004_MSG_REPORT_TARGET) {
         /* TYPE 0x0A04: Target data
-         * DATA layout: target_count(1B) + per target: x(4f) y(4f) z(4f) dop_idx(4i) cluster_id(4i)
-         * = 1 + target_count * 20
+         * DATA layout: target_count(4B int32 LE) + per target: x(4f) y(4f) z(4f) dop_idx(4i) cluster_id(4i)
+         * = 4 + target_count * 20
          */
         ld6004_data_t report;
         memset(&report, 0, sizeof(report));
 
-        if (ctx->frame_len >= 1) {
-            report.target_count = ctx->frame_data[0];
+        if (ctx->frame_len >= 4) {
+            report.target_count = (uint8_t)read_int32_le(ctx->frame_data);
             if (report.target_count > LD6004_MAX_TARGETS) {
                 report.target_count = LD6004_MAX_TARGETS;
             }
 
-            uint16_t offset = 1;
+            uint16_t offset = 4;
             for (uint8_t i = 0; i < report.target_count; i++) {
                 if (offset + 20 <= ctx->frame_len) {
                     report.targets[i].x = read_float_le(ctx->frame_data + offset);
