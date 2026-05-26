@@ -62,45 +62,6 @@ static void remove_client(int fd)
     }
 }
 
-/* ---------- 异步发送辅助 ---------- */
-
-/**
- * @brief 异步发送工作参数（传递给 httpd_queue_work 的回调）
- */
-typedef struct {
-    int fd;
-    char *payload;
-    size_t len;
-} async_send_arg_t;
-
-/**
- * @brief httpd 工作队列回调：异步发送一帧 WebSocket 文本
- *
- * 在 httpd 的工作线程中执行，可以安全调用 httpd_ws_send_frame_async。
- */
-static void async_send_to_client(void *arg)
-{
-    async_send_arg_t *send_arg = (async_send_arg_t *)arg;
-
-    httpd_ws_frame_t ws_pkt = {
-        .type = HTTPD_WS_TYPE_TEXT,
-        .payload = (uint8_t *)send_arg->payload,
-        .len = send_arg->len,
-    };
-
-    esp_err_t ret = httpd_ws_send_frame_async(s_server, send_arg->fd, &ws_pkt);
-    if (ret != ESP_OK) {
-        ESP_LOGW(TAG, "async send to fd=%d failed: %s", send_arg->fd, esp_err_to_name(ret));
-        /* 发送失败，可能是客户端已断开 */
-        xSemaphoreTake(s_mutex, portMAX_DELAY);
-        remove_client(send_arg->fd);
-        xSemaphoreGive(s_mutex);
-    }
-
-    free(send_arg->payload);
-    free(send_arg);
-}
-
 /* ---------- WebSocket handler ---------- */
 
 /**
@@ -295,37 +256,21 @@ esp_err_t websocket_broadcast_text(const char *text)
         return ESP_ERR_INVALID_STATE;
     }
 
-    size_t text_len = strlen(text);
+    httpd_ws_frame_t ws_pkt = {
+        .type = HTTPD_WS_TYPE_TEXT,
+        .payload = (uint8_t *)text,
+        .len = strlen(text),
+    };
 
     xSemaphoreTake(s_mutex, portMAX_DELAY);
 
     for (int i = 0; i < MAX_WS_CLIENTS; i++) {
         if (s_clients[i].active) {
             int fd = s_clients[i].fd;
-
-            /* 分配异步发送参数 */
-            async_send_arg_t *arg = malloc(sizeof(async_send_arg_t));
-            if (arg == NULL) {
-                ESP_LOGE(TAG, "Failed to alloc async send arg");
-                continue;
-            }
-
-            arg->fd = fd;
-            arg->len = text_len;
-            arg->payload = malloc(text_len);
-            if (arg->payload == NULL) {
-                ESP_LOGE(TAG, "Failed to alloc async send payload");
-                free(arg);
-                continue;
-            }
-            memcpy(arg->payload, text, text_len);
-
-            /* 通过 httpd_queue_work 异步发送（线程安全） */
-            esp_err_t ret = httpd_queue_work(s_server, async_send_to_client, arg);
+            esp_err_t ret = httpd_ws_send_frame_async(s_server, fd, &ws_pkt);
             if (ret != ESP_OK) {
-                ESP_LOGW(TAG, "httpd_queue_work failed for fd=%d: %s", fd, esp_err_to_name(ret));
-                free(arg->payload);
-                free(arg);
+                ESP_LOGW(TAG, "broadcast to fd=%d failed: %s", fd, esp_err_to_name(ret));
+                remove_client(fd);
             }
         }
     }
@@ -344,18 +289,6 @@ esp_err_t websocket_close(int sockfd)
         return ESP_ERR_INVALID_STATE;
     }
 
-    /* 通过 httpd_queue_work 发送 close 帧 */
-    async_send_arg_t *arg = malloc(sizeof(async_send_arg_t));
-    if (arg == NULL) {
-        return ESP_ERR_NO_MEM;
-    }
-
-    /* 对于 close 帧，payload 设为 NULL，len 设为 0，
-     * async_send_to_client 中需要特殊处理 */
-    arg->fd = sockfd;
-    arg->payload = NULL;
-    arg->len = 0;
-
     /* 直接使用 httpd_ws_send_frame_async 发送 close 帧 */
     httpd_ws_frame_t ws_pkt = {
         .type = HTTPD_WS_TYPE_CLOSE,
@@ -367,8 +300,6 @@ esp_err_t websocket_close(int sockfd)
     if (ret != ESP_OK) {
         ESP_LOGW(TAG, "close fd=%d failed: %s", sockfd, esp_err_to_name(ret));
     }
-
-    free(arg);
 
     xSemaphoreTake(s_mutex, portMAX_DELAY);
     remove_client(sockfd);
