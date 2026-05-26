@@ -27,8 +27,10 @@
 static const char *TAG = "HTTP_SERVER";
 static httpd_handle_t s_server = NULL;
 
-// 雷达数据广播定时器
+// 雷达数据广播
 static TimerHandle_t s_radar_timer = NULL;
+static TaskHandle_t s_broadcast_task = NULL;
+static QueueHandle_t s_broadcast_queue = NULL;
 
 /* MIME 类型映射 */
 static const struct {
@@ -802,48 +804,72 @@ static void ws_on_message(int sockfd, const uint8_t *data, size_t len, ws_frame_
 }
 
 /**
- * @brief 雷达数据广播定时器回调
+ * @brief 雷达数据广播任务（独立栈空间，避免定时器栈溢出）
+ */
+static void radar_broadcast_task(void *arg)
+{
+    radar_frame_t frame;
+    
+    ESP_LOGI(TAG, "Radar broadcast task started");
+    
+    while (1) {
+        // 等待定时器通知
+        ulTaskNotifyTake(pdTRUE, portMAX_DELAY);
+        
+        // 无客户端则跳过
+        if (websocket_get_client_count() == 0) {
+            continue;
+        }
+        
+        // 获取真实雷达数据
+        if (radar_adapter_get_frame(&frame) != ESP_OK) {
+            continue;  // 无数据则跳过
+        }
+        
+        // 构建 JSON
+        cJSON *root = cJSON_CreateObject();
+        if (!root) continue;
+        
+        cJSON_AddStringToObject(root, "type", "radar_data");
+        cJSON_AddNumberToObject(root, "timestamp", frame.timestamp_ms);
+        cJSON_AddNumberToObject(root, "frame_id", frame.frame_id);
+        
+        // 目标数据
+        cJSON *targets = cJSON_CreateArray();
+        for (int i = 0; i < frame.target_count; i++) {
+            cJSON *target = cJSON_CreateObject();
+            if (target) {
+                cJSON_AddNumberToObject(target, "id", frame.targets[i].id);
+                cJSON_AddNumberToObject(target, "x", frame.targets[i].x);
+                cJSON_AddNumberToObject(target, "y", frame.targets[i].y);
+                cJSON_AddNumberToObject(target, "z", frame.targets[i].z);
+                cJSON_AddNumberToObject(target, "speed", frame.targets[i].speed);
+                cJSON_AddNumberToObject(target, "snr", frame.targets[i].snr);
+                cJSON_AddNumberToObject(target, "confidence", frame.targets[i].confidence);
+                cJSON_AddItemToArray(targets, target);
+            }
+        }
+        
+        cJSON_AddItemToObject(root, "targets", targets);
+        cJSON_AddNumberToObject(root, "target_count", frame.target_count);
+        
+        char *json = cJSON_PrintUnformatted(root);
+        if (json) {
+            websocket_broadcast_text(json);
+            free(json);
+        }
+        cJSON_Delete(root);
+    }
+}
+
+/**
+ * @brief 雷达数据广播定时器回调（仅通知任务，不执行重逻辑）
  */
 static void radar_broadcast_callback(TimerHandle_t xTimer)
 {
-    if (websocket_get_client_count() == 0) {
-        return;
+    if (s_broadcast_task && websocket_get_client_count() > 0) {
+        xTaskNotifyGive(s_broadcast_task);
     }
-    
-    // 获取真实雷达数据
-    radar_frame_t frame;
-    if (radar_adapter_get_frame(&frame) != ESP_OK) {
-        return;  // 无数据则跳过
-    }
-    
-    // 构建 JSON
-    cJSON *root = cJSON_CreateObject();
-    cJSON_AddStringToObject(root, "type", "radar_data");
-    cJSON_AddNumberToObject(root, "timestamp", frame.timestamp_ms);
-    cJSON_AddNumberToObject(root, "frame_id", frame.frame_id);
-    
-    // 目标数据
-    cJSON *targets = cJSON_CreateArray();
-    for (int i = 0; i < frame.target_count; i++) {
-        cJSON *target = cJSON_CreateObject();
-        cJSON_AddNumberToObject(target, "id", frame.targets[i].id);
-        cJSON_AddNumberToObject(target, "x", frame.targets[i].x);
-        cJSON_AddNumberToObject(target, "y", frame.targets[i].y);
-        cJSON_AddNumberToObject(target, "z", frame.targets[i].z);
-        cJSON_AddNumberToObject(target, "speed", frame.targets[i].speed);
-        cJSON_AddNumberToObject(target, "snr", frame.targets[i].snr);
-        cJSON_AddNumberToObject(target, "confidence", frame.targets[i].confidence);
-        cJSON_AddItemToArray(targets, target);
-    }
-    
-    cJSON_AddItemToObject(root, "targets", targets);
-    cJSON_AddNumberToObject(root, "target_count", frame.target_count);
-    
-    char *json = cJSON_PrintUnformatted(root);
-    websocket_broadcast_text(json);
-    
-    free(json);
-    cJSON_Delete(root);
 }
 
 /**
@@ -1101,7 +1127,10 @@ esp_err_t http_server_start(void)
         // 继续运行，不中断 HTTP 服务
     }
 
-    // 创建雷达数据广播定时器 (100ms = 10Hz)
+    // 创建雷达数据广播任务 (独立栈 4096 字节)
+    xTaskCreate(radar_broadcast_task, "radar_bc", 4096, NULL, 5, &s_broadcast_task);
+    
+    // 创建雷达数据广播定时器 (100ms = 10Hz，仅通知任务)
     s_radar_timer = xTimerCreate("radar_timer", pdMS_TO_TICKS(100),
                                   pdTRUE, NULL, radar_broadcast_callback);
     if (s_radar_timer) {
@@ -1126,6 +1155,12 @@ esp_err_t http_server_stop(void)
         xTimerStop(s_radar_timer, 0);
         xTimerDelete(s_radar_timer, 0);
         s_radar_timer = NULL;
+    }
+
+    // 停止广播任务
+    if (s_broadcast_task) {
+        vTaskDelete(s_broadcast_task);
+        s_broadcast_task = NULL;
     }
 
     esp_err_t err = httpd_stop(s_server);
