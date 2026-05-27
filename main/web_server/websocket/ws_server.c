@@ -1,6 +1,7 @@
 /**
  * @file ws_server.c
- * @brief WebSocket 鏈嶅姟鍣ㄦ牳蹇冨疄鐜? */
+ * @brief WebSocket server core implementation
+ */
 
 #include "ws_server.h"
 #include "esp_log.h"

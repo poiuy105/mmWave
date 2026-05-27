@@ -25,6 +25,11 @@
 #include <dirent.h>
 #include <cJSON.h>
 
+// HTTP status code for rate limiting (not always defined in esp_http_server.h)
+#ifndef HTTPD_429_TOO_MANY_REQUESTS
+#define HTTPD_429_TOO_MANY_REQUESTS 429
+#endif
+
 // Forward declaration (WebSocket handler defined in ws_server.c)
 extern esp_err_t ws_uri_handler(httpd_req_t *req);
 
@@ -229,8 +234,8 @@ static const httpd_uri_t uri_handlers[] = {
 
     // API
     { .uri = "/api/status",      .method = HTTP_GET, .handler = api_status_handler },
-    { .uri = "/api/system/info",  .method = HTTP_GET, .handler = api_system_info_handler },
-    { .uri = "/api/*",            .method = HTTP_OPTIONS, .handler = api_options_handler },
+    { .uri = "/api/system/info", .method = HTTP_GET, .handler = api_system_info_handler },
+    { .uri = "/api/*",           .method = HTTP_OPTIONS, .handler = api_options_handler },
 
     // WebSocket
     { .uri = "/ws", .method = HTTP_GET, .handler = ws_uri_handler, .is_websocket = true },
@@ -247,7 +252,7 @@ esp_err_t http_server_start(void)
     // 1. Load configuration
     server_config_t config;
     server_config_load(&config);
-    server_config_to_string(&config, ESP_LOG_COLOR_I "[CONFIG] " ESP_LOG_RESET_COLOR "\n%s\n", 1024);
+    ESP_LOGI(TAG, "[CONFIG] Server configuration loaded");
 
     // 2. Initialize server context
     ESP_ERROR_CHECK(server_context_init(&config));
@@ -270,13 +275,13 @@ esp_err_t http_server_start(void)
         return ESP_FAIL;
     }
 
-    ESP_ERROR_CHECK(http_server_start(http));
+    ESP_ERROR_CHECK(http_server_core_start(http));
 
     server_context_t *ctx = server_context_get();
-    ctx->http_server = http_server_get_handle(http);
+    ctx->http_server = http_server_core_get_handle(http);
 
     // 5. Register URI handlers
-    httpd_handle_t handle = http_server_get_handle(http);
+    httpd_handle_t handle = http_server_core_get_handle(http);
     for (size_t i = 0; i < sizeof(uri_handlers) / sizeof(uri_handlers[0]); i++) {
         ESP_ERROR_CHECK(httpd_register_uri_handler(handle, &uri_handlers[i]));
     }
@@ -329,8 +334,8 @@ esp_err_t http_server_stop(void)
 
     // 2. Stop HTTP server
     if (ctx->http_server) {
-        // Get http_server_t structure
-        http_server_destroy((http_server_t *)ctx->http_server);
+        // Get http_server_t structure and destroy it
+        http_server_core_destroy((http_server_t *)ctx->http_server);
         ctx->http_server = NULL;
     }
 
@@ -347,5 +352,9 @@ esp_err_t http_server_stop(void)
 
 bool http_server_is_running(void)
 {
-    return server_is_running();
+    server_context_t *ctx = server_context_get();
+    if (ctx == NULL || ctx->http_server == NULL) {
+        return false;
+    }
+    return http_server_core_is_running((http_server_t *)ctx->http_server);
 }

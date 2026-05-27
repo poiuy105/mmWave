@@ -1,6 +1,7 @@
 /**
  * @file fatfs_init.c
- * @brief FATFS 文件系统初始化实�? */
+ * @brief FATFS filesystem initialization
+ */
 
 #include "fatfs_init.h"
 #include "esp_vfs_fat.h"
@@ -42,10 +43,10 @@ esp_err_t fatfs_init(void)
     s_mounted = true;
     ESP_LOGI(TAG, "FATFS mounted at /storage");
 
-    // 创建目录结构
+    // Create directory structure
     struct stat st;
 
-    // 创建 www 目录
+    // Create www directory
     if (stat("/storage/www", &st) != 0) {
         if (mkdir("/storage/www", 0755) != 0) {
             ESP_LOGW(TAG, "Failed to create /storage/www");
@@ -54,7 +55,7 @@ esp_err_t fatfs_init(void)
         }
     }
 
-    // 创建 logs 目录
+    // Create logs directory
     if (stat("/storage/logs", &st) != 0) {
         if (mkdir("/storage/logs", 0755) != 0) {
             ESP_LOGW(TAG, "Failed to create /storage/logs");
@@ -63,7 +64,7 @@ esp_err_t fatfs_init(void)
         }
     }
 
-    // 创建 config 目录
+    // Create config directory
     if (stat("/storage/config", &st) != 0) {
         if (mkdir("/storage/config", 0755) != 0) {
             ESP_LOGW(TAG, "Failed to create /storage/config");

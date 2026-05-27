@@ -1,11 +1,11 @@
 /**
  * @file http_server_core.h
- * @brief HTTP 服务器核心接口
+ * @brief HTTP server core interface
  *
- * 负责：
- * - HTTP 服务器的创建和销毁
- * - URI handlers 的注册
- * - 优雅关闭支持
+ * Responsibilities:
+ * - HTTP server creation and destruction
+ * - URI handlers registration
+ * - Graceful shutdown support
  */
 
 #ifndef HTTP_SERVER_CORE_H
@@ -18,70 +18,70 @@
 #include "server_context.h"
 #include "server_config.h"
 
-// ==================== 前向声明 ====================
+// ==================== Forward declarations ====================
 
 typedef struct http_server http_server_t;
 
-// ==================== HTTP 服务器 API ====================
+// ==================== HTTP Server API ====================
 
 /**
- * @brief 创建 HTTP 服务器
- * @param config 服务器配置
- * @return http_server_t* 服务器句柄
+ * @brief Create HTTP server instance
+ * @param config Server configuration
+ * @return http_server_t* Server handle
  */
 http_server_t* http_server_create(const server_config_t *config);
 
 /**
- * @brief 启动 HTTP 服务器
- * @param server 服务器句柄
+ * @brief Start HTTP server instance
+ * @param server Server handle
  * @return esp_err_t
  */
-esp_err_t http_server_start(http_server_t *server);
+esp_err_t http_server_core_start(http_server_t *server);
 
 /**
- * @brief 停止 HTTP 服务器
- * @param server 服务器句柄
+ * @brief Stop HTTP server instance
+ * @param server Server handle
  * @return esp_err_t
  */
-esp_err_t http_server_stop(http_server_t *server);
+esp_err_t http_server_core_stop(http_server_t *server);
 
 /**
- * @brief 优雅停止（等待现有请求完成）
- * @param server 服务器句柄
- * @param timeout_ms 超时时间（毫秒）
+ * @brief Graceful stop (wait for existing requests to complete)
+ * @param server Server handle
+ * @param timeout_ms Timeout in milliseconds
  * @return esp_err_t
  */
-esp_err_t http_server_graceful_stop(http_server_t *server, uint32_t timeout_ms);
+esp_err_t http_server_core_graceful_stop(http_server_t *server, uint32_t timeout_ms);
 
 /**
- * @brief 销毁 HTTP 服务器
- * @param server 服务器句柄
+ * @brief Destroy HTTP server
+ * @param server Server handle
  */
-void http_server_destroy(http_server_t *server);
+void http_server_core_destroy(http_server_t *server);
 
 /**
- * @brief 获取 HTTP 服务器句柄
- * @param server 服务器句柄
+ * @brief Get HTTP server handle
+ * @param server Server handle
  * @return httpd_handle_t
  */
-httpd_handle_t http_server_get_handle(http_server_t *server);
+httpd_handle_t http_server_core_get_handle(http_server_t *server);
 
 /**
- * @brief 检查服务器是否运行
- * @param server 服务器句柄
- * @return true 运行中
- * @return false 未运行
+ * @brief Check if server is running
+ * @param server Server handle
+ * @return true Running
+ * @return false Not running
  */
-bool http_server_is_running(http_server_t *server);
+bool http_server_core_is_running(http_server_t *server);
 
 /**
- * @brief 获取服务器统计
- * @param server 服务器句柄
- * @param total_requests 总请求数
- * @param active_requests 活跃请求数
- * @param error_requests 错误请求数
+ * @brief Get server statistics
+ * @param server Server handle
+ * @param total_requests Total requests
+ * @param active_requests Active requests
+ * @param error_requests Error requests
  */
-void http_server_get_stats(http_server_t *server,
+void http_server_core_get_stats(http_server_t *server,
                           uint32_t *total_requests,
                           uint32_t *active_requests,
                           uint32_t *error_requests);

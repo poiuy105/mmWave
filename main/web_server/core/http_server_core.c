@@ -1,6 +1,7 @@
 /**
  * @file http_server_core.c
- * @brief HTTP 鏈嶅姟鍣ㄦ牳蹇冨疄鐜? */
+ * @brief HTTP server core implementation
+ */
 
 #include "http_server_core.h"
 #include "server_config.h"
@@ -49,7 +50,7 @@ http_server_t* http_server_create(const server_config_t *config)
     return server;
 }
 
-esp_err_t http_server_start(http_server_t *server)
+esp_err_t http_server_core_start(http_server_t *server)
 {
     if (server == NULL) {
         return ESP_ERR_INVALID_ARG;
@@ -91,7 +92,7 @@ esp_err_t http_server_start(http_server_t *server)
     return ESP_OK;
 }
 
-esp_err_t http_server_stop(http_server_t *server)
+esp_err_t http_server_core_stop(http_server_t *server)
 {
     if (server == NULL) {
         return ESP_ERR_INVALID_ARG;
@@ -116,7 +117,7 @@ esp_err_t http_server_stop(http_server_t *server)
     return err;
 }
 
-esp_err_t http_server_graceful_stop(http_server_t *server, uint32_t timeout_ms)
+esp_err_t http_server_core_graceful_stop(http_server_t *server, uint32_t timeout_ms)
 {
     if (server == NULL) {
         return ESP_ERR_INVALID_ARG;
@@ -142,24 +143,24 @@ esp_err_t http_server_graceful_stop(http_server_t *server, uint32_t timeout_ms)
                  (unsigned long)server->stats_active_requests);
     }
 
-    return http_server_stop(server);
+    return http_server_core_stop(server);
 }
 
-void http_server_destroy(http_server_t *server)
+void http_server_core_destroy(http_server_t *server)
 {
     if (server == NULL) {
         return;
     }
 
     if (server->running) {
-        http_server_stop(server);
+        http_server_core_stop(server);
     }
 
     free(server);
     ESP_LOGI(TAG, "HTTP server destroyed");
 }
 
-httpd_handle_t http_server_get_handle(http_server_t *server)
+httpd_handle_t http_server_core_get_handle(http_server_t *server)
 {
     if (server == NULL) {
         return NULL;
@@ -167,7 +168,7 @@ httpd_handle_t http_server_get_handle(http_server_t *server)
     return server->handle;
 }
 
-bool http_server_is_running(http_server_t *server)
+bool http_server_core_is_running(http_server_t *server)
 {
     if (server == NULL) {
         return false;
@@ -175,7 +176,7 @@ bool http_server_is_running(http_server_t *server)
     return server->running;
 }
 
-void http_server_get_stats(http_server_t *server,
+void http_server_core_get_stats(http_server_t *server,
                           uint32_t *total_requests,
                           uint32_t *active_requests,
                           uint32_t *error_requests)

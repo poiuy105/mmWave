@@ -1,6 +1,6 @@
 /**
  * @file health_handler.c
- * @brief 健康检�?API 实现
+ * @brief Health check API implementation
  */
 
 #include "health_handler.h"
@@ -11,17 +11,21 @@
 #include <string.h>
 #include <cJSON.h>
 
-static const char *TAG = "HEALTH";
+// Forward declaration for unused handlers warning suppression
+static esp_err_t api_live_handler(httpd_req_t *req) __attribute__((unused));
+static esp_err_t api_ready_handler(httpd_req_t *req) __attribute__((unused));
 
 /**
- * @brief GET /api/health - 健康检�? */
+ * @brief GET /api/health - Health check
+ */
 static esp_err_t api_health_handler(httpd_req_t *req)
 {
     server_context_t *ctx = server_context_get();
 
     cJSON *root = cJSON_CreateObject();
 
-    // 基本状�?    if (ctx && ctx->state == SERVER_STATE_RUNNING) {
+    // Basic status
+    if (ctx && ctx->state == SERVER_STATE_RUNNING) {
         cJSON_AddStringToObject(root, "status", "healthy");
     } else {
         cJSON_AddStringToObject(root, "status", "unhealthy");
@@ -30,17 +34,18 @@ static esp_err_t api_health_handler(httpd_req_t *req)
     cJSON_AddStringToObject(root, "version", "2.0.0");
     cJSON_AddNumberToObject(root, "uptime", ctx ? ctx->stats.uptime_seconds : 0);
 
-    // 内存状�?    uint32_t free_heap = esp_get_free_heap_size();
+    // Memory status
+    uint32_t free_heap = esp_get_free_heap_size();
     uint32_t min_free = esp_get_minimum_free_heap_size();
     cJSON_AddNumberToObject(root, "free_heap", free_heap);
     cJSON_AddNumberToObject(root, "min_free_heap", min_free);
 
-    // 更新上下文中的最小堆
+    // Update min heap in context
     if (ctx && free_heap < ctx->stats.free_heap_min) {
         ctx->stats.free_heap_min = free_heap;
     }
 
-    // HTTP 统计
+    // HTTP statistics
     cJSON *http = cJSON_CreateObject();
     cJSON_AddNumberToObject(http, "total_requests", ctx ? ctx->stats.total_requests : 0);
     cJSON_AddNumberToObject(http, "active_requests", ctx ? ctx->stats.active_requests : 0);
@@ -53,7 +58,7 @@ static esp_err_t api_health_handler(httpd_req_t *req)
     }
     cJSON_AddItemToObject(root, "http", http);
 
-    // WebSocket 统计
+    // WebSocket statistics
     cJSON *ws = cJSON_CreateObject();
     cJSON_AddNumberToObject(ws, "connected_clients", ctx ? ws_server_get_client_count(ctx->ws_server) : 0);
     cJSON_AddNumberToObject(ws, "total_connections", ctx ? ctx->stats.ws_connections : 0);
@@ -62,14 +67,15 @@ static esp_err_t api_health_handler(httpd_req_t *req)
     cJSON_AddNumberToObject(ws, "messages_failed", ctx ? ctx->stats.ws_messages_failed : 0);
     cJSON_AddItemToObject(root, "websocket", ws);
 
-    // 错误统计
+    // Error statistics
     cJSON *errors = cJSON_CreateObject();
     cJSON_AddNumberToObject(errors, "rate_limit_hits", ctx ? ctx->stats.rate_limit_hits : 0);
     cJSON_AddNumberToObject(errors, "validation_failures", ctx ? ctx->stats.validation_failures : 0);
     cJSON_AddNumberToObject(errors, "timeout_errors", ctx ? ctx->stats.timeout_errors : 0);
     cJSON_AddItemToObject(root, "errors", errors);
 
-    // 广播状�?    cJSON *broadcast = cJSON_CreateObject();
+    // Broadcast status
+    cJSON *broadcast = cJSON_CreateObject();
     cJSON_AddBoolToObject(broadcast, "enabled", ctx ? ctx->config->broadcast_enabled : false);
     cJSON_AddNumberToObject(broadcast, "interval", ctx ? ctx->config->broadcast_interval : 0);
     cJSON_AddItemToObject(root, "broadcast", broadcast);
@@ -85,23 +91,17 @@ static esp_err_t api_health_handler(httpd_req_t *req)
 }
 
 /**
- * @brief GET /api/ready - 就绪检查（用于 K8s/Docker 健康探测�? */
+ * @brief GET /api/ready - Readiness check (for K8s/Docker health probes)
+ */
 static esp_err_t api_ready_handler(httpd_req_t *req)
 {
     server_context_t *ctx = server_context_get();
 
-    // 检查服务器是否运行
+    // Check if server is running
     if (!ctx || ctx->state != SERVER_STATE_RUNNING) {
         httpd_resp_send_err(req, HTTPD_503_SERVICE_UNAVAILABLE, "Server not ready");
         return ESP_FAIL;
     }
-
-    // 检�?FATFS 是否就绪
-    // extern bool file_manager_is_ready(void);
-    // if (!file_manager_is_ready()) {
-    //     httpd_resp_send_err(req, HTTPD_503_SERVICE_UNAVAILABLE, "Storage not ready");
-    //     return ESP_FAIL;
-    // }
 
     cJSON *root = cJSON_CreateObject();
     cJSON_AddBoolToObject(root, "ready", true);
@@ -118,7 +118,8 @@ static esp_err_t api_ready_handler(httpd_req_t *req)
 }
 
 /**
- * @brief GET /api/live - 存活检查（用于 K8s 存活探测�? */
+ * @brief GET /api/live - Liveness check (for K8s liveness probes)
+ */
 static esp_err_t api_live_handler(httpd_req_t *req)
 {
     httpd_resp_set_type(req, "application/json");
@@ -132,7 +133,8 @@ esp_err_t health_handler_register(httpd_handle_t server)
         return ESP_ERR_INVALID_ARG;
     }
 
-    // 健康检�?    httpd_uri_t health_uri = {
+    // Health check
+    httpd_uri_t health_uri = {
         .uri = "/api/health",
         .method = HTTP_GET,
         .handler = api_health_handler,
@@ -140,11 +142,12 @@ esp_err_t health_handler_register(httpd_handle_t server)
     };
 
     if (httpd_register_uri_handler(server, &health_uri) != ESP_OK) {
-        ESP_LOGE(TAG, "Failed to register /api/health");
+        ESP_LOGE("HEALTH", "Failed to register /api/health");
         return ESP_FAIL;
     }
 
-    // 就绪检�?    httpd_uri_t ready_uri = {
+    // Readiness check
+    httpd_uri_t ready_uri = {
         .uri = "/api/ready",
         .method = HTTP_GET,
         .handler = api_ready_handler,
@@ -152,11 +155,12 @@ esp_err_t health_handler_register(httpd_handle_t server)
     };
 
     if (httpd_register_uri_handler(server, &ready_uri) != ESP_OK) {
-        ESP_LOGE(TAG, "Failed to register /api/ready");
+        ESP_LOGE("HEALTH", "Failed to register /api/ready");
         return ESP_FAIL;
     }
 
-    // 存活检�?    httpd_uri_t live_uri = {
+    // Liveness check
+    httpd_uri_t live_uri = {
         .uri = "/api/live",
         .method = HTTP_GET,
         .handler = api_live_handler,
@@ -164,11 +168,11 @@ esp_err_t health_handler_register(httpd_handle_t server)
     };
 
     if (httpd_register_uri_handler(server, &live_uri) != ESP_OK) {
-        ESP_LOGE(TAG, "Failed to register /api/live");
+        ESP_LOGE("HEALTH", "Failed to register /api/live");
         return ESP_FAIL;
     }
 
-    ESP_LOGI(TAG, "Health handlers registered");
+    ESP_LOGI("HEALTH", "Health handlers registered");
     return ESP_OK;
 }
 
