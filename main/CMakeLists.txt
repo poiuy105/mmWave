@@ -48,6 +48,7 @@ idf_component_register(
         esp_timer
         mbedtls
         app_update
+        radar
 )
 
 # 链接数学库

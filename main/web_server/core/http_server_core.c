@@ -7,6 +7,7 @@
 #include "esp_log.h"
 #include "esp_timer.h"
 #include <string.h>
+#include <stdlib.h>
 
 static const char *TAG = "HTTP_SERVER_CORE";
 
@@ -32,28 +33,6 @@ struct http_server {
 };
 
 /**
- * @brief 获取客户端 IP 地址
- */
-static void get_client_ip(httpd_req_t *req, char *ip_buffer, size_t len)
-{
-    if (req == NULL || ip_buffer == NULL || len == 0) {
-        return;
-    }
-
-    struct sockaddr_in6 addr;
-    socklen_t addr_len = sizeof(addr);
-
-    if (getpeername(httpd_req_to_sockfd(req), (struct sockaddr *)&addr, &addr_len) == 0) {
-        if (addr.sin6_family == AF_INET) {
-            struct sockaddr_in *s = (struct sockaddr_in *)&addr;
-            inet_ntoa_r(s->sin_addr, ip_buffer, len);
-        } else {
-            snprintf(ip_buffer, len, "IPv6");
-        }
-    }
-}
-
-/**
  * @brief 全局请求计数上下文
  */
 typedef struct {
@@ -61,16 +40,6 @@ typedef struct {
     uint32_t *active;
     uint32_t *errors;
 } request_counter_ctx_t;
-
-static esp_err_t request_counter_filter(httpd_req_t *req, httpd_err_code_t err)
-{
-    // 错误处理请求，仍计入
-    request_counter_ctx_t *ctx = (request_counter_ctx_t *)httpd_get_global_user_ctx(req->handle);
-    if (ctx && ctx->errors) {
-        (*ctx->errors)++;
-    }
-    return ESP_OK;
-}
 
 http_server_t* http_server_create(const server_config_t *config)
 {
@@ -113,15 +82,11 @@ esp_err_t http_server_start(http_server_t *server)
     config.stack_size = server->config->http_stack_size;
     config.max_uri_handlers = server->config->http_max_uri_handlers;
     config.max_open_sockets = server->config->http_max_open_sockets;
-    config.recv_timeout = server->config->http_recv_timeout;
-    config.send_timeout = server->config->http_send_timeout;
+    config.recv_wait_timeout = server->config->http_recv_timeout;
+    config.send_wait_timeout = server->config->http_send_timeout;
 
     // 启用 LRU 清理
     config.lru_purge_enable = true;
-
-    // 优化
-    config.enable_multiple_cores = false;  // ESP32-C3 单核
-    config.max_resp_size = 8192;
 
     ESP_LOGI(TAG, "Starting HTTP server on port %d...", config.server_port);
 
@@ -140,8 +105,8 @@ esp_err_t http_server_start(http_server_t *server)
     ESP_LOGI(TAG, "  - Stack size: %d", config.stack_size);
     ESP_LOGI(TAG, "  - Max handlers: %d", config.max_uri_handlers);
     ESP_LOGI(TAG, "  - Max sockets: %d", config.max_open_sockets);
-    ESP_LOGI(TAG, "  - Recv timeout: %d s", config.recv_timeout);
-    ESP_LOGI(TAG, "  - Send timeout: %d s", config.send_timeout);
+    ESP_LOGI(TAG, "  - Recv wait timeout: %d s", config.recv_wait_timeout);
+    ESP_LOGI(TAG, "  - Send wait timeout: %d s", config.send_wait_timeout);
 
     return ESP_OK;
 }

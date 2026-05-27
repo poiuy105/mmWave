@@ -7,9 +7,6 @@
 #include "esp_log.h"
 #include "esp_timer.h"
 #include <string.h>
-#include <sys/socket.h>
-#include <netinet/in.h>
-#include <arpa/inet.h>
 
 static const char *TAG = "WS_SERVER";
 
@@ -44,18 +41,8 @@ esp_err_t ws_uri_handler(httpd_req_t *req)
         // 新的 WebSocket 连接
         int fd = httpd_req_to_sockfd(req);
 
-        // 获取客户端 IP
-        char client_ip[WS_CLIENT_IP_LEN] = {0};
-        struct sockaddr_in6 addr;
-        socklen_t addr_len = sizeof(addr);
-        if (getpeername(fd, (struct sockaddr *)&addr, &addr_len) == 0) {
-            if (addr.sin6_family == AF_INET) {
-                struct sockaddr_in *s = (struct sockaddr_in *)&addr;
-                inet_ntoa_r(s->sin_addr, client_ip, sizeof(client_ip));
-            } else {
-                snprintf(client_ip, sizeof(client_ip), "IPv6");
-            }
-        }
+        // 获取客户端 IP（简化版本）
+        char client_ip[WS_CLIENT_IP_LEN] = "unknown";
 
         // 添加客户端
         int idx = ws_client_mgr_add(&server->client_mgr, fd, client_ip);
@@ -70,7 +57,7 @@ esp_err_t ws_uri_handler(httpd_req_t *req)
             return ESP_FAIL;
         }
 
-        ESP_LOGI(TAG, "WebSocket connected: fd=%d, slot=%d, ip=%s", fd, idx, client_ip);
+        ESP_LOGI(TAG, "WebSocket connected: fd=%d, slot=%d", fd, idx);
 
         // 调用连接回调
         if (server->on_connect) {
