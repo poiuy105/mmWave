@@ -126,7 +126,7 @@ esp_err_t http_server_graceful_stop(http_server_t *server, uint32_t timeout_ms)
         return ESP_OK;
     }
 
-    ESP_LOGI(TAG, "Graceful shutdown initiated (timeout=%ums)...", timeout_ms);
+    ESP_LOGI(TAG, "Graceful shutdown initiated (timeout=%ums)...", (unsigned int)timeout_ms);
 
     server->graceful_shutdown = true;
     server->shutdown_deadline = xTaskGetTickCount() + (timeout_ms / portTICK_PERIOD_MS);
@@ -138,8 +138,8 @@ esp_err_t http_server_graceful_stop(http_server_t *server, uint32_t timeout_ms)
     }
 
     if (server->stats_active_requests > 0) {
-        ESP_LOGW(TAG, "Graceful shutdown timeout, %u requests still active",
-                 server->stats_active_requests);
+        ESP_LOGW(TAG, "Graceful shutdown timeout, %lu requests still active",
+                 (unsigned long)server->stats_active_requests);
     }
 
     return http_server_stop(server);

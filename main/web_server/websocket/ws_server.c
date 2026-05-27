@@ -1,6 +1,6 @@
 /**
  * @file ws_server.c
- * @brief WebSocket 服务器核心实�? */
+ * @brief WebSocket 鏈嶅姟鍣ㄦ牳蹇冨疄鐜? */
 
 #include "ws_server.h"
 #include "esp_log.h"
@@ -190,9 +190,9 @@ ws_server_t* ws_server_create(httpd_handle_t http_server, const ws_server_config
         if (ws_heartbeat_init(&server->heartbeat_ctx, &server->client_mgr,
                               http_server, &hb_config) == ESP_OK) {
             ws_heartbeat_start(&server->heartbeat_ctx);
-            ESP_LOGI(TAG, "Heartbeat enabled: interval=%us, timeout=%us",
-                     config->heartbeat_interval,
-                     config->heartbeat_timeout);
+            ESP_LOGI(TAG, "Heartbeat enabled: interval=%u us, timeout=%u us",
+                     (unsigned int)config->heartbeat_interval,
+                     (unsigned int)config->heartbeat_timeout);
         }
     }
 
