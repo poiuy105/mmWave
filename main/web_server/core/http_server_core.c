@@ -1,8 +1,10 @@
 /**
  * @file http_server_core.c
- * @brief HTTP 服务器核心实�? */
+ * @brief HTTP 服务器核心实现
+ */
 
 #include "http_server_core.h"
+#include "server_config.h"
 #include "esp_log.h"
 #include "esp_timer.h"
 #include <string.h>
@@ -10,31 +12,21 @@
 
 static const char *TAG = "HTTP_SERVER_CORE";
 
-/**
- * @brief HTTP 服务器结�? */
 struct http_server {
-    httpd_handle_t handle;         // ESP-IDF HTTP 服务器句�?    const server_config_t *config; // 配置
-    bool running;                  // 运行状�?    uint32_t start_time;           // 启动时间
+    httpd_handle_t handle;
+    server_config_t config;
+    bool running;
+    uint32_t start_time;
 
-    // 统计
     uint32_t stats_total_requests;
     uint32_t stats_active_requests;
     uint32_t stats_error_requests;
     uint32_t stats_bytes_sent;
     uint32_t stats_bytes_received;
 
-    // 关闭标志
     bool graceful_shutdown;
     uint32_t shutdown_deadline;
 };
-
-/**
- * @brief 全局请求计数上下�? */
-typedef struct {
-    uint32_t *total;
-    uint32_t *active;
-    uint32_t *errors;
-} request_counter_ctx_t;
 
 http_server_t* http_server_create(const server_config_t *config)
 {
@@ -49,12 +41,12 @@ http_server_t* http_server_create(const server_config_t *config)
         return NULL;
     }
 
-    server->config = config;
+    memcpy(&server->config, config, sizeof(server_config_t));
     server->running = false;
     server->start_time = xTaskGetTickCount() * portTICK_PERIOD_MS / 1000;
 
     ESP_LOGI(TAG, "HTTP server created: port=%d, stack=%u",
-             config->http_port, config->http_stack_size);
+             config->http_port, (unsigned int)config->http_stack_size);
 
     return server;
 }
@@ -72,15 +64,12 @@ esp_err_t http_server_start(http_server_t *server)
 
     httpd_config_t config = HTTPD_DEFAULT_CONFIG();
 
-    // 应用配置
-    config.server_port = server->config->http_port;
-    config.stack_size = server->config->http_stack_size;
-    config.max_uri_handlers = server->config->http_max_uri_handlers;
-    config.max_open_sockets = server->config->http_max_open_sockets;
-    config.recv_wait_timeout = server->config->http_recv_timeout;
-    config.send_wait_timeout = server->config->http_send_timeout;
-
-    // 启用 LRU 清理
+    config.server_port = server->config.http_port;
+    config.stack_size = server->config.http_stack_size;
+    config.max_uri_handlers = server->config.http_max_uri_handlers;
+    config.max_open_sockets = server->config.http_max_open_sockets;
+    config.recv_wait_timeout = server->config.http_recv_timeout;
+    config.send_wait_timeout = server->config.http_send_timeout;
     config.lru_purge_enable = true;
 
     ESP_LOGI(TAG, "Starting HTTP server on port %d...", config.server_port);
@@ -146,7 +135,6 @@ esp_err_t http_server_graceful_stop(http_server_t *server, uint32_t timeout_ms)
     server->graceful_shutdown = true;
     server->shutdown_deadline = xTaskGetTickCount() + (timeout_ms / portTICK_PERIOD_MS);
 
-    // 等待活跃请求完成
     uint32_t waited = 0;
     while (server->stats_active_requests > 0 && waited < timeout_ms) {
         vTaskDelay(pdMS_TO_TICKS(100));
