@@ -1,6 +1,6 @@
 /**
  * @file http_server_core.c
- * @brief HTTP 服务器核心实�? */
+ * @brief HTTP 鏈嶅姟鍣ㄦ牳蹇冨疄鐜? */
 
 #include "http_server_core.h"
 #include "server_config.h"
@@ -44,7 +44,7 @@ http_server_t* http_server_create(const server_config_t *config)
     server->start_time = xTaskGetTickCount() * portTICK_PERIOD_MS / 1000;
 
     ESP_LOGI(TAG, "HTTP server created: port=%d, stack=%lu",
-             config->http_port, config->http_stack_size);
+             config->http_port, (unsigned long)config->http_stack_size);
 
     return server;
 }
