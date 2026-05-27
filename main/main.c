@@ -18,6 +18,7 @@
 
 #include "web_server/fatfs_init.h"
 #include "web_server/http_server.h"
+#include "web_server/file_manager.h"
 #include "radar_adapter/radar_adapter.h"
 
 static const char *TAG = "MAIN";
@@ -145,6 +146,10 @@ void app_main(void)
     // 初始化 FATFS
     ESP_ERROR_CHECK(fatfs_init());
     ESP_LOGI(TAG, "FATFS initialized");
+
+    // 初始化文件管理器
+    ESP_ERROR_CHECK(file_manager_init());
+    ESP_LOGI(TAG, "File manager initialized");
 
     // 初始化雷达适配层
     esp_err_t radar_err = radar_adapter_init();

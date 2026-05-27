@@ -17,6 +17,7 @@
 #include "security/input_validator.h"
 #include "security/security_headers.h"
 #include "handlers/health_handler.h"
+#include "handlers/upload_handler.h"
 #include "esp_log.h"
 #include "esp_http_server.h"
 #include "radar_adapter/radar_adapter.h"
@@ -289,7 +290,10 @@ esp_err_t http_server_start(void)
     // 6. Register health check handlers
     health_handler_register(handle);
 
-    // 7. Create WebSocket server
+    // 7. Register file upload/management handlers
+    upload_handler_register(handle);
+
+    // 8. Create WebSocket server
     if (config.ws_enabled) {
         ws_server_config_t ws_config = {
             .on_connect = ws_on_connect,
