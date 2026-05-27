@@ -5,6 +5,8 @@
 
 #include "rate_limiter.h"
 #include "esp_log.h"
+#include "freertos/FreeRTOS.h"
+#include "freertos/semphr.h"
 #include <string.h>
 #include <stdlib.h>
 
@@ -65,7 +67,7 @@ esp_err_t rate_limiter_init(const rate_limiter_config_t *config)
         config = &s_default_config;
     }
 
-    if (s_mutex) {
+    if (s_mutex != NULL) {
         ESP_LOGW(TAG, "Rate limiter already initialized");
         return ESP_OK;
     }
@@ -97,12 +99,12 @@ esp_err_t rate_limiter_init(const rate_limiter_config_t *config)
 
 void rate_limiter_deinit(void)
 {
-    if (s_mutex) {
+    if (s_mutex != NULL) {
         vSemaphoreDelete(s_mutex);
         s_mutex = NULL;
     }
 
-    if (s_entries) {
+    if (s_entries != NULL) {
         free(s_entries);
         s_entries = NULL;
     }
@@ -207,7 +209,7 @@ void rate_limiter_reset(const char *client_ip)
 
 void rate_limiter_get_stats(uint32_t *total_hits, uint32_t *blocked_hits, uint16_t *active_entries)
 {
-    if (s_mutex) {
+    if (s_mutex != NULL) {
         xSemaphoreTake(s_mutex, portMAX_DELAY);
     }
 
@@ -222,7 +224,7 @@ void rate_limiter_get_stats(uint32_t *total_hits, uint32_t *blocked_hits, uint16
         *active_entries = count;
     }
 
-    if (s_mutex) {
+    if (s_mutex != NULL) {
         xSemaphoreGive(s_mutex);
     }
 }

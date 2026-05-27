@@ -10,6 +10,7 @@
 
 #include <stdint.h>
 #include <stdbool.h>
+#include <stddef.h>
 
 // ==================== 验证结果 ====================
 
@@ -91,7 +92,6 @@ const char* validation_result_str(validation_result_t result);
  */
 static inline bool is_safe_url_char(char c)
 {
-    // 允许的字符：字母、数字、-_.~/=
     if (c >= 'a' && c <= 'z') return true;
     if (c >= 'A' && c <= 'Z') return true;
     if (c >= '0' && c <= '9') return true;
@@ -105,7 +105,6 @@ static inline bool is_safe_url_char(char c)
  */
 static inline bool is_safe_filename_char(char c)
 {
-    // 允许的字符：字母、数字、-_. 
     if (c >= 'a' && c <= 'z') return true;
     if (c >= 'A' && c <= 'Z') return true;
     if (c >= '0' && c <= '9') return true;
