@@ -1,25 +1,24 @@
 /**
  * @file ws_heartbeat.c
- * @brief WebSocket 心跳检测实�? */
+ * @brief WebSocket 心跳检测实现
+ */
 
 #include "ws_heartbeat.h"
 #include "esp_log.h"
-#include "esp_timer.h"
 
 static const char *TAG = "WS_HEARTBEAT";
 
-/**
- * @brief 心跳检测任�? */
 static void ws_heartbeat_task(void *arg)
 {
     ws_heartbeat_ctx_t *ctx = (ws_heartbeat_ctx_t *)arg;
     TickType_t last_wake = xTaskGetTickCount();
 
     ESP_LOGI(TAG, "Heartbeat task started: interval=%us, timeout=%us",
-             ctx->config.check_interval_sec, ctx->config.client_timeout_sec);
+             (unsigned int)ctx->config.check_interval_sec,
+             (unsigned int)ctx->config.client_timeout_sec);
 
     while (ctx->running) {
-        // 等待下一个检测周�?        vTaskDelayUntil(&last_wake, pdMS_TO_TICKS(ctx->config.check_interval_sec * 1000));
+        vTaskDelayUntil(&last_wake, pdMS_TO_TICKS(ctx->config.check_interval_sec * 1000));
 
         if (!ctx->running) {
             break;
@@ -33,7 +32,6 @@ static void ws_heartbeat_task(void *arg)
         TickType_t timeout_ticks = pdMS_TO_TICKS(ctx->config.client_timeout_sec * 1000);
         TickType_t ping_threshold = pdMS_TO_TICKS((ctx->config.check_interval_sec + 5) * 1000);
 
-        // 锁定客户端管理器
         xSemaphoreTake(ctx->client_mgr->mutex, portMAX_DELAY);
 
         for (int i = 0; i < ctx->client_mgr->max_clients; i++) {
@@ -45,12 +43,11 @@ static void ws_heartbeat_task(void *arg)
 
             TickType_t idle_time = now - client->last_activity;
 
-            // 检查超�?            if (idle_time > timeout_ticks) {
-                ESP_LOGW(TAG, "Client timeout: fd=%d, ip=%s, idle=%us",
+            if (idle_time > timeout_ticks) {
+                ESP_LOGW(TAG, "Client timeout: fd=%d, ip=%s, idle=%lus",
                          client->fd, client->client_ip,
-                         (idle_time * portTICK_PERIOD_MS) / 1000);
+                         (unsigned long)(idle_time * portTICK_PERIOD_MS) / 1000);
 
-                // 发送关闭帧
                 httpd_ws_frame_t close_pkt = {
                     .type = HTTPD_WS_TYPE_CLOSE,
                     .payload = NULL,
@@ -58,7 +55,6 @@ static void ws_heartbeat_task(void *arg)
                 };
                 httpd_ws_send_frame_async(ctx->http_server, client->fd, &close_pkt);
 
-                // 标记断开
                 client->active = false;
                 client->state = WS_CLIENT_STATE_DISCONNECTED;
                 int old_fd = client->fd;
@@ -68,7 +64,6 @@ static void ws_heartbeat_task(void *arg)
 
                 ESP_LOGI(TAG, "Client disconnected due to timeout: old_fd=%d", old_fd);
             }
-            // 检查是否需要发�?ping
             else if (ctx->config.auto_ping && idle_time > ping_threshold) {
                 httpd_ws_frame_t ping_pkt = {
                     .type = HTTPD_WS_TYPE_PING,
@@ -82,10 +77,6 @@ static void ws_heartbeat_task(void *arg)
                 if (ret == ESP_OK) {
                     client->state = WS_CLIENT_STATE_PING_PENDING;
                     ctx->total_pings_sent++;
-                    ESP_LOGD(TAG, "Ping sent to fd=%d", client->fd);
-                } else {
-                    ESP_LOGW(TAG, "Failed to send ping to fd=%d: %s",
-                             client->fd, esp_err_to_name(ret));
                 }
             }
         }
@@ -114,7 +105,8 @@ esp_err_t ws_heartbeat_init(ws_heartbeat_ctx_t *ctx,
     ctx->running = false;
 
     ESP_LOGI(TAG, "Heartbeat module initialized: interval=%us, timeout=%us",
-             config->check_interval_sec, config->client_timeout_sec);
+             (unsigned int)config->check_interval_sec,
+             (unsigned int)config->client_timeout_sec);
 
     return ESP_OK;
 }
@@ -135,8 +127,10 @@ esp_err_t ws_heartbeat_start(ws_heartbeat_ctx_t *ctx)
     BaseType_t ret = xTaskCreate(
         ws_heartbeat_task,
         "ws_heartbeat",
-        4096,  // 栈大�?        ctx,
-        3,     // 优先�?        &ctx->task_handle
+        4096,
+        ctx,
+        3,
+        &ctx->task_handle
     );
 
     if (ret != pdPASS) {
@@ -162,7 +156,7 @@ esp_err_t ws_heartbeat_stop(ws_heartbeat_ctx_t *ctx)
     ctx->running = false;
 
     if (ctx->task_handle) {
-        // 等待任务自行退�?        vTaskDelay(pdMS_TO_TICKS(100));
+        vTaskDelay(pdMS_TO_TICKS(100));
         ctx->task_handle = NULL;
     }
 
