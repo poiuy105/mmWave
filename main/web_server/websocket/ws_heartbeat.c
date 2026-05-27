@@ -1,6 +1,10 @@
 /**
  * @file ws_heartbeat.c
- * @brief WebSocket 蹇冭烦妫€娴嬪疄鐜? */
+ * @brief WebSocket heartbeat monitoring implementation
+ *
+ * Periodically checks client liveness, sends ping frames,
+ * and cleans up timed-out connections.
+ */
 
 #include "ws_heartbeat.h"
 #include "esp_log.h"
@@ -12,75 +16,62 @@ static void ws_heartbeat_task(void *arg)
     ws_heartbeat_ctx_t *ctx = (ws_heartbeat_ctx_t *)arg;
     TickType_t last_wake = xTaskGetTickCount();
 
-    ESP_LOGI(TAG, "Heartbeat task started: interval=%u us, timeout=%u us",
+    ESP_LOGI(TAG, "Heartbeat task started: interval=%u s, timeout=%u s",
              (unsigned int)ctx->config.check_interval_sec,
              (unsigned int)ctx->config.client_timeout_sec);
 
+    // Pre-allocate arrays for deferred actions
+    #define MAX_ACTIONS 16
+    struct { int fd; bool timeout; } actions[MAX_ACTIONS];
+    int action_count;
+
     while (ctx->running) {
         vTaskDelayUntil(&last_wake, pdMS_TO_TICKS(ctx->config.check_interval_sec * 1000));
-
-        if (!ctx->running) {
-            break;
-        }
-
-        if (ctx->client_mgr == NULL || ctx->http_server == NULL) {
-            continue;
-        }
+        if (!ctx->running) break;
+        if (ctx->client_mgr == NULL || ctx->http_server == NULL) continue;
 
         TickType_t now = xTaskGetTickCount();
         TickType_t timeout_ticks = pdMS_TO_TICKS(ctx->config.client_timeout_sec * 1000);
         TickType_t ping_threshold = pdMS_TO_TICKS((ctx->config.check_interval_sec + 5) * 1000);
 
+        // Phase 1: Collect actions while holding lock
+        action_count = 0;
         xSemaphoreTake(ctx->client_mgr->mutex, portMAX_DELAY);
-
-        for (int i = 0; i < ctx->client_mgr->max_clients; i++) {
+        for (int i = 0; i < ctx->client_mgr->max_clients && action_count < MAX_ACTIONS; i++) {
             ws_client_t *client = &ctx->client_mgr->clients[i];
-
-            if (!client->active) {
-                continue;
-            }
-
+            if (!client->active) continue;
             TickType_t idle_time = now - client->last_activity;
-
             if (idle_time > timeout_ticks) {
-                ESP_LOGW(TAG, "Client timeout: fd=%d, ip=%s, idle=%lus",
-                         client->fd, client->client_ip,
-                         (unsigned long)(idle_time * portTICK_PERIOD_MS) / 1000);
-
-                httpd_ws_frame_t close_pkt = {
-                    .type = HTTPD_WS_TYPE_CLOSE,
-                    .payload = NULL,
-                    .len = 0,
-                };
-                httpd_ws_send_frame_async(ctx->http_server, client->fd, &close_pkt);
-
+                actions[action_count].fd = client->fd;
+                actions[action_count].timeout = true;
+                action_count++;
+                // Mark inactive immediately while holding lock
                 client->active = false;
                 client->state = WS_CLIENT_STATE_DISCONNECTED;
-                int old_fd = client->fd;
                 client->fd = -1;
                 ctx->client_mgr->total_disconnections++;
                 ctx->total_timeouts++;
-
-                ESP_LOGI(TAG, "Client disconnected due to timeout: old_fd=%d", old_fd);
-            }
-            else if (ctx->config.auto_ping && idle_time > ping_threshold) {
-                httpd_ws_frame_t ping_pkt = {
-                    .type = HTTPD_WS_TYPE_PING,
-                    .payload = NULL,
-                    .len = 0,
-                };
-
-                esp_err_t ret = httpd_ws_send_frame_async(
-                    ctx->http_server, client->fd, &ping_pkt);
-
-                if (ret == ESP_OK) {
-                    client->state = WS_CLIENT_STATE_PING_PENDING;
-                    ctx->total_pings_sent++;
-                }
+            } else if (ctx->config.auto_ping && idle_time > ping_threshold) {
+                actions[action_count].fd = client->fd;
+                actions[action_count].timeout = false;
+                action_count++;
+                client->state = WS_CLIENT_STATE_PING_PENDING;
             }
         }
-
         xSemaphoreGive(ctx->client_mgr->mutex);
+
+        // Phase 2: Execute I/O without holding lock
+        for (int i = 0; i < action_count; i++) {
+            if (actions[i].timeout) {
+                ESP_LOGW(TAG, "Client timeout: fd=%d", actions[i].fd);
+                httpd_ws_frame_t close_pkt = { .type = HTTPD_WS_TYPE_CLOSE, .payload = NULL, .len = 0 };
+                httpd_ws_send_frame_async(ctx->http_server, actions[i].fd, &close_pkt);
+            } else {
+                httpd_ws_frame_t ping_pkt = { .type = HTTPD_WS_TYPE_PING, .payload = NULL, .len = 0 };
+                esp_err_t ret = httpd_ws_send_frame_async(ctx->http_server, actions[i].fd, &ping_pkt);
+                if (ret == ESP_OK) ctx->total_pings_sent++;
+            }
+        }
     }
 
     ESP_LOGI(TAG, "Heartbeat task stopped");
@@ -103,7 +94,7 @@ esp_err_t ws_heartbeat_init(ws_heartbeat_ctx_t *ctx,
     ctx->config = *config;
     ctx->running = false;
 
-    ESP_LOGI(TAG, "Heartbeat module initialized: interval=%u us, timeout=%u us",
+    ESP_LOGI(TAG, "Heartbeat module initialized: interval=%u s, timeout=%u s",
              (unsigned int)config->check_interval_sec,
              (unsigned int)config->client_timeout_sec);
 

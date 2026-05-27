@@ -4,6 +4,7 @@
  */
 
 #include "server_context.h"
+#include "server_config.h"
 #include "esp_log.h"
 #include "esp_timer.h"
 #include <string.h>
@@ -43,8 +44,15 @@ esp_err_t server_context_init(const struct server_config *config)
         return ESP_ERR_NO_MEM;
     }
 
-    // Update state
-    s_ctx->config = config;
+    // Make a copy of config (Fix #16: avoid dangling pointer to stack variable)
+    s_ctx->config = calloc(1, sizeof(server_config_t));
+    if (s_ctx->config == NULL) {
+        ESP_LOGE(TAG, "Failed to allocate config copy");
+        free(s_ctx);
+        s_ctx = NULL;
+        return ESP_ERR_NO_MEM;
+    }
+    memcpy(s_ctx->config, config, sizeof(server_config_t));
     s_ctx->state = SERVER_STATE_INITIALIZED;
     s_ctx->graceful_shutdown_pending = false;
     s_ctx->start_time = xTaskGetTickCount() * portTICK_PERIOD_MS / 1000;
@@ -66,6 +74,11 @@ esp_err_t server_context_deinit(void)
 
     if (s_ctx->state == SERVER_STATE_RUNNING) {
         s_ctx->state = SERVER_STATE_STOPPED;
+    }
+
+    if (s_ctx->config) {
+        free(s_ctx->config);
+        s_ctx->config = NULL;
     }
 
     if (s_ctx->stats_mutex) {
@@ -94,6 +107,7 @@ void server_stats_inc_request(void)
     if (s_ctx && s_ctx->stats_mutex) {
         xSemaphoreTake(s_ctx->stats_mutex, portMAX_DELAY);
         s_ctx->stats.total_requests++;
+        s_ctx->stats.active_requests++;
         xSemaphoreGive(s_ctx->stats_mutex);
     }
 }

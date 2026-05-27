@@ -28,6 +28,10 @@ static esp_err_t api_health_handler(httpd_req_t *req)
 {
     server_context_t *ctx = server_context_get();
 
+    // Get a thread-safe snapshot of server statistics
+    server_stats_t stats;
+    server_stats_get_copy(&stats);
+
     cJSON *root = cJSON_CreateObject();
 
     // Basic status
@@ -38,7 +42,7 @@ static esp_err_t api_health_handler(httpd_req_t *req)
     }
 
     cJSON_AddStringToObject(root, "version", "2.0.0");
-    cJSON_AddNumberToObject(root, "uptime", ctx ? ctx->stats.uptime_seconds : 0);
+    cJSON_AddNumberToObject(root, "uptime", stats.uptime_seconds);
 
     // Memory status
     uint32_t free_heap = esp_get_free_heap_size();
@@ -51,33 +55,33 @@ static esp_err_t api_health_handler(httpd_req_t *req)
         ctx->stats.free_heap_min = free_heap;
     }
 
-    // HTTP statistics
+    // HTTP statistics (from thread-safe copy)
     cJSON *http = cJSON_CreateObject();
-    cJSON_AddNumberToObject(http, "total_requests", ctx ? ctx->stats.total_requests : 0);
-    cJSON_AddNumberToObject(http, "active_requests", ctx ? ctx->stats.active_requests : 0);
-    cJSON_AddNumberToObject(http, "error_requests", ctx ? ctx->stats.error_requests : 0);
-    if (ctx && ctx->stats.total_requests > 0) {
-        float error_rate = (float)ctx->stats.error_requests / ctx->stats.total_requests;
+    cJSON_AddNumberToObject(http, "total_requests", stats.total_requests);
+    cJSON_AddNumberToObject(http, "active_requests", stats.active_requests);
+    cJSON_AddNumberToObject(http, "error_requests", stats.error_requests);
+    if (stats.total_requests > 0) {
+        float error_rate = (float)stats.error_requests / stats.total_requests;
         cJSON_AddNumberToObject(http, "error_rate", error_rate);
     } else {
         cJSON_AddNumberToObject(http, "error_rate", 0.0);
     }
     cJSON_AddItemToObject(root, "http", http);
 
-    // WebSocket statistics
+    // WebSocket statistics (from thread-safe copy)
     cJSON *ws = cJSON_CreateObject();
     cJSON_AddNumberToObject(ws, "connected_clients", ctx ? ws_server_get_client_count(ctx->ws_server) : 0);
-    cJSON_AddNumberToObject(ws, "total_connections", ctx ? ctx->stats.ws_connections : 0);
-    cJSON_AddNumberToObject(ws, "total_disconnections", ctx ? ctx->stats.ws_disconnections : 0);
-    cJSON_AddNumberToObject(ws, "messages_sent", ctx ? ctx->stats.ws_messages_sent : 0);
-    cJSON_AddNumberToObject(ws, "messages_failed", ctx ? ctx->stats.ws_messages_failed : 0);
+    cJSON_AddNumberToObject(ws, "total_connections", stats.ws_connections);
+    cJSON_AddNumberToObject(ws, "total_disconnections", stats.ws_disconnections);
+    cJSON_AddNumberToObject(ws, "messages_sent", stats.ws_messages_sent);
+    cJSON_AddNumberToObject(ws, "messages_failed", stats.ws_messages_failed);
     cJSON_AddItemToObject(root, "websocket", ws);
 
-    // Error statistics
+    // Error statistics (from thread-safe copy)
     cJSON *errors = cJSON_CreateObject();
-    cJSON_AddNumberToObject(errors, "rate_limit_hits", ctx ? ctx->stats.rate_limit_hits : 0);
-    cJSON_AddNumberToObject(errors, "validation_failures", ctx ? ctx->stats.validation_failures : 0);
-    cJSON_AddNumberToObject(errors, "timeout_errors", ctx ? ctx->stats.timeout_errors : 0);
+    cJSON_AddNumberToObject(errors, "rate_limit_hits", stats.rate_limit_hits);
+    cJSON_AddNumberToObject(errors, "validation_failures", stats.validation_failures);
+    cJSON_AddNumberToObject(errors, "timeout_errors", stats.timeout_errors);
     cJSON_AddItemToObject(root, "errors", errors);
 
     // Broadcast status
@@ -114,9 +118,13 @@ static esp_err_t api_ready_handler(httpd_req_t *req)
         return ESP_FAIL;
     }
 
+    // Get thread-safe stats copy
+    server_stats_t stats;
+    server_stats_get_copy(&stats);
+
     cJSON *root = cJSON_CreateObject();
     cJSON_AddBoolToObject(root, "ready", true);
-    cJSON_AddNumberToObject(root, "uptime", ctx->stats.uptime_seconds);
+    cJSON_AddNumberToObject(root, "uptime", stats.uptime_seconds);
 
     char *json = cJSON_PrintUnformatted(root);
     httpd_resp_set_type(req, "application/json");

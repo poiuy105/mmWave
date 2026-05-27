@@ -5,6 +5,7 @@
 
 #include "ws_server.h"
 #include "esp_log.h"
+#include <stdatomic.h>
 #include <string.h>
 
 static const char *TAG = "WS_SERVER";
@@ -20,8 +21,8 @@ struct ws_server {
     ws_heartbeat_ctx_t heartbeat_ctx;
     bool heartbeat_enabled;
 
-    uint32_t stats_messages_sent;
-    uint32_t stats_messages_failed;
+    _Atomic uint32_t stats_messages_sent;
+    _Atomic uint32_t stats_messages_failed;
 };
 
 static ws_server_t *s_global_server = NULL;
@@ -150,6 +151,10 @@ ws_server_t* ws_server_create(httpd_handle_t http_server, const ws_server_config
     server->on_disconnect = config->on_disconnect;
     server->on_message = config->on_message;
 
+    // Initialize atomic counters
+    atomic_init(&server->stats_messages_sent, 0);
+    atomic_init(&server->stats_messages_failed, 0);
+
     ws_client_mgr_config_t mgr_config = {
         .max_clients = config->max_clients,
         .msg_queue_size = config->msg_queue_size,
@@ -191,7 +196,7 @@ ws_server_t* ws_server_create(httpd_handle_t http_server, const ws_server_config
         if (ws_heartbeat_init(&server->heartbeat_ctx, &server->client_mgr,
                               http_server, &hb_config) == ESP_OK) {
             ws_heartbeat_start(&server->heartbeat_ctx);
-            ESP_LOGI(TAG, "Heartbeat enabled: interval=%u us, timeout=%u us",
+            ESP_LOGI(TAG, "Heartbeat enabled: interval=%u s, timeout=%u s",
                      (unsigned int)config->heartbeat_interval,
                      (unsigned int)config->heartbeat_timeout);
         }
@@ -242,9 +247,9 @@ esp_err_t ws_server_send_text(ws_server_t *server, int fd, const char *text)
     esp_err_t ret = httpd_ws_send_frame_async(server->http_server, fd, &ws_pkt);
 
     if (ret == ESP_OK) {
-        server->stats_messages_sent++;
+        atomic_fetch_add(&server->stats_messages_sent, 1);
     } else {
-        server->stats_messages_failed++;
+        atomic_fetch_add(&server->stats_messages_failed, 1);
     }
 
     return ret;
@@ -269,9 +274,9 @@ esp_err_t ws_server_send_binary(ws_server_t *server, int fd, const uint8_t *data
     esp_err_t ret = httpd_ws_send_frame_async(server->http_server, fd, &ws_pkt);
 
     if (ret == ESP_OK) {
-        server->stats_messages_sent++;
+        atomic_fetch_add(&server->stats_messages_sent, 1);
     } else {
-        server->stats_messages_failed++;
+        atomic_fetch_add(&server->stats_messages_failed, 1);
     }
 
     return ret;
@@ -286,8 +291,11 @@ int ws_server_broadcast_text(ws_server_t *server, const char *text)
     int count = ws_client_mgr_broadcast(&server->client_mgr, server->http_server,
                                         (const uint8_t *)text, strlen(text),
                                         HTTPD_WS_TYPE_TEXT);
-    server->stats_messages_sent += count;
-    server->stats_messages_failed += (ws_client_mgr_get_active_count(&server->client_mgr) - count);
+    atomic_fetch_add(&server->stats_messages_sent, (uint32_t)count);
+    int active = ws_client_mgr_get_active_count(&server->client_mgr);
+    if (active > count) {
+        atomic_fetch_add(&server->stats_messages_failed, (uint32_t)(active - count));
+    }
 
     return count;
 }
@@ -300,8 +308,11 @@ int ws_server_broadcast_binary(ws_server_t *server, const uint8_t *data, size_t 
 
     int count = ws_client_mgr_broadcast(&server->client_mgr, server->http_server,
                                         data, len, HTTPD_WS_TYPE_BINARY);
-    server->stats_messages_sent += count;
-    server->stats_messages_failed += (ws_client_mgr_get_active_count(&server->client_mgr) - count);
+    atomic_fetch_add(&server->stats_messages_sent, (uint32_t)count);
+    int active = ws_client_mgr_get_active_count(&server->client_mgr);
+    if (active > count) {
+        atomic_fetch_add(&server->stats_messages_failed, (uint32_t)(active - count));
+    }
 
     return count;
 }
@@ -357,8 +368,8 @@ void ws_server_get_stats(ws_server_t *server,
     ws_client_mgr_get_stats(&server->client_mgr, total_conn, total_disconn,
                            total_sent, total_failed, active);
 
-    if (total_sent) *total_sent += server->stats_messages_sent;
-    if (total_failed) *total_failed += server->stats_messages_failed;
+    if (total_sent) *total_sent += atomic_load(&server->stats_messages_sent);
+    if (total_failed) *total_failed += atomic_load(&server->stats_messages_failed);
 }
 
 bool ws_server_get_client_ip(ws_server_t *server, int fd, char *ip_buffer, size_t buffer_size)
@@ -395,6 +406,6 @@ void ws_server_dump_status(ws_server_t *server)
     }
 
     ESP_LOGI(TAG, "Server stats: msg_sent=%lu, msg_failed=%lu",
-             (unsigned long)server->stats_messages_sent,
-             (unsigned long)server->stats_messages_failed);
+             (unsigned long)atomic_load(&server->stats_messages_sent),
+             (unsigned long)atomic_load(&server->stats_messages_failed));
 }

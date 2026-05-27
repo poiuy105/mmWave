@@ -7,6 +7,7 @@
 #include "esp_log.h"
 #include "esp_vfs_fat.h"
 #include "wear_levelling.h"
+#include "esp_partition.h"
 #include <string.h>
 #include <sys/stat.h>
 #include <dirent.h>
@@ -22,6 +23,7 @@ static bool s_initialized = false;
 
 // Storage partition mount point
 #define STORAGE_MOUNT_POINT "/storage"
+#define MAX_LIST_ENTRIES 50  // Prevent heap exhaustion on ESP32-C3
 
 esp_err_t file_manager_init(void)
 {
@@ -71,11 +73,18 @@ esp_err_t file_manager_list(const char *path, file_list_t *list)
         return ESP_ERR_NOT_FOUND;
     }
 
-    // First pass: count
+    // First pass: count (skip . and ..)
     int count = 0;
     struct dirent *entry;
     while ((entry = readdir(dir)) != NULL) {
+        if (strcmp(entry->d_name, ".") == 0 || strcmp(entry->d_name, "..") == 0) {
+            continue;
+        }
         count++;
+        if (count >= MAX_LIST_ENTRIES) {
+            ESP_LOGW(TAG, "Directory has too many entries, limiting to %d", MAX_LIST_ENTRIES);
+            break;
+        }
     }
 
     if (count == 0) {
@@ -280,10 +289,15 @@ esp_err_t file_manager_get_fs_info(fs_info_t *info)
         file_manager_list_free(&list);
     }
 
-    // Partition size (from partition table, using fixed value here)
-    // In production, should get from wear leveling layer
-    info->total_bytes = 1536 * 1024;  // approx 1.5MB
-    info->free_bytes = info->total_bytes - info->used_bytes;
+    // Get actual partition size from partition table
+    const esp_partition_t *part = esp_partition_find_first(ESP_PARTITION_TYPE_DATA, ESP_PARTITION_SUBTYPE_DATA_FAT, "storage");
+    if (part) {
+        info->total_bytes = part->size;
+    } else {
+        info->total_bytes = 1536 * 1024;  // Fallback approx 1.5MB
+        ESP_LOGW(TAG, "Storage partition not found, using default size");
+    }
+    info->free_bytes = (info->total_bytes > info->used_bytes) ? (info->total_bytes - info->used_bytes) : 0;
 
     return ESP_OK;
 }

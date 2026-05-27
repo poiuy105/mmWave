@@ -1,11 +1,18 @@
 /**
  * @file ws_client_mgr.c
- * @brief WebSocket 客户端管理器实现
+ * @brief WebSocket client manager implementation
+ *
+ * Manages all WebSocket client connections including:
+ * - Client state tracking
+ * - Connect/disconnect handling
+ * - Message queue management
  */
 
 #include "ws_client_mgr.h"
 #include "esp_log.h"
 #include "esp_err.h"
+#include "freertos/FreeRTOS.h"
+#include "freertos/semphr.h"
 #include <string.h>
 #include <stdio.h>
 
@@ -204,11 +211,13 @@ int ws_client_mgr_get_active_count(const ws_client_mgr_t *mgr)
     }
 
     int count = 0;
+    xSemaphoreTake(mgr->mutex, portMAX_DELAY);
     for (int i = 0; i < mgr->max_clients; i++) {
         if (mgr->clients[i].active) {
             count++;
         }
     }
+    xSemaphoreGive(mgr->mutex);
     return count;
 }
 
@@ -236,12 +245,17 @@ int ws_client_mgr_remove_timeout(ws_client_mgr_t *mgr, httpd_handle_t server, Ti
         return 0;
     }
 
+    // Pre-allocate array for deferred close actions
+    #define MAX_TIMEOUT_ACTIONS 16
+    struct { int fd; int slot; } close_actions[MAX_TIMEOUT_ACTIONS];
+    int close_count = 0;
     int removed = 0;
     TickType_t now = xTaskGetTickCount();
 
+    // Phase 1: Collect timed-out clients while holding lock
     xSemaphoreTake(mgr->mutex, portMAX_DELAY);
 
-    for (int i = 0; i < mgr->max_clients; i++) {
+    for (int i = 0; i < mgr->max_clients && close_count < MAX_TIMEOUT_ACTIONS; i++) {
         if (mgr->clients[i].active) {
             TickType_t elapsed = now - mgr->clients[i].last_activity;
             if (elapsed > timeout_ticks) {
@@ -249,13 +263,11 @@ int ws_client_mgr_remove_timeout(ws_client_mgr_t *mgr, httpd_handle_t server, Ti
                          mgr->clients[i].fd, i, mgr->clients[i].client_ip,
                          (unsigned long)(elapsed * portTICK_PERIOD_MS) / 1000);
 
-                httpd_ws_frame_t close_pkt = {
-                    .type = HTTPD_WS_TYPE_CLOSE,
-                    .payload = NULL,
-                    .len = 0,
-                };
-                httpd_ws_send_frame_async(server, mgr->clients[i].fd, &close_pkt);
+                close_actions[close_count].fd = mgr->clients[i].fd;
+                close_actions[close_count].slot = i;
+                close_count++;
 
+                // Mark inactive immediately while holding lock
                 mgr->clients[i].active = false;
                 mgr->clients[i].state = WS_CLIENT_STATE_DISCONNECTED;
                 mgr->clients[i].fd = -1;
@@ -266,47 +278,58 @@ int ws_client_mgr_remove_timeout(ws_client_mgr_t *mgr, httpd_handle_t server, Ti
     }
 
     xSemaphoreGive(mgr->mutex);
+
+    // Phase 2: Send close frames without holding lock
+    for (int i = 0; i < close_count; i++) {
+        httpd_ws_frame_t close_pkt = {
+            .type = HTTPD_WS_TYPE_CLOSE,
+            .payload = NULL,
+            .len = 0,
+        };
+        httpd_ws_send_frame_async(server, close_actions[i].fd, &close_pkt);
+    }
+
     return removed;
 }
 
 int ws_client_mgr_broadcast(ws_client_mgr_t *mgr, httpd_handle_t server,
                             const uint8_t *data, size_t len, httpd_ws_type_t type)
 {
-    if (mgr == NULL || server == NULL || data == NULL || len == 0) {
-        return 0;
-    }
+    if (mgr == NULL || server == NULL || data == NULL || len == 0) return 0;
 
-    int success_count = 0;
+    int fds[16];  // max clients to broadcast
+    int fd_count = 0;
 
+    // Phase 1: Collect active fds while holding lock
     xSemaphoreTake(mgr->mutex, portMAX_DELAY);
-
-    for (int i = 0; i < mgr->max_clients; i++) {
+    for (int i = 0; i < mgr->max_clients && fd_count < 16; i++) {
         if (mgr->clients[i].active) {
-            esp_err_t ret = httpd_ws_send_frame_async(
-                server,
-                mgr->clients[i].fd,
-                &(httpd_ws_frame_t){
-                    .type = type,
-                    .payload = (uint8_t *)data,
-                    .len = len
-                }
-            );
-
-            if (ret == ESP_OK) {
-                success_count++;
-                mgr->clients[i].msg_count_sent++;
-                mgr->clients[i].bytes_sent += len;
-            } else {
-                ESP_LOGW(TAG, "Broadcast failed to fd=%d: %s",
-                         mgr->clients[i].fd, esp_err_to_name(ret));
-                mgr->clients[i].error_count++;
-                mgr->clients[i].active = false;
-                mgr->clients[i].fd = -1;
-            }
+            fds[fd_count++] = mgr->clients[i].fd;
         }
     }
-
     xSemaphoreGive(mgr->mutex);
+
+    // Phase 2: Send without holding lock
+    int success_count = 0;
+    for (int i = 0; i < fd_count; i++) {
+        esp_err_t ret = httpd_ws_send_frame_async(server, fds[i],
+            &(httpd_ws_frame_t){ .type = type, .payload = (uint8_t *)data, .len = len });
+        if (ret == ESP_OK) {
+            success_count++;
+        } else {
+            ESP_LOGW(TAG, "Broadcast failed to fd=%d: %s", fds[i], esp_err_to_name(ret));
+            // Mark failed client as inactive
+            xSemaphoreTake(mgr->mutex, portMAX_DELAY);
+            int idx = ws_client_mgr_find_by_fd(mgr, fds[i]);
+            if (idx >= 0) {
+                mgr->clients[idx].active = false;
+                mgr->clients[idx].fd = -1;
+                mgr->clients[idx].error_count++;
+                mgr->total_disconnections++;
+            }
+            xSemaphoreGive(mgr->mutex);
+        }
+    }
 
     return success_count;
 }
@@ -319,7 +342,8 @@ esp_err_t ws_client_mgr_send_async(ws_client_mgr_t *mgr, httpd_handle_t server,
     }
 
     if (len > mgr->config.max_msg_size) {
-        ESP_LOGW(TAG, "Message too large: %zu > %d", len, mgr->config.max_msg_size);
+        ESP_LOGW(TAG, "Message too large: %lu > %u",
+                 (unsigned long)len, (unsigned int)mgr->config.max_msg_size);
         return ESP_ERR_INVALID_SIZE;
     }
 

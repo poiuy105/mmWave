@@ -31,9 +31,6 @@
 #define HTTPD_429_TOO_MANY_REQUESTS 429
 #endif
 
-// Forward declaration (WebSocket handler defined in ws_server.c)
-extern esp_err_t ws_uri_handler(httpd_req_t *req);
-
 static const char *TAG = "HTTP_SERVER";
 
 // ============================================================
@@ -78,7 +75,8 @@ static void ws_on_disconnect(int fd)
 
 static void ws_on_message(int fd, const uint8_t *data, size_t len, httpd_ws_type_t type)
 {
-    ESP_LOGD(TAG, "WebSocket message from fd=%d: type=%d, len=%zu", fd, type, len);
+    ESP_LOGD(TAG, "WebSocket message from fd=%d: type=%d, len=%lu",
+             fd, type, (unsigned long)len);
 
     // Handle subscription requests
     if (type == HTTPD_WS_TYPE_TEXT) {
@@ -110,10 +108,12 @@ static esp_err_t static_file_handler(httpd_req_t *req)
     const char *uri = req->uri;
     server_context_t *ctx = server_context_get();
 
-    // Rate limit check
+    // Rate limit check - use actual client IP
     if (ctx->config->rate_limit_enabled) {
-        char client_ip[32];
-        strcpy(client_ip, "unknown");
+        char client_ip[16];
+        httpd_req_get_remote_ip(req, client_ip, sizeof(client_ip) - 1);
+        client_ip[sizeof(client_ip) - 1] = '\0';
+
         if (!rate_limiter_check(client_ip)) {
             server_stats_inc_rate_limit();
             httpd_resp_send_err(req, HTTPD_429_TOO_MANY_REQUESTS, "Rate limit exceeded");
@@ -238,8 +238,7 @@ static const httpd_uri_t uri_handlers[] = {
     { .uri = "/api/system/info", .method = HTTP_GET, .handler = api_system_info_handler },
     { .uri = "/api/*",           .method = HTTP_OPTIONS, .handler = api_options_handler },
 
-    // WebSocket
-    { .uri = "/ws", .method = HTTP_GET, .handler = ws_uri_handler, .is_websocket = true },
+    // WebSocket /ws is registered by ws_server_create() - do NOT register here
 };
 
 // ============================================================
@@ -279,6 +278,7 @@ esp_err_t http_server_start(void)
     ESP_ERROR_CHECK(http_server_core_start(http));
 
     server_context_t *ctx = server_context_get();
+    ctx->http_server_obj = (void *)http;
     ctx->http_server = http_server_core_get_handle(http);
 
     // 5. Register URI handlers
@@ -336,10 +336,10 @@ esp_err_t http_server_stop(void)
         ctx->ws_server = NULL;
     }
 
-    // 2. Stop HTTP server
-    if (ctx->http_server) {
-        // Get http_server_t structure and destroy it
-        http_server_core_destroy((http_server_t *)ctx->http_server);
+    // 2. Stop HTTP server - use http_server_obj for proper type
+    if (ctx->http_server_obj) {
+        http_server_core_destroy((http_server_t *)ctx->http_server_obj);
+        ctx->http_server_obj = NULL;
         ctx->http_server = NULL;
     }
 
@@ -357,8 +357,8 @@ esp_err_t http_server_stop(void)
 bool http_server_is_running(void)
 {
     server_context_t *ctx = server_context_get();
-    if (ctx == NULL || ctx->http_server == NULL) {
+    if (ctx == NULL || ctx->http_server_obj == NULL) {
         return false;
     }
-    return http_server_core_is_running((http_server_t *)ctx->http_server);
+    return http_server_core_is_running((http_server_t *)ctx->http_server_obj);
 }

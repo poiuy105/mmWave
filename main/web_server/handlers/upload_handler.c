@@ -253,6 +253,23 @@ static esp_err_t api_file_list_handler(httpd_req_t *req)
     url_decode_inplace(path);
     ESP_LOGD(TAG, "List files: %s", path);
 
+    // Security: validate the directory path to prevent path traversal
+    validation_result_t vresult = validate_file_path(path);
+    if (vresult != VALIDATION_OK) {
+        ESP_LOGW(TAG, "List path validation failed: %s", validation_result_str(vresult));
+        send_json_error(req, "Invalid path");
+        free(path);
+        return ESP_FAIL;
+    }
+
+    // Restrict to /storage/ prefix to prevent accessing arbitrary directories
+    if (strncmp(path, "/storage/", 9) != 0) {
+        ESP_LOGW(TAG, "List path outside /storage/: %s", path);
+        send_json_error(req, "Access denied");
+        free(path);
+        return ESP_FAIL;
+    }
+
     file_list_t list;
     esp_err_t ret = file_manager_list(path, &list);
 
