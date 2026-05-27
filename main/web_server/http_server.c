@@ -1,8 +1,12 @@
 /**
  * @file http_server.c
- * @brief HTTP/WebSocket 服务器整合入�? *
- * 工业级重构版 - 使用模块化架�? *
- * 使用方法�? * 1. �?app_main.c 中调�?http_server_start() 启动服务�? * 2. �?app_main.c 中调�?http_server_stop() 停止服务�? */
+ * @brief HTTP/WebSocket server integration
+ * Industrial-grade refactored version - modular architecture
+ *
+ * Usage:
+ * 1. Call http_server_start() in app_main.c to start the server
+ * 2. Call http_server_stop() in app_main.c to stop the server
+ */
 
 #include "http_server.h"
 #include "http_server_core.h"
@@ -21,13 +25,14 @@
 #include <dirent.h>
 #include <cJSON.h>
 
-// 前向声明（WebSocket handler �?ws_server.c 中定义）
+// Forward declaration (WebSocket handler defined in ws_server.c)
 extern esp_err_t ws_uri_handler(httpd_req_t *req);
 
 static const char *TAG = "HTTP_SERVER";
 
 // ============================================================
-// 静态文件服�?// ============================================================
+// Static file serving
+// ============================================================
 
 static const char* get_mime_type(const char *filename)
 {
@@ -50,7 +55,7 @@ static const char* get_mime_type(const char *filename)
 }
 
 // ============================================================
-// WebSocket 回调
+// WebSocket callbacks
 // ============================================================
 
 static void ws_on_connect(int fd, const char *client_ip)
@@ -69,14 +74,15 @@ static void ws_on_message(int fd, const uint8_t *data, size_t len, httpd_ws_type
 {
     ESP_LOGD(TAG, "WebSocket message from fd=%d: type=%d, len=%zu", fd, type, len);
 
-    // 处理订阅请求
+    // Handle subscription requests
     if (type == HTTPD_WS_TYPE_TEXT) {
         cJSON *msg = cJSON_Parse((char*)data);
         if (msg) {
             cJSON *msg_type = cJSON_GetObjectItem(msg, "type");
             if (msg_type && cJSON_IsString(msg_type)) {
                 if (strcmp(msg_type->valuestring, "subscribe") == 0) {
-                    // 发送订阅确�?                    ws_server_send_text(server_context_get()->ws_server, fd,
+                    // Send subscription confirmation
+                    ws_server_send_text(server_context_get()->ws_server, fd,
                                         "{\"type\":\"subscribed\"}");
                 } else if (strcmp(msg_type->valuestring, "ping") == 0) {
                     ws_server_send_text(server_context_get()->ws_server, fd,
@@ -98,9 +104,9 @@ static esp_err_t static_file_handler(httpd_req_t *req)
     const char *uri = req->uri;
     server_context_t *ctx = server_context_get();
 
-    // 速率限制检�?    if (ctx->config->rate_limit_enabled) {
+    // Rate limit check
+    if (ctx->config->rate_limit_enabled) {
         char client_ip[32];
-        // get_client_ip(req, client_ip, sizeof(client_ip));
         strcpy(client_ip, "unknown");
         if (!rate_limiter_check(client_ip)) {
             server_stats_inc_rate_limit();
@@ -109,29 +115,32 @@ static esp_err_t static_file_handler(httpd_req_t *req)
         }
     }
 
-    // 安全�?    if (ctx->config->security_headers_enabled) {
+    // Security headers
+    if (ctx->config->security_headers_enabled) {
         security_headers_set(req, NULL);
     }
 
-    // 根路�?-> index.html
+    // Root path -> index.html
     if (strcmp(uri, "/") == 0) {
         uri = "/index.html";
     }
 
-    // 构建文件路径
+    // Build file path
     snprintf(filepath, sizeof(filepath), "%s%s%s",
              ctx->config->fatfs_mount_path,
              ctx->config->static_file_root,
              uri);
 
-    // 检查文件是否存�?    struct stat st;
+    // Check if file exists
+    struct stat st;
     if (stat(filepath, &st) != 0 || !S_ISREG(st.st_mode)) {
         ESP_LOGD(TAG, "File not found: %s", filepath);
         httpd_resp_send_404(req);
         return ESP_FAIL;
     }
 
-    // 读取并发送文�?    FILE *file = fopen(filepath, "r");
+    // Read and send file
+    FILE *file = fopen(filepath, "r");
     if (!file) {
         ESP_LOGE(TAG, "Failed to open file: %s", filepath);
         httpd_resp_send_500(req);
@@ -209,11 +218,12 @@ static esp_err_t api_options_handler(httpd_req_t *req)
 }
 
 // ============================================================
-// URI Handler 列表
+// URI Handler list
 // ============================================================
 
 static const httpd_uri_t uri_handlers[] = {
-    // 静态文�?    { .uri = "/",           .method = HTTP_GET, .handler = static_file_handler },
+    // Static files
+    { .uri = "/",           .method = HTTP_GET, .handler = static_file_handler },
     { .uri = "/index.html", .method = HTTP_GET, .handler = static_file_handler },
     { .uri = "/*",          .method = HTTP_GET, .handler = static_file_handler },
 
@@ -227,21 +237,23 @@ static const httpd_uri_t uri_handlers[] = {
 };
 
 // ============================================================
-// 服务器启�?停止
+// Server start/stop
 // ============================================================
 
 esp_err_t http_server_start(void)
 {
     ESP_LOGI(TAG, "Starting HTTP/WebSocket server...");
 
-    // 1. 加载配置
+    // 1. Load configuration
     server_config_t config;
     server_config_load(&config);
     server_config_to_string(&config, ESP_LOG_COLOR_I "[CONFIG] " ESP_LOG_RESET_COLOR "\n%s\n", 1024);
 
-    // 2. 初始化服务器上下�?    ESP_ERROR_CHECK(server_context_init(&config));
+    // 2. Initialize server context
+    ESP_ERROR_CHECK(server_context_init(&config));
 
-    // 3. 初始化安全模�?    rate_limiter_config_t rl_config = {
+    // 3. Initialize security modules
+    rate_limiter_config_t rl_config = {
         .max_requests = config.rate_limit_max_requests,
         .window_ms = config.rate_limit_window_ms,
         .block_duration_sec = config.rate_limit_block_duration,
@@ -251,7 +263,8 @@ esp_err_t http_server_start(void)
 
     security_headers_init_default();
 
-    // 4. 创建 HTTP 服务�?    http_server_t *http = http_server_create(&config);
+    // 4. Create HTTP server
+    http_server_t *http = http_server_create(&config);
     if (http == NULL) {
         ESP_LOGE(TAG, "Failed to create HTTP server");
         return ESP_FAIL;
@@ -262,16 +275,17 @@ esp_err_t http_server_start(void)
     server_context_t *ctx = server_context_get();
     ctx->http_server = http_server_get_handle(http);
 
-    // 5. 注册 URI handlers
+    // 5. Register URI handlers
     httpd_handle_t handle = http_server_get_handle(http);
     for (size_t i = 0; i < sizeof(uri_handlers) / sizeof(uri_handlers[0]); i++) {
         ESP_ERROR_CHECK(httpd_register_uri_handler(handle, &uri_handlers[i]));
     }
 
-    // 6. 注册健康检�?handlers
+    // 6. Register health check handlers
     health_handler_register(handle);
 
-    // 7. 创建 WebSocket 服务�?    if (config.ws_enabled) {
+    // 7. Create WebSocket server
+    if (config.ws_enabled) {
         ws_server_config_t ws_config = {
             .on_connect = ws_on_connect,
             .on_disconnect = ws_on_disconnect,
@@ -291,9 +305,9 @@ esp_err_t http_server_start(void)
     }
 
     ESP_LOGI(TAG, "HTTP/WebSocket server started successfully");
-    ESP_LOGI(TAG, "  - HTTP:  http://<ip>:%d/", config.http_port);
-    ESP_LOGI(TAG, "  - WS:    ws://<ip>:%d/ws", config.http_port);
-    ESP_LOGI(TAG, "  - Health: http://<ip>:%d/api/health", config.http_port);
+    ESP_LOGI(TAG, "  - HTTP:  http://<ip>:%d/", (int)config.http_port);
+    ESP_LOGI(TAG, "  - WS:    ws://<ip>:%d/ws", (int)config.http_port);
+    ESP_LOGI(TAG, "  - Health: http://<ip>:%d/api/health", (int)config.http_port);
 
     return ESP_OK;
 }
@@ -307,21 +321,23 @@ esp_err_t http_server_stop(void)
         return ESP_OK;
     }
 
-    // 1. 停止 WebSocket 服务�?    if (ctx->ws_server) {
+    // 1. Stop WebSocket server
+    if (ctx->ws_server) {
         ws_server_destroy(ctx->ws_server);
         ctx->ws_server = NULL;
     }
 
-    // 2. 停止 HTTP 服务�?    if (ctx->http_server) {
-        // 获取 http_server_t 句柄
+    // 2. Stop HTTP server
+    if (ctx->http_server) {
+        // Get http_server_t structure
         http_server_destroy((http_server_t *)ctx->http_server);
         ctx->http_server = NULL;
     }
 
-    // 3. 清理安全模块
+    // 3. Cleanup security modules
     rate_limiter_deinit();
 
-    // 4. 清理服务器上下文
+    // 4. Cleanup server context
     server_context_deinit();
 
     ESP_LOGI(TAG, "HTTP/WebSocket server stopped");
