@@ -18,7 +18,6 @@
 static const char *TAG = "FILE_MGR";
 
 // Storage handle
-static wl_handle_t s_wl_handle = WL_INVALID_HANDLE;
 static bool s_initialized = false;
 
 // Storage partition mount point

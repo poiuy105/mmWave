@@ -20,6 +20,9 @@
 #include "handlers/upload_handler.h"
 #include "esp_log.h"
 #include "esp_http_server.h"
+#include "esp_netif.h"
+#include <arpa/inet.h>
+#include <sys/socket.h>
 #include "radar_adapter/radar_adapter.h"
 #include <string.h>
 #include <sys/stat.h>
@@ -110,9 +113,15 @@ static esp_err_t static_file_handler(httpd_req_t *req)
 
     // Rate limit check - use actual client IP
     if (ctx->config->rate_limit_enabled) {
-        char client_ip[16];
-        httpd_req_get_remote_ip(req, client_ip, sizeof(client_ip) - 1);
-        client_ip[sizeof(client_ip) - 1] = '\0';
+        char client_ip[16] = "unknown";
+        int fd = httpd_req_to_sockfd(req);
+        if (fd >= 0) {
+            struct sockaddr_in addr;
+            socklen_t addr_len = sizeof(addr);
+            if (getpeername(fd, (struct sockaddr *)&addr, &addr_len) == 0) {
+                inet_ntop(AF_INET, &addr.sin_addr, client_ip, sizeof(client_ip));
+            }
+        }
 
         if (!rate_limiter_check(client_ip)) {
             server_stats_inc_rate_limit();
