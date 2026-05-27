@@ -157,9 +157,10 @@ void server_config_get_defaults(server_config_t *config);
 /**
  * @brief 验证配置有效性
  * @param config 配置指针
- * @return int 成功返回 1
+ * @return true 配置有效
+ * @return false 配置无效
  */
-int server_config_validate(const server_config_t *config);
+bool server_config_validate(const server_config_t *config);
 
 #ifdef __cplusplus
 }
