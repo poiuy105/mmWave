@@ -32,8 +32,7 @@ esp_err_t server_context_init(const struct server_config *config)
         return ESP_ERR_NO_MEM;
     }
 
-    // 创建互斥量
-    s_ctx->mutex = xSemaphoreCreateMutexStatic(&s_ctx_mutex_buffer);
+    // 创建互斥�?    s_ctx->mutex = xSemaphoreCreateMutexStatic(&s_ctx_mutex_buffer);
     s_ctx->stats_mutex = xSemaphoreCreateMutexStatic(&s_stats_mutex_buffer);
 
     if (s_ctx->mutex == NULL || s_ctx->stats_mutex == NULL) {
@@ -43,14 +42,12 @@ esp_err_t server_context_init(const struct server_config *config)
         return ESP_ERR_NO_MEM;
     }
 
-    // 初始化状态
-    s_ctx->config = config;
+    // 初始化状�?    s_ctx->config = config;
     s_ctx->state = SERVER_STATE_INITIALIZED;
     s_ctx->graceful_shutdown_pending = false;
     s_ctx->start_time = xTaskGetTickCount() * portTICK_PERIOD_MS / 1000;
 
-    // 初始化统计
-    memset(&s_ctx->stats, 0, sizeof(server_stats_t));
+    // 初始化统�?    memset(&s_ctx->stats, 0, sizeof(server_stats_t));
     s_ctx->stats.free_heap_min = esp_get_free_heap_size();
 
     ESP_LOGI(TAG, "Server context initialized");

@@ -19,19 +19,17 @@ esp_err_t ws_client_mgr_init(ws_client_mgr_t *mgr, const ws_client_mgr_config_t 
 
     memset(mgr, 0, sizeof(ws_client_mgr_t));
 
-    // 保存配置
     mgr->config.max_clients = config->max_clients;
     mgr->config.msg_queue_size = config->msg_queue_size;
     mgr->config.max_msg_size = config->max_msg_size;
     mgr->max_clients = config->max_clients;
 
-    // 分配客户端数�?    mgr->clients = calloc(config->max_clients, sizeof(ws_client_t));
+    mgr->clients = calloc(config->max_clients, sizeof(ws_client_t));
     if (mgr->clients == NULL) {
         ESP_LOGE(TAG, "Failed to allocate client array");
         return ESP_ERR_NO_MEM;
     }
 
-    // 初始化互斥量
     mgr->mutex = xSemaphoreCreateMutexStatic(&mgr->mutex_buffer);
     if (mgr->mutex == NULL) {
         free(mgr->clients);
@@ -40,7 +38,6 @@ esp_err_t ws_client_mgr_init(ws_client_mgr_t *mgr, const ws_client_mgr_config_t 
         return ESP_ERR_NO_MEM;
     }
 
-    // 初始化客户端
     for (int i = 0; i < mgr->max_clients; i++) {
         mgr->clients[i].fd = -1;
         mgr->clients[i].state = WS_CLIENT_STATE_IDLE;
@@ -64,7 +61,6 @@ void ws_client_mgr_deinit(ws_client_mgr_t *mgr)
 
     xSemaphoreTake(mgr->mutex, portMAX_DELAY);
 
-    // 清理所有客户端
     for (int i = 0; i < mgr->max_clients; i++) {
         if (mgr->clients[i].msg_queue) {
             vQueueDelete(mgr->clients[i].msg_queue);
@@ -106,7 +102,6 @@ int ws_client_mgr_add(ws_client_mgr_t *mgr, int fd, const char *client_ip)
         return -1;
     }
 
-    // 初始化客户端
     ws_client_t *client = &mgr->clients[idx];
     client->fd = fd;
     client->active = true;
@@ -126,13 +121,12 @@ int ws_client_mgr_add(ws_client_mgr_t *mgr, int fd, const char *client_ip)
         strcpy(client->client_ip, "unknown");
     }
 
-    // 重置消息队列
     xQueueReset(client->msg_queue);
 
     xSemaphoreGive(mgr->mutex);
 
-    ESP_LOGI(TAG, "Client added: fd=%d, slot=%d, ip=%s, conn_id=%u",
-             fd, idx, client->client_ip, client->connection_id);
+    ESP_LOGI(TAG, "Client added: fd=%d, slot=%d, ip=%s, conn_id=%lu",
+             fd, idx, client->client_ip, (unsigned long)client->connection_id);
 
     return idx;
 }
@@ -153,22 +147,19 @@ void ws_client_mgr_remove(ws_client_mgr_t *mgr, int fd)
 
     ws_client_t *client = &mgr->clients[idx];
 
-    // 标记为非活跃
     client->active = false;
     client->state = WS_CLIENT_STATE_DISCONNECTED;
     client->fd = -1;
 
-    // 清空消息队列
     ws_msg_queue_item_t msg;
     while (xQueueReceive(client->msg_queue, &msg, 0) == pdTRUE) {
-        // 丢弃队列中的消息
     }
 
     mgr->total_disconnections++;
 
-    ESP_LOGI(TAG, "Client removed: fd=%d, slot=%d, conn_id=%u, sent=%u, recv=%u",
-             fd, idx, client->connection_id,
-             client->msg_count_sent, client->msg_count_received);
+    ESP_LOGI(TAG, "Client removed: fd=%d, slot=%d, conn_id=%lu, sent=%lu, recv=%lu",
+             fd, idx, (unsigned long)client->connection_id,
+             (unsigned long)client->msg_count_sent, (unsigned long)client->msg_count_received);
 
     xSemaphoreGive(mgr->mutex);
 }
@@ -254,11 +245,10 @@ int ws_client_mgr_remove_timeout(ws_client_mgr_t *mgr, httpd_handle_t server, Ti
         if (mgr->clients[i].active) {
             TickType_t elapsed = now - mgr->clients[i].last_activity;
             if (elapsed > timeout_ticks) {
-                ESP_LOGW(TAG, "Client timeout: fd=%d, slot=%d, ip=%s, idle=%us",
+                ESP_LOGW(TAG, "Client timeout: fd=%d, slot=%d, ip=%s, idle=%lus",
                          mgr->clients[i].fd, i, mgr->clients[i].client_ip,
-                         (elapsed * portTICK_PERIOD_MS) / 1000);
+                         (unsigned long)(elapsed * portTICK_PERIOD_MS) / 1000);
 
-                // 发送关闭帧
                 httpd_ws_frame_t close_pkt = {
                     .type = HTTPD_WS_TYPE_CLOSE,
                     .payload = NULL,
@@ -266,7 +256,6 @@ int ws_client_mgr_remove_timeout(ws_client_mgr_t *mgr, httpd_handle_t server, Ti
                 };
                 httpd_ws_send_frame_async(server, mgr->clients[i].fd, &close_pkt);
 
-                // 标记移除
                 mgr->clients[i].active = false;
                 mgr->clients[i].state = WS_CLIENT_STATE_DISCONNECTED;
                 mgr->clients[i].fd = -1;
@@ -342,14 +331,13 @@ esp_err_t ws_client_mgr_send_async(ws_client_mgr_t *mgr, httpd_handle_t server,
         return ESP_ERR_INVALID_STATE;
     }
 
-    // 准备消息
     ws_msg_queue_item_t msg = {
         .type = type,
         .len = len
     };
     memcpy(msg.payload, data, len);
 
-    // 发送到队列（非阻塞�?    BaseType_t ret = xQueueSend(mgr->clients[idx].msg_queue, &msg, 0);
+    BaseType_t ret = xQueueSend(mgr->clients[idx].msg_queue, &msg, 0);
 
     xSemaphoreGive(mgr->mutex);
 
@@ -389,24 +377,24 @@ void ws_client_mgr_dump_status(const ws_client_mgr_t *mgr)
 
     ESP_LOGI(TAG, "=== WebSocket Client Manager Status ===");
     ESP_LOGI(TAG, "Max clients: %d", mgr->max_clients);
-    ESP_LOGI(TAG, "Total connections: %u", mgr->total_connections);
-    ESP_LOGI(TAG, "Total disconnections: %u", mgr->total_disconnections);
-    ESP_LOGI(TAG, "Total messages sent: %u", mgr->total_messages_sent);
-    ESP_LOGI(TAG, "Total messages failed: %u", mgr->total_messages_failed);
+    ESP_LOGI(TAG, "Total connections: %lu", (unsigned long)mgr->total_connections);
+    ESP_LOGI(TAG, "Total disconnections: %lu", (unsigned long)mgr->total_disconnections);
+    ESP_LOGI(TAG, "Total messages sent: %lu", (unsigned long)mgr->total_messages_sent);
+    ESP_LOGI(TAG, "Total messages failed: %lu", (unsigned long)mgr->total_messages_failed);
     ESP_LOGI(TAG, "----------------------------------------");
 
     for (int i = 0; i < mgr->max_clients; i++) {
         const ws_client_t *client = &mgr->clients[i];
-        ESP_LOGI(TAG, "Slot %d: %s fd=%d ip=%s state=%d idle=%us sent=%u recv=%u err=%u",
+        ESP_LOGI(TAG, "Slot %d: %s fd=%d ip=%s state=%d idle=%lus sent=%lu recv=%lu err=%lu",
                  i,
                  client->active ? "[ACTIVE]" : "[FREE ]",
                  client->fd,
                  client->client_ip,
                  client->state,
-                 client->active ? ((xTaskGetTickCount() - client->last_activity) * portTICK_PERIOD_MS) / 1000 : 0,
-                 client->msg_count_sent,
-                 client->msg_count_received,
-                 client->error_count);
+                 client->active ? (unsigned long)((xTaskGetTickCount() - client->last_activity) * portTICK_PERIOD_MS) / 1000 : 0,
+                 (unsigned long)client->msg_count_sent,
+                 (unsigned long)client->msg_count_received,
+                 (unsigned long)client->error_count);
     }
 
     ESP_LOGI(TAG, "========================================");

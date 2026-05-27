@@ -1,7 +1,6 @@
 /**
  * @file server_config.c
- * @brief 服务器配置实现
- */
+ * @brief 服务器配置实�? */
 
 #include "server_config.h"
 #include "esp_log.h"
@@ -17,8 +16,7 @@ int server_config_load(server_config_t *config)
         return -1;
     }
 
-    // 获取默认值
-    server_config_get_defaults(config);
+    // 获取默认�?    server_config_get_defaults(config);
 
 #ifdef CONFIG_HTTP_SERVER_ENABLED
     config->http_enabled = true;
@@ -29,7 +27,7 @@ int server_config_load(server_config_t *config)
 #endif
 
 #ifdef CONFIG_HTTP_SERVER_STACK_SIZE
-    config->http_stack_size = CONFIG_HTTP_SERVER_STACK_SIZE;
+    (unsigned int)config->http_stack_size = CONFIG_HTTP_SERVER_STACK_SIZE;
 #endif
 
 #ifdef CONFIG_HTTP_SERVER_MAX_URI_HANDLERS
@@ -58,23 +56,23 @@ int server_config_load(server_config_t *config)
 #endif
 
 #ifdef CONFIG_WS_MAX_CLIENTS
-    config->ws_max_clients = CONFIG_WS_MAX_CLIENTS;
+    (unsigned int)config->ws_max_clients = CONFIG_WS_MAX_CLIENTS;
 #endif
 
 #ifdef CONFIG_WS_HEARTBEAT_INTERVAL
-    config->ws_heartbeat_interval = CONFIG_WS_HEARTBEAT_INTERVAL;
+    (unsigned int)config->ws_heartbeat_interval = CONFIG_WS_HEARTBEAT_INTERVAL;
 #endif
 
 #ifdef CONFIG_WS_CLIENT_TIMEOUT
-    config->ws_client_timeout = CONFIG_WS_CLIENT_TIMEOUT;
+    (unsigned int)config->ws_client_timeout = CONFIG_WS_CLIENT_TIMEOUT;
 #endif
 
 #ifdef CONFIG_WS_MSG_QUEUE_SIZE
-    config->ws_msg_queue_size = CONFIG_WS_MSG_QUEUE_SIZE;
+    (unsigned int)config->ws_msg_queue_size = CONFIG_WS_MSG_QUEUE_SIZE;
 #endif
 
 #ifdef CONFIG_WS_MAX_MSG_SIZE
-    config->ws_max_msg_size = CONFIG_WS_MAX_MSG_SIZE;
+    (unsigned int)config->ws_max_msg_size = CONFIG_WS_MAX_MSG_SIZE;
 #endif
 
 #ifdef CONFIG_WS_TASK_STACK_SIZE
@@ -148,10 +146,9 @@ void server_config_get_defaults(server_config_t *config)
 {
     memset(config, 0, sizeof(server_config_t));
 
-    // HTTP 默认值
-    config->http_enabled = true;
+    // HTTP 默认�?    config->http_enabled = true;
     config->http_port = 80;
-    config->http_stack_size = 12288;
+    (unsigned int)config->http_stack_size = 12288;
     config->http_max_uri_handlers = 32;
     config->http_max_open_sockets = 7;
     config->http_recv_timeout = 5;
@@ -159,18 +156,16 @@ void server_config_get_defaults(server_config_t *config)
     config->max_upload_size = 100 * 1024;  // 100KB
     config->request_timeout_ms = 5000;
 
-    // WebSocket 默认值
-    config->ws_enabled = true;
-    config->ws_max_clients = 4;
-    config->ws_heartbeat_interval = 30;
-    config->ws_client_timeout = 60;
-    config->ws_msg_queue_size = 10;
-    config->ws_max_msg_size = 2048;
+    // WebSocket 默认�?    config->ws_enabled = true;
+    (unsigned int)config->ws_max_clients = 4;
+    (unsigned int)config->ws_heartbeat_interval = 30;
+    (unsigned int)config->ws_client_timeout = 60;
+    (unsigned int)config->ws_msg_queue_size = 10;
+    (unsigned int)config->ws_max_msg_size = 2048;
     config->ws_task_stack_size = 4096;
     config->ws_task_priority = 5;
 
-    // 安全默认值
-    config->rate_limit_enabled = true;
+    // 安全默认�?    config->rate_limit_enabled = true;
     config->rate_limit_max_requests = 20;
     config->rate_limit_window_ms = 1000;
     config->rate_limit_block_duration = 5;
@@ -182,8 +177,7 @@ void server_config_get_defaults(server_config_t *config)
     config->x_frame_options = true;
     config->content_security_policy = false;  // 生产环境建议启用
 
-    // 广播默认值
-    config->broadcast_enabled = true;
+    // 广播默认�?    config->broadcast_enabled = true;
     config->broadcast_interval = 100;
     config->broadcast_task_stack = 4096;
     config->broadcast_task_priority = 5;
@@ -196,33 +190,28 @@ void server_config_get_defaults(server_config_t *config)
 
 bool server_config_validate(const server_config_t *config)
 {
-    // 端口范围检查
-    if (config->http_port == 0 || config->http_port > 65535) {
+    // 端口范围检�?    if (config->http_port == 0 || config->http_port > 65535) {
         ESP_LOGE(TAG, "Invalid HTTP port: %d", config->http_port);
         return false;
     }
 
-    // 栈大小检查
-    if (config->http_stack_size < 4096) {
-        ESP_LOGE(TAG, "HTTP stack size too small: %u", (unsigned int)config->http_stack_size);
+    // 栈大小检�?    if ((unsigned int)config->http_stack_size < 4096) {
+        ESP_LOGE(TAG, "HTTP stack size too small: %u", (unsigned int)(unsigned int)config->http_stack_size);
         return false;
     }
 
-    // WebSocket 客户端数检查
-    if (config->ws_max_clients == 0 || config->ws_max_clients > 16) {
-        ESP_LOGE(TAG, "Invalid WS max clients: %d", config->ws_max_clients);
+    // WebSocket 客户端数检�?    if ((unsigned int)config->ws_max_clients == 0 || (unsigned int)config->ws_max_clients > 16) {
+        ESP_LOGE(TAG, "Invalid WS max clients: %d", (unsigned int)config->ws_max_clients);
         return false;
     }
 
-    // 超时值检查
-    if (config->ws_client_timeout < 10) {
-        ESP_LOGE(TAG, "WS client timeout too small: %d", config->ws_client_timeout);
+    // 超时值检�?    if ((unsigned int)config->ws_client_timeout < 10) {
+        ESP_LOGE(TAG, "WS client timeout too small: %d", (unsigned int)config->ws_client_timeout);
         return false;
     }
 
-    // 消息大小检查
-    if (config->ws_max_msg_size < 256 || config->ws_max_msg_size > 65536) {
-        ESP_LOGE(TAG, "Invalid WS max msg size: %d", config->ws_max_msg_size);
+    // 消息大小检�?    if ((unsigned int)config->ws_max_msg_size < 256 || (unsigned int)config->ws_max_msg_size > 65536) {
+        ESP_LOGE(TAG, "Invalid WS max msg size: %d", (unsigned int)config->ws_max_msg_size);
         return false;
     }
 
@@ -236,10 +225,10 @@ void server_config_to_string(const server_config_t *config, char *buffer, size_t
         "WS: enabled=%d, max_clients=%d, heartbeat=%d, timeout=%d, queue=%d, max_msg=%d\n"
         "Security: rate_limit=%d, max_req=%d, cors=%d, security_hdrs=%d\n"
         "Broadcast: enabled=%d, interval=%d",
-        config->http_enabled, config->http_port, (unsigned int)config->http_stack_size,
+        config->http_enabled, config->http_port, (unsigned int)(unsigned int)config->http_stack_size,
         config->http_max_open_sockets, config->http_recv_timeout, config->http_send_timeout,
-        config->ws_enabled, config->ws_max_clients, config->ws_heartbeat_interval,
-        config->ws_client_timeout, config->ws_msg_queue_size, config->ws_max_msg_size,
+        config->ws_enabled, (unsigned int)config->ws_max_clients, (unsigned int)config->ws_heartbeat_interval,
+        (unsigned int)config->ws_client_timeout, (unsigned int)config->ws_msg_queue_size, (unsigned int)config->ws_max_msg_size,
         config->rate_limit_enabled, config->rate_limit_max_requests,
         config->cors_enabled, config->security_headers_enabled,
         config->broadcast_enabled, config->broadcast_interval

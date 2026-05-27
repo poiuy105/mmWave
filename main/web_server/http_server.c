@@ -276,12 +276,12 @@ esp_err_t http_server_start(void)
             .on_connect = ws_on_connect,
             .on_disconnect = ws_on_disconnect,
             .on_message = ws_on_message,
-            .max_clients = config.ws_max_clients,
-            .msg_queue_size = config.ws_msg_queue_size,
-            .max_msg_size = config.ws_max_msg_size,
+            .max_clients = (unsigned int)config.ws_max_clients,
+            .msg_queue_size = (unsigned int)config.ws_msg_queue_size,
+            .max_msg_size = (unsigned int)config.ws_max_msg_size,
             .heartbeat_enabled = true,
-            .heartbeat_interval = config.ws_heartbeat_interval,
-            .heartbeat_timeout = config.ws_client_timeout,
+            .heartbeat_interval = (unsigned int)config.ws_heartbeat_interval,
+            .heartbeat_timeout = (unsigned int)config.ws_client_timeout,
         };
 
         ctx->ws_server = ws_server_create(handle, &ws_config);
