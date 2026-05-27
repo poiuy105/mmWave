@@ -93,8 +93,9 @@ esp_err_t rate_limiter_init(const rate_limiter_config_t *config)
         return ESP_ERR_NO_MEM;
     }
 
-    ESP_LOGI(TAG, "Rate limiter initialized: max_req=%d, window=%dms, block=%ds, entries=%d",
-             s_max_requests, s_window_ms, s_block_duration_sec, s_max_entries);
+    ESP_LOGI(TAG, "Rate limiter initialized: max_req=%lu, window=%lums, block=%lus, entries=%lu",
+             (unsigned long)s_max_requests, (unsigned long)s_window_ms,
+             (unsigned long)s_block_duration_sec, (unsigned long)s_max_entries);
 
     return ESP_OK;
 }
