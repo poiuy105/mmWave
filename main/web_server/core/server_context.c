@@ -15,31 +15,6 @@ static server_context_t *s_ctx = NULL;
 static StaticSemaphore_t s_ctx_mutex_buffer;
 static StaticSemaphore_t s_stats_mutex_buffer;
 
-static void stats_updater_task(void *arg)
-{
-    uint32_t last_update = 0;
-
-    while (server_is_running()) {
-        vTaskDelay(pdMS_TO_TICKS(1000));
-
-        server_context_t *ctx = server_context_get();
-        if (ctx == NULL) continue;
-
-        // 每秒更新运行时间
-        if (xTaskGetTickCount() / configTICK_RATE_HZ > last_update) {
-            last_update = xTaskGetTickCount() / configTICK_RATE_HZ;
-            ctx->stats.uptime_seconds++;
-            ctx->stats.free_heap_current = esp_get_free_heap_size();
-
-            if (ctx->stats.free_heap_min == 0) {
-                ctx->stats.free_heap_min = ctx->stats.free_heap_current;
-            }
-        }
-    }
-
-    vTaskDelete(NULL);
-}
-
 esp_err_t server_context_init(const struct server_config *config)
 {
     if (config == NULL) {
@@ -57,7 +32,8 @@ esp_err_t server_context_init(const struct server_config *config)
         return ESP_ERR_NO_MEM;
     }
 
-    // 创建互斥�?    s_ctx->mutex = xSemaphoreCreateMutexStatic(&s_ctx_mutex_buffer);
+    // 创建互斥量
+    s_ctx->mutex = xSemaphoreCreateMutexStatic(&s_ctx_mutex_buffer);
     s_ctx->stats_mutex = xSemaphoreCreateMutexStatic(&s_stats_mutex_buffer);
 
     if (s_ctx->mutex == NULL || s_ctx->stats_mutex == NULL) {
@@ -67,12 +43,14 @@ esp_err_t server_context_init(const struct server_config *config)
         return ESP_ERR_NO_MEM;
     }
 
-    // 初始化状�?    s_ctx->config = config;
+    // 初始化状态
+    s_ctx->config = config;
     s_ctx->state = SERVER_STATE_INITIALIZED;
     s_ctx->graceful_shutdown_pending = false;
     s_ctx->start_time = xTaskGetTickCount() * portTICK_PERIOD_MS / 1000;
 
-    // 初始化统�?    memset(&s_ctx->stats, 0, sizeof(server_stats_t));
+    // 初始化统计
+    memset(&s_ctx->stats, 0, sizeof(server_stats_t));
     s_ctx->stats.free_heap_min = esp_get_free_heap_size();
 
     ESP_LOGI(TAG, "Server context initialized");
@@ -111,24 +89,18 @@ server_context_t* server_context_get(void)
     return s_ctx;
 }
 
-// 统计更新宏（线程安全�?#define STATS_INC(counter) \
-    do { \
-        if (s_ctx && s_ctx->stats_mutex) { \
-            xSemaphoreTake(s_ctx->stats_mutex, portMAX_DELAY); \
-            s_ctx->stats.counter++; \
-            xSemaphoreGive(s_ctx->stats_mutex); \
-        } \
-    } while(0)
-
 void server_stats_inc_request(void)
 {
-    STATS_INC(total_requests);
+    if (s_ctx && s_ctx->stats_mutex) {
+        xSemaphoreTake(s_ctx->stats_mutex, portMAX_DELAY);
+        s_ctx->stats.total_requests++;
+        xSemaphoreGive(s_ctx->stats_mutex);
+    }
 }
 
 void server_stats_dec_request(void)
 {
-    STATS_INC(active_requests);
-    if (s_ctx && s_ctx->stats.active_requests > 0) {
+    if (s_ctx && s_ctx->stats_mutex) {
         xSemaphoreTake(s_ctx->stats_mutex, portMAX_DELAY);
         if (s_ctx->stats.active_requests > 0) {
             s_ctx->stats.active_requests--;
@@ -139,42 +111,74 @@ void server_stats_dec_request(void)
 
 void server_stats_inc_error(void)
 {
-    STATS_INC(error_requests);
+    if (s_ctx && s_ctx->stats_mutex) {
+        xSemaphoreTake(s_ctx->stats_mutex, portMAX_DELAY);
+        s_ctx->stats.error_requests++;
+        xSemaphoreGive(s_ctx->stats_mutex);
+    }
 }
 
 void server_stats_inc_ws_connection(void)
 {
-    STATS_INC(ws_connections);
+    if (s_ctx && s_ctx->stats_mutex) {
+        xSemaphoreTake(s_ctx->stats_mutex, portMAX_DELAY);
+        s_ctx->stats.ws_connections++;
+        xSemaphoreGive(s_ctx->stats_mutex);
+    }
 }
 
 void server_stats_inc_ws_disconnect(void)
 {
-    STATS_INC(ws_disconnections);
+    if (s_ctx && s_ctx->stats_mutex) {
+        xSemaphoreTake(s_ctx->stats_mutex, portMAX_DELAY);
+        s_ctx->stats.ws_disconnections++;
+        xSemaphoreGive(s_ctx->stats_mutex);
+    }
 }
 
 void server_stats_inc_ws_message_sent(void)
 {
-    STATS_INC(ws_messages_sent);
+    if (s_ctx && s_ctx->stats_mutex) {
+        xSemaphoreTake(s_ctx->stats_mutex, portMAX_DELAY);
+        s_ctx->stats.ws_messages_sent++;
+        xSemaphoreGive(s_ctx->stats_mutex);
+    }
 }
 
 void server_stats_inc_ws_message_failed(void)
 {
-    STATS_INC(ws_messages_failed);
+    if (s_ctx && s_ctx->stats_mutex) {
+        xSemaphoreTake(s_ctx->stats_mutex, portMAX_DELAY);
+        s_ctx->stats.ws_messages_failed++;
+        xSemaphoreGive(s_ctx->stats_mutex);
+    }
 }
 
 void server_stats_inc_rate_limit(void)
 {
-    STATS_INC(rate_limit_hits);
+    if (s_ctx && s_ctx->stats_mutex) {
+        xSemaphoreTake(s_ctx->stats_mutex, portMAX_DELAY);
+        s_ctx->stats.rate_limit_hits++;
+        xSemaphoreGive(s_ctx->stats_mutex);
+    }
 }
 
 void server_stats_inc_validation_failure(void)
 {
-    STATS_INC(validation_failures);
+    if (s_ctx && s_ctx->stats_mutex) {
+        xSemaphoreTake(s_ctx->stats_mutex, portMAX_DELAY);
+        s_ctx->stats.validation_failures++;
+        xSemaphoreGive(s_ctx->stats_mutex);
+    }
 }
 
 void server_stats_inc_timeout(void)
 {
-    STATS_INC(timeout_errors);
+    if (s_ctx && s_ctx->stats_mutex) {
+        xSemaphoreTake(s_ctx->stats_mutex, portMAX_DELAY);
+        s_ctx->stats.timeout_errors++;
+        xSemaphoreGive(s_ctx->stats_mutex);
+    }
 }
 
 void server_stats_update_heap(void)
