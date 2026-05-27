@@ -31,21 +31,24 @@ struct ws_server {
     uint32_t stats_messages_failed;
 };
 
+// 全局服务器句柄（供 handler 使用）
+static ws_server_t *s_global_server = NULL;
+
 // ==================== URI Handler ====================
 
 esp_err_t ws_uri_handler(httpd_req_t *req)
 {
-    ws_server_t *server = (ws_server_t *)httpd_get_global_user_ctx(req->handle());
+    ws_server_t *server = (ws_server_t *)req->user_ctx;
+    if (server == NULL) {
+        server = s_global_server;
+    }
 
     if (req->method == HTTP_GET) {
         // 新的 WebSocket 连接
         int fd = httpd_req_to_sockfd(req);
 
-        // 获取客户端 IP（简化版本）
-        char client_ip[WS_CLIENT_IP_LEN] = "unknown";
-
         // 添加客户端
-        int idx = ws_client_mgr_add(&server->client_mgr, fd, client_ip);
+        int idx = ws_client_mgr_add(&server->client_mgr, fd, "unknown");
         if (idx < 0) {
             ESP_LOGW(TAG, "Max clients reached, rejecting fd=%d", fd);
             httpd_ws_frame_t close_pkt = {
@@ -61,7 +64,7 @@ esp_err_t ws_uri_handler(httpd_req_t *req)
 
         // 调用连接回调
         if (server->on_connect) {
-            server->on_connect(fd, client_ip);
+            server->on_connect(fd, "unknown");
         }
 
         return ESP_OK;
@@ -152,7 +155,7 @@ esp_err_t ws_uri_handler(httpd_req_t *req)
             break;
         }
 
-        case HTTPD_WS_TYPE_CONTINUATION: {
+        case HTTPD_WS_TYPE_CONTINUE: {
             ESP_LOGW(TAG, "Continuation frame not supported, ignoring");
             break;
         }
@@ -217,8 +220,8 @@ ws_server_t* ws_server_create(httpd_handle_t http_server, const ws_server_config
         return NULL;
     }
 
-    // 设置全局用户上下文，供 handler 访问
-    httpd_set_user_ctx(http_server, server);
+    // 保存全局引用
+    s_global_server = server;
 
     // 初始化并启动心跳
     server->heartbeat_enabled = config->heartbeat_enabled;
@@ -254,6 +257,10 @@ void ws_server_destroy(ws_server_t *server)
 
     // 销毁客户端管理器
     ws_client_mgr_deinit(&server->client_mgr);
+
+    if (s_global_server == server) {
+        s_global_server = NULL;
+    }
 
     free(server);
     ESP_LOGI(TAG, "WebSocket server destroyed");

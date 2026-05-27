@@ -10,6 +10,7 @@
 
 #include <stdint.h>
 #include <stdbool.h>
+#include <stddef.h>
 
 /**
  * @brief 服务器配置结构
@@ -136,12 +137,16 @@ typedef struct server_config {
 
 } server_config_t;
 
+#ifdef __cplusplus
+extern "C" {
+#endif
+
 /**
  * @brief 加载配置（从 Kconfig 宏）
  * @param config 输出配置结构指针
- * @return esp_err_t
+ * @return int 成功返回 0
  */
-esp_err_t server_config_load(server_config_t *config);
+int server_config_load(server_config_t *config);
 
 /**
  * @brief 获取默认配置
@@ -152,17 +157,12 @@ void server_config_get_defaults(server_config_t *config);
 /**
  * @brief 验证配置有效性
  * @param config 配置指针
- * @return true 配置有效
- * @return false 配置无效
+ * @return int 成功返回 1
  */
-bool server_config_validate(const server_config_t *config);
+int server_config_validate(const server_config_t *config);
 
-/**
- * @brief 获取配置描述字符串（用于日志）
- * @param config 配置指针
- * @param buffer 输出缓冲区
- * @param buffer_size 缓冲区大小
- */
-void server_config_to_string(const server_config_t *config, char *buffer, size_t buffer_size);
+#ifdef __cplusplus
+}
+#endif
 
 #endif // SERVER_CONFIG_H
