@@ -5,11 +5,17 @@
 
 #include "health_handler.h"
 #include "server_context.h"
+#include "server_config.h"
 #include "ws_server.h"
 #include "esp_log.h"
 #include "esp_timer.h"
 #include <string.h>
 #include <cJSON.h>
+
+// HTTP status codes for error responses
+#ifndef HTTPD_503_SERVICE_UNAVAILABLE
+#define HTTPD_503_SERVICE_UNAVAILABLE 503
+#endif
 
 // Forward declaration for unused handlers warning suppression
 static esp_err_t api_live_handler(httpd_req_t *req) __attribute__((unused));
@@ -76,8 +82,13 @@ static esp_err_t api_health_handler(httpd_req_t *req)
 
     // Broadcast status
     cJSON *broadcast = cJSON_CreateObject();
-    cJSON_AddBoolToObject(broadcast, "enabled", ctx ? ctx->config->broadcast_enabled : false);
-    cJSON_AddNumberToObject(broadcast, "interval", ctx ? ctx->config->broadcast_interval : 0);
+    if (ctx && ctx->config) {
+        cJSON_AddBoolToObject(broadcast, "enabled", ctx->config->broadcast_enabled);
+        cJSON_AddNumberToObject(broadcast, "interval", ctx->config->broadcast_interval);
+    } else {
+        cJSON_AddBoolToObject(broadcast, "enabled", false);
+        cJSON_AddNumberToObject(broadcast, "interval", 0);
+    }
     cJSON_AddItemToObject(root, "broadcast", broadcast);
 
     char *json = cJSON_PrintUnformatted(root);

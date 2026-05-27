@@ -1,6 +1,7 @@
 /**
  * @file security_headers.c
- * @brief HTTP 安全响应头实�? */
+ * @brief HTTP security headers implementation
+ */
 
 #include "security_headers.h"
 #include "esp_log.h"
@@ -12,8 +13,8 @@ const security_headers_config_t SECURITY_HEADERS_DEFAULT = {
     .x_content_type_options = true,
     .x_frame_options = true,
     .x_xss_protection = true,
-    .strict_transport_security = false,  // 需�?HTTPS
-    .content_security_policy = false,    // 生产环境建议启用
+    .strict_transport_security = false,  // Requires HTTPS
+    .content_security_policy = false,    // Enable in production
     .csp_policy = NULL
 };
 
@@ -62,7 +63,7 @@ void security_headers_set(httpd_req_t *req, const security_headers_config_t *con
         httpd_resp_set_hdr(req, "X-XSS-Protection", "1; mode=block");
     }
 
-    // Strict-Transport-Security (需�?HTTPS 支持)
+    // Strict-Transport-Security (requires HTTPS support)
     if (config->strict_transport_security) {
         httpd_resp_set_hdr(req, "Strict-Transport-Security", "max-age=31536000; includeSubDomains");
     }
@@ -71,9 +72,6 @@ void security_headers_set(httpd_req_t *req, const security_headers_config_t *con
     if (config->content_security_policy && config->csp_policy) {
         httpd_resp_set_hdr(req, "Content-Security-Policy", config->csp_policy);
     }
-
-    // Cache-Control: no-store for sensitive pages
-    // httpd_resp_set_hdr(req, "Cache-Control", "no-store");
 }
 
 void security_headers_set_cors(httpd_req_t *req, const char *allow_origin)
@@ -82,14 +80,16 @@ void security_headers_set_cors(httpd_req_t *req, const char *allow_origin)
         return;
     }
 
-    // CORS �?    httpd_resp_set_hdr(req, "Access-Control-Allow-Methods", "GET, POST, PUT, DELETE, OPTIONS");
+    // CORS headers
+    httpd_resp_set_hdr(req, "Access-Control-Allow-Methods", "GET, POST, PUT, DELETE, OPTIONS");
     httpd_resp_set_hdr(req, "Access-Control-Allow-Headers", "Content-Type, Authorization");
-    httpd_resp_set_hdr(req, "Access-Control-Max-Age", "86400");  // 24小时
+    httpd_resp_set_hdr(req, "Access-Control-Max-Age", "86400");  // 24 hours
 
     if (allow_origin && strlen(allow_origin) > 0) {
         httpd_resp_set_hdr(req, "Access-Control-Allow-Origin", allow_origin);
 
-        // 如果允许的源不是 *，添�?Vary �?        if (strcmp(allow_origin, "*") != 0) {
+        // If allowed origin is not *, add Vary header
+        if (strcmp(allow_origin, "*") != 0) {
             httpd_resp_set_hdr(req, "Vary", "Origin");
         }
     }
