@@ -1,0 +1,247 @@
+/**
+ * @file server_config.c
+ * @brief 服务器配置实现
+ */
+
+#include "server_config.h"
+#include "esp_log.h"
+#include "esp_check.h"
+#include <string.h>
+#include <stdio.h>
+
+static const char *TAG = "SERVER_CONFIG";
+
+esp_err_t server_config_load(server_config_t *config)
+{
+    if (config == NULL) {
+        return ESP_ERR_INVALID_ARG;
+    }
+
+    // 获取默认值
+    server_config_get_defaults(config);
+
+#ifdef CONFIG_HTTP_SERVER_ENABLED
+    config->http_enabled = true;
+#endif
+
+#ifdef CONFIG_HTTP_SERVER_PORT
+    config->http_port = CONFIG_HTTP_SERVER_PORT;
+#endif
+
+#ifdef CONFIG_HTTP_SERVER_STACK_SIZE
+    config->http_stack_size = CONFIG_HTTP_SERVER_STACK_SIZE;
+#endif
+
+#ifdef CONFIG_HTTP_SERVER_MAX_URI_HANDLERS
+    config->http_max_uri_handlers = CONFIG_HTTP_SERVER_MAX_URI_HANDLERS;
+#endif
+
+#ifdef CONFIG_HTTP_SERVER_MAX_OPEN_SOCKETS
+    config->http_max_open_sockets = CONFIG_HTTP_SERVER_MAX_OPEN_SOCKETS;
+#endif
+
+#ifdef CONFIG_HTTP_RECV_TIMEOUT
+    config->http_recv_timeout = CONFIG_HTTP_RECV_TIMEOUT;
+#endif
+
+#ifdef CONFIG_HTTP_SEND_TIMEOUT
+    config->http_send_timeout = CONFIG_HTTP_SEND_TIMEOUT;
+#endif
+
+#ifdef CONFIG_MAX_UPLOAD_SIZE
+    config->max_upload_size = CONFIG_MAX_UPLOAD_SIZE * 1024;  // KB to bytes
+#endif
+
+    // WebSocket 配置
+#ifdef CONFIG_WS_SERVER_ENABLED
+    config->ws_enabled = true;
+#endif
+
+#ifdef CONFIG_WS_MAX_CLIENTS
+    config->ws_max_clients = CONFIG_WS_MAX_CLIENTS;
+#endif
+
+#ifdef CONFIG_WS_HEARTBEAT_INTERVAL
+    config->ws_heartbeat_interval = CONFIG_WS_HEARTBEAT_INTERVAL;
+#endif
+
+#ifdef CONFIG_WS_CLIENT_TIMEOUT
+    config->ws_client_timeout = CONFIG_WS_CLIENT_TIMEOUT;
+#endif
+
+#ifdef CONFIG_WS_MSG_QUEUE_SIZE
+    config->ws_msg_queue_size = CONFIG_WS_MSG_QUEUE_SIZE;
+#endif
+
+#ifdef CONFIG_WS_MAX_MSG_SIZE
+    config->ws_max_msg_size = CONFIG_WS_MAX_MSG_SIZE;
+#endif
+
+#ifdef CONFIG_WS_TASK_STACK_SIZE
+    config->ws_task_stack_size = CONFIG_WS_TASK_STACK_SIZE;
+#endif
+
+    // 安全配置
+#ifdef CONFIG_RATE_LIMIT_ENABLED
+    config->rate_limit_enabled = true;
+#endif
+
+#ifdef CONFIG_RATE_LIMIT_MAX_REQUESTS
+    config->rate_limit_max_requests = CONFIG_RATE_LIMIT_MAX_REQUESTS;
+#endif
+
+#ifdef CONFIG_RATE_LIMIT_WINDOW_MS
+    config->rate_limit_window_ms = CONFIG_RATE_LIMIT_WINDOW_MS;
+#endif
+
+#ifdef CONFIG_RATE_LIMIT_BLOCK_DURATION
+    config->rate_limit_block_duration = CONFIG_RATE_LIMIT_BLOCK_DURATION;
+#endif
+
+#ifdef CONFIG_RATE_LIMIT_MAX_ENTRIES
+    config->rate_limit_max_entries = CONFIG_RATE_LIMIT_MAX_ENTRIES;
+#endif
+
+#ifdef CONFIG_CORS_ENABLED
+    config->cors_enabled = true;
+#endif
+
+#ifdef CONFIG_CORS_ORIGIN
+    strncpy(config->cors_origin, CONFIG_CORS_ORIGIN, sizeof(config->cors_origin) - 1);
+#endif
+
+#ifdef CONFIG_SECURITY_HEADERS_ENABLED
+    config->security_headers_enabled = true;
+#endif
+
+#ifdef CONFIG_X_CONTENT_TYPE_OPTIONS
+    config->x_content_type_options = true;
+#endif
+
+#ifdef CONFIG_X_FRAME_OPTIONS
+    config->x_frame_options = true;
+#endif
+
+#ifdef CONFIG_CONTENT_SECURITY_POLICY
+    config->content_security_policy = true;
+#endif
+
+    // 广播配置
+#ifdef CONFIG_RADAR_BROADCAST_ENABLED
+    config->broadcast_enabled = true;
+#endif
+
+#ifdef CONFIG_RADAR_BROADCAST_INTERVAL
+    config->broadcast_interval = CONFIG_RADAR_BROADCAST_INTERVAL;
+#endif
+
+#ifdef CONFIG_RADAR_BROADCAST_TASK_STACK
+    config->broadcast_task_stack = CONFIG_RADAR_BROADCAST_TASK_STACK;
+#endif
+
+    ESP_LOGI(TAG, "Configuration loaded successfully");
+
+    return ESP_OK;
+}
+
+void server_config_get_defaults(server_config_t *config)
+{
+    memset(config, 0, sizeof(server_config_t));
+
+    // HTTP 默认值
+    config->http_enabled = true;
+    config->http_port = 80;
+    config->http_stack_size = 12288;
+    config->http_max_uri_handlers = 32;
+    config->http_max_open_sockets = 7;
+    config->http_recv_timeout = 5;
+    config->http_send_timeout = 5;
+    config->max_upload_size = 100 * 1024;  // 100KB
+    config->request_timeout_ms = 5000;
+
+    // WebSocket 默认值
+    config->ws_enabled = true;
+    config->ws_max_clients = 4;
+    config->ws_heartbeat_interval = 30;
+    config->ws_client_timeout = 60;
+    config->ws_msg_queue_size = 10;
+    config->ws_max_msg_size = 2048;
+    config->ws_task_stack_size = 4096;
+    config->ws_task_priority = 5;
+
+    // 安全默认值
+    config->rate_limit_enabled = true;
+    config->rate_limit_max_requests = 20;
+    config->rate_limit_window_ms = 1000;
+    config->rate_limit_block_duration = 5;
+    config->rate_limit_max_entries = 32;
+    config->cors_enabled = false;
+    strcpy(config->cors_origin, "*");
+    config->security_headers_enabled = true;
+    config->x_content_type_options = true;
+    config->x_frame_options = true;
+    config->content_security_policy = false;  // 生产环境建议启用
+
+    // 广播默认值
+    config->broadcast_enabled = true;
+    config->broadcast_interval = 100;
+    config->broadcast_task_stack = 4096;
+    config->broadcast_task_priority = 5;
+
+    // 文件系统
+    strcpy(config->fatfs_mount_path, "/storage");
+    strcpy(config->static_file_root, "/www");
+    strcpy(config->allowed_extensions, ".html,.htm,.css,.js,.json,.png,.jpg,.jpeg,.gif,.svg,.ico,.woff,.woff2,.ttf");
+}
+
+bool server_config_validate(const server_config_t *config)
+{
+    // 端口范围检查
+    if (config->http_port == 0 || config->http_port > 65535) {
+        ESP_LOGE(TAG, "Invalid HTTP port: %d", config->http_port);
+        return false;
+    }
+
+    // 栈大小检查
+    if (config->http_stack_size < 4096) {
+        ESP_LOGE(TAG, "HTTP stack size too small: %lu", config->http_stack_size);
+        return false;
+    }
+
+    // WebSocket 客户端数检查
+    if (config->ws_max_clients == 0 || config->ws_max_clients > 16) {
+        ESP_LOGE(TAG, "Invalid WS max clients: %d", config->ws_max_clients);
+        return false;
+    }
+
+    // 超时值检查
+    if (config->ws_client_timeout < 10) {
+        ESP_LOGE(TAG, "WS client timeout too small: %d", config->ws_client_timeout);
+        return false;
+    }
+
+    // 消息大小检查
+    if (config->ws_max_msg_size < 256 || config->ws_max_msg_size > 65536) {
+        ESP_LOGE(TAG, "Invalid WS max msg size: %d", config->ws_max_msg_size);
+        return false;
+    }
+
+    return true;
+}
+
+void server_config_to_string(const server_config_t *config, char *buffer, size_t buffer_size)
+{
+    snprintf(buffer, buffer_size,
+        "HTTP: enabled=%d, port=%d, stack=%lu, sockets=%d, recv_timeout=%d, send_timeout=%d\n"
+        "WS: enabled=%d, max_clients=%d, heartbeat=%d, timeout=%d, queue=%d, max_msg=%d\n"
+        "Security: rate_limit=%d, max_req=%d, cors=%d, security_hdrs=%d\n"
+        "Broadcast: enabled=%d, interval=%d",
+        config->http_enabled, config->http_port, config->http_stack_size,
+        config->http_max_open_sockets, config->http_recv_timeout, config->http_send_timeout,
+        config->ws_enabled, config->ws_max_clients, config->ws_heartbeat_interval,
+        config->ws_client_timeout, config->ws_msg_queue_size, config->ws_max_msg_size,
+        config->rate_limit_enabled, config->rate_limit_max_requests,
+        config->cors_enabled, config->security_headers_enabled,
+        config->broadcast_enabled, config->broadcast_interval
+    );
+}
