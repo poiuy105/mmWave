@@ -1,7 +1,6 @@
 /**
  * @file server_config.c
- * @brief 服务器配置实现
- */
+ * @brief 服务器配置实�? */
 
 #include "server_config.h"
 #include "esp_log.h"
@@ -16,8 +15,7 @@ int server_config_load(server_config_t *config)
         return -1;
     }
 
-    // 获取默认值
-    server_config_get_defaults(config);
+    // 获取默认�?    server_config_get_defaults(config);
 
 #ifdef CONFIG_HTTP_SERVER_ENABLED
     config->http_enabled = true;
@@ -147,8 +145,7 @@ void server_config_get_defaults(server_config_t *config)
 {
     memset(config, 0, sizeof(server_config_t));
 
-    // HTTP 默认值
-    config->http_enabled = true;
+    // HTTP 默认�?    config->http_enabled = true;
     config->http_port = 80;
     config->http_stack_size = 12288;
     config->http_max_uri_handlers = 32;
@@ -158,8 +155,7 @@ void server_config_get_defaults(server_config_t *config)
     config->max_upload_size = 100 * 1024;
     config->request_timeout_ms = 5000;
 
-    // WebSocket 默认值
-    config->ws_enabled = true;
+    // WebSocket 默认�?    config->ws_enabled = true;
     config->ws_max_clients = 4;
     config->ws_heartbeat_interval = 30;
     config->ws_client_timeout = 60;
@@ -168,8 +164,7 @@ void server_config_get_defaults(server_config_t *config)
     config->ws_task_stack_size = 4096;
     config->ws_task_priority = 5;
 
-    // 安全默认值
-    config->rate_limit_enabled = true;
+    // 安全默认�?    config->rate_limit_enabled = true;
     config->rate_limit_max_requests = 20;
     config->rate_limit_window_ms = 1000;
     config->rate_limit_block_duration = 5;
@@ -181,8 +176,7 @@ void server_config_get_defaults(server_config_t *config)
     config->x_frame_options = true;
     config->content_security_policy = false;
 
-    // 广播默认值
-    config->broadcast_enabled = true;
+    // 广播默认�?    config->broadcast_enabled = true;
     config->broadcast_interval = 100;
     config->broadcast_task_stack = 4096;
     config->broadcast_task_priority = 5;
@@ -201,7 +195,7 @@ bool server_config_validate(const server_config_t *config)
     }
 
     if (config->http_stack_size < 4096) {
-        ESP_LOGE(TAG, "HTTP stack size too small: %u", (unsigned int)config->http_stack_size);
+        ESP_LOGE(TAG, "HTTP stack size too small: %lu", config->http_stack_size);
         return false;
     }
 
@@ -230,7 +224,7 @@ void server_config_to_string(const server_config_t *config, char *buffer, size_t
         "WS: enabled=%d, clients=%d, hb=%d, timeout=%d, queue=%d, maxmsg=%d\n"
         "Security: rl=%d, maxreq=%d, cors=%d, hdrs=%d\n"
         "Broadcast: en=%d, interval=%d",
-        config->http_enabled, config->http_port, (unsigned int)config->http_stack_size,
+        config->http_enabled, config->http_port, config->http_stack_size,
         config->http_max_open_sockets, config->http_recv_timeout, config->http_send_timeout,
         config->ws_enabled, config->ws_max_clients, config->ws_heartbeat_interval,
         config->ws_client_timeout, config->ws_msg_queue_size, config->ws_max_msg_size,

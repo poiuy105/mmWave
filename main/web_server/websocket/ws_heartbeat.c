@@ -1,7 +1,6 @@
 /**
  * @file ws_heartbeat.c
- * @brief WebSocket 心跳检测实现
- */
+ * @brief WebSocket 心跳检测实�? */
 
 #include "ws_heartbeat.h"
 #include "esp_log.h"
@@ -14,8 +13,8 @@ static void ws_heartbeat_task(void *arg)
     TickType_t last_wake = xTaskGetTickCount();
 
     ESP_LOGI(TAG, "Heartbeat task started: interval=%us, timeout=%us",
-             (unsigned int)ctx->config.check_interval_sec,
-             (unsigned int)ctx->config.client_timeout_sec);
+             ctx->config.check_interval_sec,
+             ctx->config.client_timeout_sec);
 
     while (ctx->running) {
         vTaskDelayUntil(&last_wake, pdMS_TO_TICKS(ctx->config.check_interval_sec * 1000));
@@ -105,8 +104,8 @@ esp_err_t ws_heartbeat_init(ws_heartbeat_ctx_t *ctx,
     ctx->running = false;
 
     ESP_LOGI(TAG, "Heartbeat module initialized: interval=%us, timeout=%us",
-             (unsigned int)config->check_interval_sec,
-             (unsigned int)config->client_timeout_sec);
+             config->check_interval_sec,
+             config->client_timeout_sec);
 
     return ESP_OK;
 }
