@@ -1,13 +1,8 @@
 /**
  * @file http_server.c
- * @brief HTTP/WebSocket 服务器整合入口
- *
- * 工业级重构版 - 使用模块化架构
- *
- * 使用方法：
- * 1. 在 app_main.c 中调用 http_server_start() 启动服务器
- * 2. 在 app_main.c 中调用 http_server_stop() 停止服务器
- */
+ * @brief HTTP/WebSocket 服务器整合入�? *
+ * 工业级重构版 - 使用模块化架�? *
+ * 使用方法�? * 1. �?app_main.c 中调�?http_server_start() 启动服务�? * 2. �?app_main.c 中调�?http_server_stop() 停止服务�? */
 
 #include "http_server.h"
 #include "http_server_core.h"
@@ -26,14 +21,13 @@
 #include <dirent.h>
 #include <cJSON.h>
 
-// 前向声明（WebSocket handler 在 ws_server.c 中定义）
+// 前向声明（WebSocket handler �?ws_server.c 中定义）
 extern esp_err_t ws_uri_handler(httpd_req_t *req);
 
 static const char *TAG = "HTTP_SERVER";
 
 // ============================================================
-// 静态文件服务
-// ============================================================
+// 静态文件服�?// ============================================================
 
 static const char* get_mime_type(const char *filename)
 {
@@ -82,8 +76,7 @@ static void ws_on_message(int fd, const uint8_t *data, size_t len, httpd_ws_type
             cJSON *msg_type = cJSON_GetObjectItem(msg, "type");
             if (msg_type && cJSON_IsString(msg_type)) {
                 if (strcmp(msg_type->valuestring, "subscribe") == 0) {
-                    // 发送订阅确认
-                    ws_server_send_text(server_context_get()->ws_server, fd,
+                    // 发送订阅确�?                    ws_server_send_text(server_context_get()->ws_server, fd,
                                         "{\"type\":\"subscribed\"}");
                 } else if (strcmp(msg_type->valuestring, "ping") == 0) {
                     ws_server_send_text(server_context_get()->ws_server, fd,
@@ -105,8 +98,7 @@ static esp_err_t static_file_handler(httpd_req_t *req)
     const char *uri = req->uri;
     server_context_t *ctx = server_context_get();
 
-    // 速率限制检查
-    if (ctx->config->rate_limit_enabled) {
+    // 速率限制检�?    if (ctx->config->rate_limit_enabled) {
         char client_ip[32];
         // get_client_ip(req, client_ip, sizeof(client_ip));
         strcpy(client_ip, "unknown");
@@ -117,12 +109,11 @@ static esp_err_t static_file_handler(httpd_req_t *req)
         }
     }
 
-    // 安全头
-    if (ctx->config->security_headers_enabled) {
+    // 安全�?    if (ctx->config->security_headers_enabled) {
         security_headers_set(req, NULL);
     }
 
-    // 根路径 -> index.html
+    // 根路�?-> index.html
     if (strcmp(uri, "/") == 0) {
         uri = "/index.html";
     }
@@ -133,16 +124,14 @@ static esp_err_t static_file_handler(httpd_req_t *req)
              ctx->config->static_file_root,
              uri);
 
-    // 检查文件是否存在
-    struct stat st;
+    // 检查文件是否存�?    struct stat st;
     if (stat(filepath, &st) != 0 || !S_ISREG(st.st_mode)) {
         ESP_LOGD(TAG, "File not found: %s", filepath);
         httpd_resp_send_404(req);
         return ESP_FAIL;
     }
 
-    // 读取并发送文件
-    FILE *file = fopen(filepath, "r");
+    // 读取并发送文�?    FILE *file = fopen(filepath, "r");
     if (!file) {
         ESP_LOGE(TAG, "Failed to open file: %s", filepath);
         httpd_resp_send_500(req);
@@ -224,8 +213,7 @@ static esp_err_t api_options_handler(httpd_req_t *req)
 // ============================================================
 
 static const httpd_uri_t uri_handlers[] = {
-    // 静态文件
-    { .uri = "/",           .method = HTTP_GET, .handler = static_file_handler },
+    // 静态文�?    { .uri = "/",           .method = HTTP_GET, .handler = static_file_handler },
     { .uri = "/index.html", .method = HTTP_GET, .handler = static_file_handler },
     { .uri = "/*",          .method = HTTP_GET, .handler = static_file_handler },
 
@@ -239,7 +227,7 @@ static const httpd_uri_t uri_handlers[] = {
 };
 
 // ============================================================
-// 服务器启动/停止
+// 服务器启�?停止
 // ============================================================
 
 esp_err_t http_server_start(void)
@@ -251,11 +239,9 @@ esp_err_t http_server_start(void)
     server_config_load(&config);
     server_config_to_string(&config, ESP_LOG_COLOR_I "[CONFIG] " ESP_LOG_RESET_COLOR "\n%s\n", 1024);
 
-    // 2. 初始化服务器上下文
-    ESP_ERROR_CHECK(server_context_init(&config));
+    // 2. 初始化服务器上下�?    ESP_ERROR_CHECK(server_context_init(&config));
 
-    // 3. 初始化安全模块
-    rate_limiter_config_t rl_config = {
+    // 3. 初始化安全模�?    rate_limiter_config_t rl_config = {
         .max_requests = config.rate_limit_max_requests,
         .window_ms = config.rate_limit_window_ms,
         .block_duration_sec = config.rate_limit_block_duration,
@@ -265,8 +251,7 @@ esp_err_t http_server_start(void)
 
     security_headers_init_default();
 
-    // 4. 创建 HTTP 服务器
-    http_server_t *http = http_server_create(&config);
+    // 4. 创建 HTTP 服务�?    http_server_t *http = http_server_create(&config);
     if (http == NULL) {
         ESP_LOGE(TAG, "Failed to create HTTP server");
         return ESP_FAIL;
@@ -283,11 +268,10 @@ esp_err_t http_server_start(void)
         ESP_ERROR_CHECK(httpd_register_uri_handler(handle, &uri_handlers[i]));
     }
 
-    // 6. 注册健康检查 handlers
+    // 6. 注册健康检�?handlers
     health_handler_register(handle);
 
-    // 7. 创建 WebSocket 服务器
-    if (config.ws_enabled) {
+    // 7. 创建 WebSocket 服务�?    if (config.ws_enabled) {
         ws_server_config_t ws_config = {
             .on_connect = ws_on_connect,
             .on_disconnect = ws_on_disconnect,
@@ -323,14 +307,12 @@ esp_err_t http_server_stop(void)
         return ESP_OK;
     }
 
-    // 1. 停止 WebSocket 服务器
-    if (ctx->ws_server) {
+    // 1. 停止 WebSocket 服务�?    if (ctx->ws_server) {
         ws_server_destroy(ctx->ws_server);
         ctx->ws_server = NULL;
     }
 
-    // 2. 停止 HTTP 服务器
-    if (ctx->http_server) {
+    // 2. 停止 HTTP 服务�?    if (ctx->http_server) {
         // 获取 http_server_t 句柄
         http_server_destroy((http_server_t *)ctx->http_server);
         ctx->http_server = NULL;
