@@ -180,8 +180,8 @@ bool rate_limiter_check(const char *client_ip)
         entry->block_until = now + (s_block_duration_sec * 1000);
         s_blocked_hits++;
         xSemaphoreGive(s_mutex);
-        ESP_LOGW(TAG, "Rate limit exceeded for %s: %d req in %dms",
-                 client_ip, entry->request_count, elapsed);
+        ESP_LOGW(TAG, "Rate limit exceeded for %s: %lu req in %lu ms",
+                 client_ip, (unsigned long)entry->request_count, (unsigned long)elapsed);
         return false;
     }
 

@@ -105,7 +105,7 @@ static void ws_on_message(int fd, const uint8_t *data, size_t len, httpd_ws_type
 
 static esp_err_t static_file_handler(httpd_req_t *req)
 {
-    char filepath[512];
+    char filepath[768];
     const char *uri = req->uri;
     server_context_t *ctx = server_context_get();
 
