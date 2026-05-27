@@ -91,17 +91,37 @@ static char* get_query_param(httpd_req_t *req, const char *key)
 }
 
 /**
- * URL-decode a string in-place
+ * Check if a character is a valid hex digit
  */
-static void url_decode_inplace(char *str)
+static bool is_hex_char(char c)
+{
+    return (c >= '0' && c <= '9') || (c >= 'a' && c <= 'f') || (c >= 'A' && c <= 'F');
+}
+
+/**
+ * URL-decode a string in-place (Fix #20: added hex validation)
+ * Returns false if invalid encoding is detected
+ */
+static bool url_decode_inplace(char *str)
 {
     char *src = str;
     char *dst = str;
 
     while (*src) {
         if (*src == '%' && src[1] && src[2]) {
+            // Validate hex characters
+            if (!is_hex_char(src[1]) || !is_hex_char(src[2])) {
+                ESP_LOGW(TAG, "Invalid URL encoding: %%%c%c", src[1], src[2]);
+                return false;
+            }
             char hex[3] = { src[1], src[2], '\0' };
-            *dst++ = (char)strtol(hex, NULL, 16);
+            char decoded = (char)strtol(hex, NULL, 16);
+            // Reject null bytes (Fix #20)
+            if (decoded == '\0') {
+                ESP_LOGW(TAG, "Null byte in URL encoding");
+                return false;
+            }
+            *dst++ = decoded;
             src += 3;
         } else if (*src == '+') {
             *dst++ = ' ';
@@ -111,6 +131,7 @@ static void url_decode_inplace(char *str)
         }
     }
     *dst = '\0';
+    return true;
 }
 
 // ==================== Handlers ====================
@@ -145,7 +166,11 @@ static esp_err_t api_upload_handler(httpd_req_t *req)
     }
 
     // URL-decode the path
-    url_decode_inplace(path);
+    if (!url_decode_inplace(path)) {
+        send_json_error(req, "Invalid URL encoding");
+        free(path);
+        return ESP_FAIL;
+    }
 
     ESP_LOGI(TAG, "Upload request: path=%s", path);
 
@@ -158,9 +183,9 @@ static esp_err_t api_upload_handler(httpd_req_t *req)
         return ESP_FAIL;
     }
 
-    // Check content length
-    int content_length = req->content_len;
-    if (content_length <= 0) {
+    // Check content length (Fix #21: use size_t to match req->content_len)
+    size_t content_length = req->content_len;
+    if (content_length == 0) {
         send_json_error(req, "Empty request body");
         free(path);
         return ESP_FAIL;
@@ -171,9 +196,9 @@ static esp_err_t api_upload_handler(httpd_req_t *req)
         max_size = 102400; // Default 100KB
     }
 
-    if ((uint32_t)content_length > max_size) {
-        ESP_LOGW(TAG, "Upload too large: %d bytes (max=%lu)",
-                 content_length, (unsigned long)max_size);
+    if (content_length > max_size) {
+        ESP_LOGW(TAG, "Upload too large: %lu bytes (max=%lu)",
+                 (unsigned long)content_length, (unsigned long)max_size);
         send_json_error(req, "File too large");
         free(path);
         return ESP_FAIL;
@@ -188,8 +213,9 @@ static esp_err_t api_upload_handler(httpd_req_t *req)
         // Small file: read directly into stack buffer
         uint8_t buf[UPLOAD_BUF_SIZE];
         int received = httpd_req_recv(req, (char *)buf, content_length);
-        if (received != content_length) {
-            ESP_LOGE(TAG, "Failed to receive file data: got %d of %d", received, content_length);
+        if ((size_t)received != content_length) {
+            ESP_LOGE(TAG, "Failed to receive file data: got %d of %lu",
+                     received, (unsigned long)content_length);
             send_json_error(req, "Failed to receive file data");
             free(path);
             return ESP_FAIL;
@@ -199,20 +225,21 @@ static esp_err_t api_upload_handler(httpd_req_t *req)
         // Larger file: allocate heap buffer
         data = malloc(content_length);
         if (!data) {
-            ESP_LOGE(TAG, "Failed to allocate %d bytes for upload", content_length);
+            ESP_LOGE(TAG, "Failed to allocate %lu bytes for upload",
+                     (unsigned long)content_length);
             send_json_error(req, "Out of memory");
             free(path);
             return ESP_FAIL;
         }
 
-        int total_received = 0;
+        size_t total_received = 0;
         while (total_received < content_length) {
-            int remaining = content_length - total_received;
-            int to_read = (remaining > UPLOAD_BUF_SIZE) ? UPLOAD_BUF_SIZE : remaining;
+            size_t remaining = content_length - total_received;
+            int to_read = (remaining > UPLOAD_BUF_SIZE) ? UPLOAD_BUF_SIZE : (int)remaining;
             int received = httpd_req_recv(req, (char *)(data + total_received), to_read);
 
             if (received <= 0) {
-                ESP_LOGE(TAG, "Upload recv error at offset %d", total_received);
+                ESP_LOGE(TAG, "Upload recv error at offset %lu", (unsigned long)total_received);
                 ret = ESP_FAIL;
                 break;
             }
@@ -226,7 +253,7 @@ static esp_err_t api_upload_handler(httpd_req_t *req)
     }
 
     if (ret == ESP_OK) {
-        ESP_LOGI(TAG, "File uploaded: %s (%d bytes)", path, content_length);
+        ESP_LOGI(TAG, "File uploaded: %s (%lu bytes)", path, (unsigned long)content_length);
         send_json_ok(req, "File uploaded successfully");
     } else {
         ESP_LOGE(TAG, "Upload failed: %s", esp_err_to_name(ret));
@@ -250,7 +277,11 @@ static esp_err_t api_file_list_handler(httpd_req_t *req)
         path = strdup("/storage/www");
     }
 
-    url_decode_inplace(path);
+    if (!url_decode_inplace(path)) {
+        send_json_error(req, "Invalid URL encoding");
+        free(path);
+        return ESP_FAIL;
+    }
     ESP_LOGD(TAG, "List files: %s", path);
 
     // Security: validate the directory path to prevent path traversal
@@ -321,7 +352,11 @@ static esp_err_t api_file_delete_handler(httpd_req_t *req)
         return ESP_FAIL;
     }
 
-    url_decode_inplace(path);
+    if (!url_decode_inplace(path)) {
+        send_json_error(req, "Invalid URL encoding");
+        free(path);
+        return ESP_FAIL;
+    }
     ESP_LOGI(TAG, "Delete file: %s", path);
 
     // Validate path

@@ -65,20 +65,33 @@ esp_err_t ws_uri_handler(httpd_req_t *req)
         return ESP_ERR_NOT_FOUND;
     }
 
-    uint8_t buf[2048] = {0};
+    // Use config-based buffer size (Fix #22), fallback to 2048 if not available
+    size_t buf_size = 2048;
+    // Note: max_msg_size is stored in client_mgr config after init
+    if (server->client_mgr.config.max_msg_size > 0) {
+        buf_size = server->client_mgr.config.max_msg_size;
+    }
+    uint8_t *buf = calloc(1, buf_size);
+    if (buf == NULL) {
+        ESP_LOGE(TAG, "Failed to allocate WS receive buffer");
+        return ESP_ERR_NO_MEM;
+    }
+
     httpd_ws_frame_t ws_pkt = {
         .type = HTTPD_WS_TYPE_TEXT,
         .payload = buf,
-        .len = sizeof(buf),
+        .len = buf_size,
     };
 
     esp_err_t ret = httpd_ws_recv_frame(req, &ws_pkt, 0);
     if (ret != ESP_OK) {
         ESP_LOGW(TAG, "Failed to receive frame from fd=%d: %s", fd, esp_err_to_name(ret));
+        free(buf);
         return ret;
     }
 
     if (ws_pkt.len == 0) {
+        free(buf);
         return ESP_OK;
     }
 
@@ -87,7 +100,7 @@ esp_err_t ws_uri_handler(httpd_req_t *req)
     switch (ws_pkt.type) {
         case HTTPD_WS_TYPE_TEXT:
         case HTTPD_WS_TYPE_BINARY: {
-            if (ws_pkt.type == HTTPD_WS_TYPE_TEXT && ws_pkt.len < sizeof(buf)) {
+            if (ws_pkt.type == HTTPD_WS_TYPE_TEXT && ws_pkt.len < buf_size) {
                 buf[ws_pkt.len] = '\0';
             }
             if (server->on_message) {
@@ -130,6 +143,7 @@ esp_err_t ws_uri_handler(httpd_req_t *req)
             break;
     }
 
+    free(buf);
     return ESP_OK;
 }
 
@@ -216,6 +230,11 @@ void ws_server_destroy(ws_server_t *server)
 
     if (server->heartbeat_enabled) {
         ws_heartbeat_stop(&server->heartbeat_ctx);
+    }
+
+    // Unregister WebSocket URI handler (Fix #24)
+    if (server->http_server) {
+        httpd_unregister_uri_handler(server->http_server, "/ws", HTTP_GET);
     }
 
     ws_client_mgr_deinit(&server->client_mgr);

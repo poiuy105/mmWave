@@ -258,22 +258,30 @@ esp_err_t http_server_start(void)
 {
     ESP_LOGI(TAG, "Starting HTTP/WebSocket server...");
 
+    esp_err_t ret;
+
     // 1. Load configuration
     server_config_t config;
     server_config_load(&config);
-    ESP_LOGI(TAG, "[CONFIG] Server configuration loaded");
 
     // 2. Initialize server context
-    ESP_ERROR_CHECK(server_context_init(&config));
+    ret = server_context_init(&config);
+    if (ret != ESP_OK) {
+        ESP_LOGE(TAG, "Failed to init server context: %s", esp_err_to_name(ret));
+        return ret;
+    }
 
-    // 3. Initialize security modules
+    // 3. Initialize security modules (non-critical, graceful degradation)
     rate_limiter_config_t rl_config = {
         .max_requests = config.rate_limit_max_requests,
         .window_ms = config.rate_limit_window_ms,
         .block_duration_sec = config.rate_limit_block_duration,
         .max_entries = config.rate_limit_max_entries,
     };
-    ESP_ERROR_CHECK(rate_limiter_init(&rl_config));
+    ret = rate_limiter_init(&rl_config);
+    if (ret != ESP_OK) {
+        ESP_LOGW(TAG, "Rate limiter init failed (continuing without rate limiting)");
+    }
 
     security_headers_init_default();
 
@@ -284,7 +292,12 @@ esp_err_t http_server_start(void)
         return ESP_FAIL;
     }
 
-    ESP_ERROR_CHECK(http_server_core_start(http));
+    ret = http_server_core_start(http);
+    if (ret != ESP_OK) {
+        ESP_LOGE(TAG, "Failed to start HTTP server: %s", esp_err_to_name(ret));
+        http_server_core_destroy(http);
+        return ret;
+    }
 
     server_context_t *ctx = server_context_get();
     ctx->http_server_obj = (void *)http;
@@ -345,7 +358,23 @@ esp_err_t http_server_stop(void)
         ctx->ws_server = NULL;
     }
 
-    // 2. Stop HTTP server - use http_server_obj for proper type
+    // 2. Unregister URI handlers before stopping HTTP server (Fix #25)
+    httpd_handle_t handle = (httpd_handle_t)ctx->http_server;
+    if (handle) {
+        httpd_unregister_uri_handler(handle, "/upload", HTTP_GET);
+        httpd_unregister_uri_handler(handle, "/api/files/upload", HTTP_POST);
+        httpd_unregister_uri_handler(handle, "/api/files/list", HTTP_GET);
+        httpd_unregister_uri_handler(handle, "/api/files/delete", HTTP_DELETE);
+        httpd_unregister_uri_handler(handle, "/api/fs/info", HTTP_GET);
+        httpd_unregister_uri_handler(handle, "/api/fs/format", HTTP_POST);
+        httpd_unregister_uri_handler(handle, "/api/health", HTTP_GET);
+        httpd_unregister_uri_handler(handle, "/api/ready", HTTP_GET);
+        httpd_unregister_uri_handler(handle, "/api/live", HTTP_GET);
+        httpd_unregister_uri_handler(handle, "/api/status", HTTP_GET);
+        httpd_unregister_uri_handler(handle, "/api/system/info", HTTP_GET);
+    }
+
+    // 3. Stop HTTP server - use http_server_obj for proper type
     if (ctx->http_server_obj) {
         http_server_core_destroy((http_server_t *)ctx->http_server_obj);
         ctx->http_server_obj = NULL;

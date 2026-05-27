@@ -72,11 +72,13 @@ typedef struct {
     uint32_t error_count;           // 错误计数
     char client_ip[WS_CLIENT_IP_LEN];  // 客户端 IP 地址
 
-    // 发送队列和任务
-    QueueHandle_t msg_queue;        // 待发送消息队列
-    TaskHandle_t sender_task;       // 发送任务句柄
-    StaticQueue_t msg_queue_buffer; // 队列静态缓冲区
-    uint8_t msg_queue_storage[sizeof(ws_msg_queue_item_t) * 10];  // 队列存储
+#define WS_MAX_MSG_QUEUE_SIZE 10  // Max queue depth per client
+
+    // Send queue and task
+    QueueHandle_t msg_queue;        // Pending message queue
+    TaskHandle_t sender_task;       // Sender task handle
+    StaticQueue_t msg_queue_buffer; // Queue static buffer
+    uint8_t msg_queue_storage[sizeof(ws_msg_queue_item_t) * WS_MAX_MSG_QUEUE_SIZE];  // Queue storage
 
     // 统计
     uint32_t bytes_sent;            // 发送字节数

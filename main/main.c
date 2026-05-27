@@ -37,28 +37,22 @@ static int s_retry_num = 0;
 #define MAX_RETRY  5
 
 /**
- * WiFi 事件处理
+ * WiFi event handler - STA mode only (Fix #26: removed unused AP events)
  */
 static void wifi_event_handler(void* arg, esp_event_base_t event_base,
                                int32_t event_id, void* event_data)
 {
-    if (event_id == WIFI_EVENT_AP_STACONNECTED) {
-        wifi_event_ap_staconnected_t* evt = (wifi_event_ap_staconnected_t*) event_data;
-        ESP_LOGI(TAG, "Station joined, AID=%d", evt->aid);
-    } else if (event_id == WIFI_EVENT_AP_STADISCONNECTED) {
-        wifi_event_ap_stadisconnected_t* evt = (wifi_event_ap_stadisconnected_t*) event_data;
-        ESP_LOGI(TAG, "Station left, AID=%d", evt->aid);
-    } else if (event_base == WIFI_EVENT && event_id == WIFI_EVENT_STA_START) {
+    if (event_base == WIFI_EVENT && event_id == WIFI_EVENT_STA_START) {
         esp_wifi_connect();
     } else if (event_base == WIFI_EVENT && event_id == WIFI_EVENT_STA_DISCONNECTED) {
         if (s_retry_num < MAX_RETRY) {
             esp_wifi_connect();
             s_retry_num++;
-            ESP_LOGI(TAG, "Retry to connect to the AP");
+            ESP_LOGI(TAG, "Retry to connect to the AP (%d/%d)", s_retry_num, MAX_RETRY);
         } else {
             xEventGroupSetBits(s_wifi_event_group, WIFI_FAIL_BIT);
+            ESP_LOGE(TAG, "WiFi connection failed after %d retries", MAX_RETRY);
         }
-        ESP_LOGI(TAG, "Connect to the AP fail");
     } else if (event_base == IP_EVENT && event_id == IP_EVENT_STA_GOT_IP) {
         ip_event_got_ip_t* event = (ip_event_got_ip_t*) event_data;
         ESP_LOGI(TAG, "Got IP: " IPSTR, IP2STR(&event->ip_info.ip));
@@ -161,16 +155,30 @@ void app_main(void)
         ESP_LOGW(TAG, "Radar initialization failed: %s (continuing without radar)", esp_err_to_name(radar_err));
     }
 
-    // 初始化 WiFi STA 模式
+    // Initialize WiFi STA mode
     wifi_init_sta();
 
-    // 启动 HTTP 服务器
+    // Wait for WiFi connection with timeout (Fix #27)
+    ESP_LOGI(TAG, "Waiting for WiFi connection...");
+    EventBits_t bits = xEventGroupWaitBits(s_wifi_event_group,
+                                            WIFI_CONNECTED_BIT | WIFI_FAIL_BIT,
+                                            pdFALSE, pdFALSE,
+                                            pdMS_TO_TICKS(15000));  // 15s timeout
+
+    if (bits & WIFI_CONNECTED_BIT) {
+        ESP_LOGI(TAG, "WiFi connected successfully");
+    } else if (bits & WIFI_FAIL_BIT) {
+        ESP_LOGW(TAG, "WiFi connection failed, starting HTTP server in AP-less mode");
+    } else {
+        ESP_LOGW(TAG, "WiFi connection timeout, starting HTTP server anyway");
+    }
+
+    // Start HTTP server (Fix #27: start after WiFi attempt)
     ESP_ERROR_CHECK(http_server_start());
     ESP_LOGI(TAG, "HTTP server started");
 
     ESP_LOGI(TAG, "=================================");
     ESP_LOGI(TAG, "System Ready!");
-    ESP_LOGI(TAG, "Connecting to WiFi: %s", WIFI_SSID);
     ESP_LOGI(TAG, "=================================");
 
     // 主循环 - 打印系统状态

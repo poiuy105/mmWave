@@ -5,6 +5,7 @@
 
 #include "rate_limiter.h"
 #include "esp_log.h"
+#include "esp_timer.h"
 #include "freertos/FreeRTOS.h"
 #include "freertos/semphr.h"
 #include <string.h>
@@ -17,17 +18,17 @@ static const char *TAG = "RATE_LIMITER";
 typedef struct {
     char ip[MAX_IP_LENGTH];
     uint32_t request_count;
-    uint32_t window_start;      // System start time in milliseconds
+    int64_t window_start;       // Use 64-bit microsecond timestamp (Fix #18)
     bool blocked;
-    uint32_t block_until;       // Block end timestamp
-    bool used;                   // Whether this entry is in use
+    int64_t block_until;        // 64-bit to avoid overflow
+    bool used;
 } rate_limit_entry_t;
 
 static rate_limit_entry_t *s_entries = NULL;
-static uint16_t s_max_entries = 32;
-static uint16_t s_max_requests = 20;
-static uint16_t s_window_ms = 1000;
-static uint16_t s_block_duration_sec = 5;
+static uint32_t s_max_entries = 32;
+static uint32_t s_max_requests = 20;
+static uint32_t s_window_ms = 1000;
+static uint32_t s_block_duration_sec = 5;
 static SemaphoreHandle_t s_mutex = NULL;
 
 static uint32_t s_total_hits = 0;
@@ -40,9 +41,10 @@ static const rate_limiter_config_t s_default_config = {
     .max_entries = 32
 };
 
-static uint32_t get_time_ms(void)
+static int64_t get_time_us(void)
 {
-    return xTaskGetTickCount() * portTICK_PERIOD_MS;
+    // Use 64-bit esp_timer to avoid tick overflow (Fix #18)
+    return esp_timer_get_time();
 }
 
 static rate_limit_entry_t* find_or_create_entry(const char *ip)
@@ -135,7 +137,7 @@ bool rate_limiter_check(const char *client_ip)
         return false;
     }
 
-    uint32_t now = get_time_ms();
+    int64_t now = get_time_us();
 
     // Initialize new entry
     if (!entry->used) {
@@ -161,9 +163,10 @@ bool rate_limiter_check(const char *client_ip)
         entry->window_start = now;
     }
 
-    // Check time window
-    uint32_t elapsed = now - entry->window_start;
-    if (elapsed > s_window_ms) {
+    // Check time window (convert window_ms to microseconds)
+    int64_t elapsed_us = now - entry->window_start;
+    int64_t window_us = (int64_t)s_window_ms * 1000;
+    if (elapsed_us > window_us) {
         // New window
         entry->request_count = 1;
         entry->window_start = now;
@@ -175,13 +178,14 @@ bool rate_limiter_check(const char *client_ip)
     entry->request_count++;
 
     if (entry->request_count > s_max_requests) {
-        // Exceeded, block
+        // Exceeded, block (convert block_duration to microseconds)
         entry->blocked = true;
-        entry->block_until = now + (s_block_duration_sec * 1000);
+        entry->block_until = now + (int64_t)s_block_duration_sec * 1000000;
         s_blocked_hits++;
         xSemaphoreGive(s_mutex);
         ESP_LOGW(TAG, "Rate limit exceeded for %s: %lu req in %lu ms",
-                 client_ip, (unsigned long)entry->request_count, (unsigned long)elapsed);
+                 client_ip, (unsigned long)entry->request_count,
+                 (unsigned long)(elapsed_us / 1000));
         return false;
     }
 
@@ -200,7 +204,7 @@ void rate_limiter_reset(const char *client_ip)
     rate_limit_entry_t *entry = find_or_create_entry(client_ip);
     if (entry && entry->used) {
         entry->request_count = 0;
-        entry->window_start = get_time_ms();
+        entry->window_start = get_time_us();
         entry->blocked = false;
     }
 

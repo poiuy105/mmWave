@@ -24,10 +24,17 @@ esp_err_t ws_client_mgr_init(ws_client_mgr_t *mgr, const ws_client_mgr_config_t 
         return ESP_ERR_INVALID_ARG;
     }
 
+    // Clamp queue size to static storage limit (Fix #17)
+    if (config->msg_queue_size > WS_MAX_MSG_QUEUE_SIZE) {
+        ESP_LOGW(TAG, "msg_queue_size %d exceeds max %d, clamping",
+                 config->msg_queue_size, WS_MAX_MSG_QUEUE_SIZE);
+    }
+
     memset(mgr, 0, sizeof(ws_client_mgr_t));
 
     mgr->config.max_clients = config->max_clients;
-    mgr->config.msg_queue_size = config->msg_queue_size;
+    mgr->config.msg_queue_size = (config->msg_queue_size > WS_MAX_MSG_QUEUE_SIZE)
+                                  ? WS_MAX_MSG_QUEUE_SIZE : config->msg_queue_size;
     mgr->config.max_msg_size = config->max_msg_size;
     mgr->max_clients = config->max_clients;
 

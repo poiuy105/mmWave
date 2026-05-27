@@ -99,6 +99,8 @@ esp_err_t server_context_deinit(void)
 
 server_context_t* server_context_get(void)
 {
+    // Memory barrier to ensure pointer read is not reordered
+    __atomic_thread_fence(__ATOMIC_ACQUIRE);
     return s_ctx;
 }
 
