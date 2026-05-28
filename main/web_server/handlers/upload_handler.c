@@ -295,7 +295,27 @@ static esp_err_t api_upload_handler(httpd_req_t *req)
         send_json_resp(req, 500, false, "Upload failed during transfer");
     } else {
         ESP_LOGI(TAG, "Upload SUCCESS: %s (%lu bytes)", path, (unsigned long)total_written);
-        send_json_resp(req, 200, true, "File uploaded successfully");
+        // Custom response with file info
+        httpd_resp_set_status(req, "200 OK");
+        httpd_resp_set_type(req, "application/json");
+        httpd_resp_set_hdr(req, "Access-Control-Allow-Origin", "*");
+        cJSON *root = cJSON_CreateObject();
+        if (root) {
+            cJSON_AddBoolToObject(root, "success", true);
+            cJSON_AddStringToObject(root, "message", "File uploaded successfully");
+            cJSON_AddStringToObject(root, "path", path);
+            cJSON_AddNumberToObject(root, "bytes_written", total_written);
+            char *json = cJSON_PrintUnformatted(root);
+            cJSON_Delete(root);
+            if (json) {
+                httpd_resp_send(req, json, strlen(json));
+                free(json);
+            } else {
+                httpd_resp_send(req, "{\"success\":true}", 17);
+            }
+        } else {
+            httpd_resp_send(req, "{\"success\":true}", 17);
+        }
     }
 
     free(path);

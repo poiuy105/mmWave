@@ -270,22 +270,56 @@ esp_err_t file_manager_get_fs_info(fs_info_t *info)
 
     memset(info, 0, sizeof(fs_info_t));
 
-    // FATFS statistics (simplified implementation)
-    // Note: Complete FATFS stats require f_getfree API
-    // Here we use a simplified version
+    // Recursive helper: count files and accumulate sizes in subdirectories
+    // Uses opendir/readdir directly to avoid malloc overhead of file_manager_list
+    const char *dirs_to_scan[] = { "/storage", NULL };
+    for (int d = 0; dirs_to_scan[d] != NULL; d++) {
+        DIR *dir = opendir(dirs_to_scan[d]);
+        if (!dir) continue;
 
-    // Traverse and count files
-    file_list_t list;
-    if (file_manager_list(STORAGE_MOUNT_POINT, &list) == ESP_OK) {
-        for (int i = 0; i < list.count; i++) {
-            if (list.files[i].is_dir) {
+        struct dirent *entry;
+        while ((entry = readdir(dir)) != NULL) {
+            if (strcmp(entry->d_name, ".") == 0 || strcmp(entry->d_name, "..") == 0) {
+                continue;
+            }
+
+            char full_path[512];
+            snprintf(full_path, sizeof(full_path), "%s/%s", dirs_to_scan[d], entry->d_name);
+
+            if (entry->d_type == DT_DIR) {
                 info->dir_count++;
+                // Recurse into subdirectory
+                DIR *sub_dir = opendir(full_path);
+                if (sub_dir) {
+                    struct dirent *sub_entry;
+                    while ((sub_entry = readdir(sub_dir)) != NULL) {
+                        if (strcmp(sub_entry->d_name, ".") == 0 || strcmp(sub_entry->d_name, "..") == 0) {
+                            continue;
+                        }
+                        char sub_path[512];
+                        snprintf(sub_path, sizeof(sub_path), "%s/%s", full_path, sub_entry->d_name);
+
+                        if (sub_entry->d_type == DT_DIR) {
+                            info->dir_count++;
+                        } else {
+                            info->file_count++;
+                            struct stat st;
+                            if (stat(sub_path, &st) == 0) {
+                                info->used_bytes += st.st_size;
+                            }
+                        }
+                    }
+                    closedir(sub_dir);
+                }
             } else {
                 info->file_count++;
-                info->used_bytes += list.files[i].size;
+                struct stat st;
+                if (stat(full_path, &st) == 0) {
+                    info->used_bytes += st.st_size;
+                }
             }
         }
-        file_manager_list_free(&list);
+        closedir(dir);
     }
 
     // Get actual partition size from partition table
@@ -297,6 +331,10 @@ esp_err_t file_manager_get_fs_info(fs_info_t *info)
         ESP_LOGW(TAG, "Storage partition not found, using default size");
     }
     info->free_bytes = (info->total_bytes > info->used_bytes) ? (info->total_bytes - info->used_bytes) : 0;
+
+    ESP_LOGI(TAG, "FS info: total=%lu, used=%lu, free=%lu, files=%d, dirs=%d",
+             (unsigned long)info->total_bytes, (unsigned long)info->used_bytes,
+             (unsigned long)info->free_bytes, info->file_count, info->dir_count);
 
     return ESP_OK;
 }
