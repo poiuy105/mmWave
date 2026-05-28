@@ -166,11 +166,11 @@ static const char* upload_page_html =
 "            var reader = new FileReader();\n"
 "            reader.onload = function(e) {\n"
 "                var path = '/storage/www/' + file.name;\n"
-"                fetch('/api/files/upload?path=' + encodeURIComponent(path), {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/octet-stream' },
-                    body: e.target.result
-                }).then(function(r) { return r.json(); }).then(function(data) {\n"
+"                fetch('/api/files/upload?path=' + encodeURIComponent(path), {\n"
+"                    method: 'POST',\n"
+"                    headers: { 'Content-Type': 'application/octet-stream' },\n"
+"                    body: e.target.result\n"
+"                }).then(function(r) { return r.json(); }).then(function(data) {\n"
 "                    if (data.success) {\n"
 "                        showStatus('Uploaded: ' + file.name, false);\n"
 "                        loadFileList();\n"
