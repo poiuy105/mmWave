@@ -36,13 +36,18 @@ static const char *TAG = "UPLOAD";
 // ==================== Helper functions ====================
 
 /**
- * Send JSON response with memory fallback.
+ * Send JSON response with memory fallback and CORS headers.
  * If heap is too low for cJSON, send a minimal fixed-string JSON.
  * Returns ESP_OK if response was sent, ESP_FAIL otherwise.
  */
 static esp_err_t send_json_resp(httpd_req_t *req, bool success, const char *message)
 {
     httpd_resp_set_type(req, "application/json");
+    
+    // Add CORS headers for cross-origin requests
+    httpd_resp_set_hdr(req, "Access-Control-Allow-Origin", "*");
+    httpd_resp_set_hdr(req, "Access-Control-Allow-Methods", "GET, POST, PUT, DELETE, OPTIONS");
+    httpd_resp_set_hdr(req, "Access-Control-Allow-Headers", "Content-Type");
 
     // If enough heap, use cJSON for proper formatting
     if (esp_get_free_heap_size() >= MIN_HEAP_FOR_JSON) {
@@ -149,6 +154,7 @@ static bool url_decode_inplace(char *str)
 static esp_err_t upload_page_handler(httpd_req_t *req)
 {
     httpd_resp_set_type(req, "text/html");
+    httpd_resp_set_hdr(req, "Access-Control-Allow-Origin", "*");
     return httpd_resp_send(req, upload_page_html, strlen(upload_page_html));
 }
 
@@ -335,6 +341,7 @@ static esp_err_t api_file_list_handler(httpd_req_t *req)
         cJSON_Delete(root);
         if (json) {
             httpd_resp_set_type(req, "application/json");
+            httpd_resp_set_hdr(req, "Access-Control-Allow-Origin", "*");
             httpd_resp_send(req, json, strlen(json));
             free(json);
         } else {
@@ -423,6 +430,7 @@ static esp_err_t api_fs_info_handler(httpd_req_t *req)
         cJSON_Delete(root);
         if (json) {
             httpd_resp_set_type(req, "application/json");
+            httpd_resp_set_hdr(req, "Access-Control-Allow-Origin", "*");
             httpd_resp_send(req, json, strlen(json));
             free(json);
         } else {
