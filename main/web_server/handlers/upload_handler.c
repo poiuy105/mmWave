@@ -187,8 +187,18 @@ static esp_err_t api_upload_handler(httpd_req_t *req)
         return ESP_FAIL;
     }
 
-    ESP_LOGI(TAG, "Upload request: path=%s, size=%lu",
-             path, (unsigned long)req->content_len);
+    ESP_LOGI(TAG, "Upload request: path=%s, size=%lu, free_heap=%lu",
+             path, (unsigned long)req->content_len,
+             (unsigned long)esp_get_free_heap_size());
+
+    // Check minimum heap before starting upload (need ~8KB for FATFS buffers + operations)
+    if (esp_get_free_heap_size() < 8192) {
+        ESP_LOGW(TAG, "Insufficient heap for upload: %lu bytes",
+                 (unsigned long)esp_get_free_heap_size());
+        send_json_resp(req, false, "Server busy, insufficient memory");
+        free(path);
+        return ESP_FAIL;
+    }
 
     // Validate the file path
     validation_result_t vresult = validate_file_path(path);
@@ -269,13 +279,15 @@ static esp_err_t api_upload_handler(httpd_req_t *req)
     }
 
     // Send response - use fallback if heap is low
-    // Always return ESP_OK if file was written successfully,
-    // even if JSON response fails (file is already on disk)
-    send_json_resp(req, ret == ESP_OK,
+    // Note: send_json_resp calls httpd_resp_send internally
+    esp_err_t send_ret = send_json_resp(req, ret == ESP_OK,
                    ret == ESP_OK ? "File uploaded successfully" : "Upload failed");
 
     free(path);
-    return ret;
+    
+    // Return ESP_OK to prevent HTTPD from sending another error response
+    // The response has already been sent by send_json_resp
+    return (send_ret == ESP_OK) ? ESP_OK : ret;
 }
 
 /**
@@ -392,7 +404,7 @@ static esp_err_t api_file_delete_handler(httpd_req_t *req)
     }
 
     esp_err_t ret = file_manager_delete(path);
-    send_json_resp(req, ret == ESP_OK,
+    esp_err_t send_ret = send_json_resp(req, ret == ESP_OK,
                    ret == ESP_OK ? "File deleted" : "Delete failed");
 
     if (ret == ESP_OK) {
@@ -402,7 +414,7 @@ static esp_err_t api_file_delete_handler(httpd_req_t *req)
     }
 
     free(path);
-    return ret;
+    return (send_ret == ESP_OK) ? ESP_OK : ret;
 }
 
 /**
@@ -451,10 +463,10 @@ static esp_err_t api_fs_format_handler(httpd_req_t *req)
     ESP_LOGW(TAG, "Storage format requested!");
 
     esp_err_t ret = file_manager_format();
-    send_json_resp(req, ret == ESP_OK,
+    esp_err_t send_ret = send_json_resp(req, ret == ESP_OK,
                    ret == ESP_OK ? "Storage formatted" : "Format failed");
 
-    return ret;
+    return (send_ret == ESP_OK) ? ESP_OK : ret;
 }
 
 // ==================== Registration ====================
