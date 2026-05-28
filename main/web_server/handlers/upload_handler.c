@@ -15,6 +15,7 @@
 #include "esp_heap_caps.h"
 #include <string.h>
 #include <stdio.h>
+#include <errno.h>
 #include <cJSON.h>
 
 static const char *TAG = "UPLOAD";
@@ -301,7 +302,7 @@ static esp_err_t api_file_list_handler(httpd_req_t *req)
     }
 
     file_list_t list;
-    esp_err_t ret = file_manager_list(path, &list);
+    file_manager_list(path, &list);
 
     cJSON *root = cJSON_CreateObject();
     cJSON *files_array = cJSON_CreateArray();
@@ -377,7 +378,7 @@ static esp_err_t api_fs_info_handler(httpd_req_t *req)
     ESP_LOGI(TAG, "=== fs info handler called ===");
 
     fs_info_t info;
-    esp_err_t ret = file_manager_get_fs_info(&info);
+    file_manager_get_fs_info(&info);
 
     cJSON *root = cJSON_CreateObject();
     cJSON_AddNumberToObject(root, "total_bytes", info.total_bytes);
