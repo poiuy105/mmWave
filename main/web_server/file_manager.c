@@ -144,7 +144,7 @@ esp_err_t file_manager_upload(const char *path, const uint8_t *data, size_t len)
         return ESP_ERR_INVALID_ARG;
     }
 
-    ESP_LOGI(TAG, "Uploading file: %s (%zu bytes)", path, len);
+    ESP_LOGI(TAG, "Uploading file: %s (%lu bytes)", path, (unsigned long)len);
 
     // Ensure parent directory exists
     char parent_dir[512];
@@ -166,7 +166,7 @@ esp_err_t file_manager_upload(const char *path, const uint8_t *data, size_t len)
     fclose(file);
 
     if (written != len) {
-        ESP_LOGE(TAG, "Write failed: wrote %zu of %zu bytes", written, len);
+        ESP_LOGE(TAG, "Write failed: wrote %lu of %lu bytes", (unsigned long)written, (unsigned long)len);
         return ESP_ERR_INVALID_SIZE;
     }
 

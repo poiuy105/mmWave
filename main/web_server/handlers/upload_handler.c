@@ -284,20 +284,20 @@ static esp_err_t api_file_list_handler(httpd_req_t *req)
 {
     ESP_LOGI(TAG, "=== file list handler called ===");
 
-    char *path_param = get_query_param(req, "path");
-    char *path = path_param ? path_param : strdup("/storage/www");
+    char *path = get_query_param(req, "path");
+    if (!path) {
+        path = strdup("/storage/www");
+    }
 
     if (!url_decode_inplace(path)) {
         send_json_resp(req, 400, false, "Invalid URL encoding");
         free(path);
-        free(path_param);
         return ESP_OK;
     }
 
     if (strncmp(path, "/storage/", 9) != 0) {
         send_json_resp(req, 403, false, "Access denied");
         free(path);
-        free(path_param);
         return ESP_OK;
     }
 
@@ -331,7 +331,6 @@ static esp_err_t api_file_list_handler(httpd_req_t *req)
 
     file_manager_list_free(&list);
     free(path);
-    free(path_param);
     return ESP_OK;
 }
 
