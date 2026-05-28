@@ -333,26 +333,40 @@ esp_err_t file_manager_ensure_dir(const char *path)
         return ESP_ERR_INVALID_ARG;
     }
 
-    // If directory already exists, return directly
-    struct stat st;
-    if (stat(path, &st) == 0 && S_ISDIR(st.st_mode)) {
+    // Work on a copy - find the last '/' to get parent directory
+    char dir[512];
+    strncpy(dir, path, sizeof(dir) - 1);
+    dir[sizeof(dir) - 1] = '\0';
+
+    // If path ends with '/', treat it as a directory path
+    // Otherwise, strip the filename to get the parent directory
+    char *last_slash = strrchr(dir, '/');
+    if (last_slash == NULL) {
+        return ESP_OK;  // No directory component
+    }
+
+    // If the last '/' is at position 0 (root), nothing to create
+    if (last_slash == dir) {
         return ESP_OK;
     }
 
-    // Recursively create parent directory
-    char parent[512];
-    strncpy(parent, path, sizeof(parent) - 1);
+    // If path doesn't end with '/', strip the filename
+    if (*(last_slash + 1) != '\0') {
+        *last_slash = '\0';
+    }
 
-    char *p = parent;
+    // Now dir contains the parent directory path
+    // Recursively create each component
+    char *p = dir;
     while ((p = strchr(p + 1, '/')) != NULL) {
         *p = '\0';
-        mkdir(parent, 0755);
+        mkdir(dir, 0755);
         *p = '/';
     }
 
-    // Create final directory
-    if (mkdir(path, 0755) != 0 && errno != EEXIST) {
-        ESP_LOGE(TAG, "Failed to create directory: %s", path);
+    // Create final directory component
+    if (mkdir(dir, 0755) != 0 && errno != EEXIST) {
+        ESP_LOGE(TAG, "Failed to create directory: %s (errno=%d)", dir, errno);
         return ESP_ERR_NOT_FOUND;
     }
 

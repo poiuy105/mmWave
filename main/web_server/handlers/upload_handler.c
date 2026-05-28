@@ -241,7 +241,7 @@ static esp_err_t api_upload_handler(httpd_req_t *req)
 
         size_t written = fwrite(buf, 1, received, file);
         if (written != (size_t)received) {
-            ESP_LOGE(TAG, "fwrite failed: wrote %zu of %d", written, received);
+            ESP_LOGE(TAG, "fwrite failed: wrote %lu of %d", (unsigned long)written, received);
             ret = ESP_FAIL;
             break;
         }
