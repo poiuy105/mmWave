@@ -107,9 +107,17 @@ static void ws_on_message(int fd, const uint8_t *data, size_t len, httpd_ws_type
 
 static esp_err_t static_file_handler(httpd_req_t *req)
 {
+    server_context_t *ctx = server_context_get();
+
+    // Check minimum heap before processing (prevent crashes under memory pressure)
+    if (esp_get_free_heap_size() < 4096) {
+        ESP_LOGW(TAG, "Low heap (%lu bytes), returning 503", (unsigned long)esp_get_free_heap_size());
+        httpd_resp_send_err(req, HTTPD_503_SERVICE_UNAVAILABLE, "Server busy");
+        return ESP_FAIL;
+    }
+
     char filepath[768];
     const char *uri = req->uri;
-    server_context_t *ctx = server_context_get();
 
     // Rate limit check - use actual client IP
     if (ctx->config->rate_limit_enabled) {

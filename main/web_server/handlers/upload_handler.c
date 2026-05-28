@@ -4,7 +4,7 @@
  *
  * Endpoints:
  *   GET  /upload          - File manager web page
- *   POST /api/files/upload - Upload file (raw body)
+ *   POST /api/files/upload - Upload file (raw body, streamed to disk)
  *   GET  /api/files/list   - List files in directory
  *   DELETE /api/files/delete - Delete a file
  *   GET  /api/fs/info      - Filesystem info
@@ -20,48 +20,60 @@
 #include "server_config.h"
 #include "esp_log.h"
 #include "esp_http_server.h"
+#include "esp_heap_caps.h"
 #include <string.h>
 #include <stdio.h>
 #include <cJSON.h>
 
 static const char *TAG = "UPLOAD";
 
-// Maximum upload buffer size (ESP32-C3 memory is limited)
-#define UPLOAD_BUF_SIZE 4096
+// Upload chunk size - small to avoid memory pressure on ESP32-C3
+#define UPLOAD_BUF_SIZE 2048
+
+// Minimum heap required to send a JSON response
+#define MIN_HEAP_FOR_JSON 2048
 
 // ==================== Helper functions ====================
 
-static void send_json_ok(httpd_req_t *req, const char *message)
+/**
+ * Send JSON response with memory fallback.
+ * If heap is too low for cJSON, send a minimal fixed-string JSON.
+ * Returns ESP_OK if response was sent, ESP_FAIL otherwise.
+ */
+static esp_err_t send_json_resp(httpd_req_t *req, bool success, const char *message)
 {
-    cJSON *root = cJSON_CreateObject();
-    cJSON_AddBoolToObject(root, "success", true);
-    if (message) {
-        cJSON_AddStringToObject(root, "message", message);
-    }
-    char *json = cJSON_PrintUnformatted(root);
     httpd_resp_set_type(req, "application/json");
-    httpd_resp_send(req, json, strlen(json));
-    free(json);
-    cJSON_Delete(root);
-}
 
-static void send_json_error(httpd_req_t *req, const char *message)
-{
-    cJSON *root = cJSON_CreateObject();
-    cJSON_AddBoolToObject(root, "success", false);
-    if (message) {
-        cJSON_AddStringToObject(root, "message", message);
+    // If enough heap, use cJSON for proper formatting
+    if (esp_get_free_heap_size() >= MIN_HEAP_FOR_JSON) {
+        cJSON *root = cJSON_CreateObject();
+        if (root) {
+            cJSON_AddBoolToObject(root, "success", success);
+            if (message) {
+                cJSON_AddStringToObject(root, "message", message);
+            }
+            char *json = cJSON_PrintUnformatted(root);
+            cJSON_Delete(root);
+            if (json) {
+                esp_err_t ret = httpd_resp_send(req, json, strlen(json));
+                free(json);
+                return ret;
+            }
+        }
     }
-    char *json = cJSON_PrintUnformatted(root);
-    httpd_resp_set_type(req, "application/json");
-    httpd_resp_send(req, json, strlen(json));
-    free(json);
-    cJSON_Delete(root);
+
+    // Fallback: send minimal fixed JSON string (no heap allocation needed)
+    ESP_LOGW(TAG, "Low heap (%lu bytes), using fallback JSON response",
+             (unsigned long)esp_get_free_heap_size());
+    const char *resp = success
+        ? "{\"success\":true,\"message\":\"ok\"}"
+        : "{\"success\":false,\"message\":\"error\"}";
+    return httpd_resp_send(req, resp, strlen(resp));
 }
 
 /**
  * Extract query parameter value from URI
- * Returns NULL if parameter not found
+ * Returns NULL if parameter not found (caller must free)
  */
 static char* get_query_param(httpd_req_t *req, const char *key)
 {
@@ -81,7 +93,6 @@ static char* get_query_param(httpd_req_t *req, const char *key)
         return NULL;
     }
 
-    // Allocate and return a copy
     char *result = malloc(param_len + 1);
     if (result) {
         memcpy(result, param, param_len);
@@ -99,7 +110,7 @@ static bool is_hex_char(char c)
 }
 
 /**
- * URL-decode a string in-place (Fix #20: added hex validation)
+ * URL-decode a string in-place
  * Returns false if invalid encoding is detected
  */
 static bool url_decode_inplace(char *str)
@@ -109,16 +120,12 @@ static bool url_decode_inplace(char *str)
 
     while (*src) {
         if (*src == '%' && src[1] && src[2]) {
-            // Validate hex characters
             if (!is_hex_char(src[1]) || !is_hex_char(src[2])) {
-                ESP_LOGW(TAG, "Invalid URL encoding: %%%c%c", src[1], src[2]);
                 return false;
             }
             char hex[3] = { src[1], src[2], '\0' };
             char decoded = (char)strtol(hex, NULL, 16);
-            // Reject null bytes (Fix #20)
             if (decoded == '\0') {
-                ESP_LOGW(TAG, "Null byte in URL encoding");
                 return false;
             }
             *dst++ = decoded;
@@ -146,10 +153,13 @@ static esp_err_t upload_page_handler(httpd_req_t *req)
 }
 
 /**
- * POST /api/files/upload - Upload a file
+ * POST /api/files/upload - Upload a file (streamed to disk)
  *
  * Query params: path (target file path, e.g. /storage/www/index.html)
- * Body: raw file data (not multipart)
+ * Body: raw file data
+ *
+ * Uses streaming: reads 2KB chunks from HTTP request and writes
+ * directly to file, avoiding large heap allocations.
  */
 static esp_err_t api_upload_handler(httpd_req_t *req)
 {
@@ -161,32 +171,31 @@ static esp_err_t api_upload_handler(httpd_req_t *req)
     // Get target path from query string
     char *path = get_query_param(req, "path");
     if (!path) {
-        send_json_error(req, "Missing 'path' parameter");
+        send_json_resp(req, false, "Missing 'path' parameter");
         return ESP_FAIL;
     }
 
-    // URL-decode the path
     if (!url_decode_inplace(path)) {
-        send_json_error(req, "Invalid URL encoding");
+        send_json_resp(req, false, "Invalid URL encoding");
         free(path);
         return ESP_FAIL;
     }
 
-    ESP_LOGI(TAG, "Upload request: path=%s", path);
+    ESP_LOGI(TAG, "Upload request: path=%s, size=%lu",
+             path, (unsigned long)req->content_len);
 
     // Validate the file path
     validation_result_t vresult = validate_file_path(path);
     if (vresult != VALIDATION_OK) {
         ESP_LOGW(TAG, "Upload path validation failed: %s", validation_result_str(vresult));
-        send_json_error(req, validation_result_str(vresult));
+        send_json_resp(req, false, validation_result_str(vresult));
         free(path);
         return ESP_FAIL;
     }
 
-    // Check content length (Fix #21: use size_t to match req->content_len)
     size_t content_length = req->content_len;
     if (content_length == 0) {
-        send_json_error(req, "Empty request body");
+        send_json_resp(req, false, "Empty request body");
         free(path);
         return ESP_FAIL;
     }
@@ -199,66 +208,65 @@ static esp_err_t api_upload_handler(httpd_req_t *req)
     if (content_length > max_size) {
         ESP_LOGW(TAG, "Upload too large: %lu bytes (max=%lu)",
                  (unsigned long)content_length, (unsigned long)max_size);
-        send_json_error(req, "File too large");
+        send_json_resp(req, false, "File too large");
         free(path);
         return ESP_FAIL;
     }
 
-    // Read request body into buffer
-    // For ESP32-C3 with limited RAM, use a reasonable buffer
-    uint8_t *data = NULL;
+    // Ensure parent directory exists
+    file_manager_ensure_dir(path);
+
+    // Stream: open file first, then read chunks and write directly
+    FILE *file = fopen(path, "wb");
+    if (!file) {
+        ESP_LOGE(TAG, "Failed to open file for writing: %s", path);
+        send_json_resp(req, false, "Failed to create file");
+        free(path);
+        return ESP_FAIL;
+    }
+
+    uint8_t buf[UPLOAD_BUF_SIZE];
+    size_t total_written = 0;
     esp_err_t ret = ESP_OK;
 
-    if (content_length <= UPLOAD_BUF_SIZE) {
-        // Small file: read directly into stack buffer
-        uint8_t buf[UPLOAD_BUF_SIZE];
-        int received = httpd_req_recv(req, (char *)buf, content_length);
-        if ((size_t)received != content_length) {
-            ESP_LOGE(TAG, "Failed to receive file data: got %d of %lu",
-                     received, (unsigned long)content_length);
-            send_json_error(req, "Failed to receive file data");
-            free(path);
-            return ESP_FAIL;
-        }
-        ret = file_manager_upload(path, buf, received);
-    } else {
-        // Larger file: allocate heap buffer
-        data = malloc(content_length);
-        if (!data) {
-            ESP_LOGE(TAG, "Failed to allocate %lu bytes for upload",
-                     (unsigned long)content_length);
-            send_json_error(req, "Out of memory");
-            free(path);
-            return ESP_FAIL;
+    while (total_written < content_length) {
+        size_t remaining = content_length - total_written;
+        int to_read = (remaining > UPLOAD_BUF_SIZE) ? UPLOAD_BUF_SIZE : (int)remaining;
+        int received = httpd_req_recv(req, (char *)buf, to_read);
+
+        if (received <= 0) {
+            ESP_LOGE(TAG, "Upload recv error at offset %lu", (unsigned long)total_written);
+            ret = ESP_FAIL;
+            break;
         }
 
-        size_t total_received = 0;
-        while (total_received < content_length) {
-            size_t remaining = content_length - total_received;
-            int to_read = (remaining > UPLOAD_BUF_SIZE) ? UPLOAD_BUF_SIZE : (int)remaining;
-            int received = httpd_req_recv(req, (char *)(data + total_received), to_read);
-
-            if (received <= 0) {
-                ESP_LOGE(TAG, "Upload recv error at offset %lu", (unsigned long)total_received);
-                ret = ESP_FAIL;
-                break;
-            }
-            total_received += received;
+        size_t written = fwrite(buf, 1, received, file);
+        if (written != (size_t)received) {
+            ESP_LOGE(TAG, "File write error at offset %lu", (unsigned long)total_written);
+            ret = ESP_FAIL;
+            break;
         }
 
-        if (ret == ESP_OK && total_received == content_length) {
-            ret = file_manager_upload(path, data, total_received);
-        }
-        free(data);
+        total_written += received;
     }
+
+    fclose(file);
 
     if (ret == ESP_OK) {
-        ESP_LOGI(TAG, "File uploaded: %s (%lu bytes)", path, (unsigned long)content_length);
-        send_json_ok(req, "File uploaded successfully");
+        ESP_LOGI(TAG, "File uploaded: %s (%lu bytes), free heap=%lu",
+                 path, (unsigned long)total_written,
+                 (unsigned long)esp_get_free_heap_size());
     } else {
-        ESP_LOGE(TAG, "Upload failed: %s", esp_err_to_name(ret));
-        send_json_error(req, "Upload failed");
+        // Clean up partial file on failure
+        remove(path);
+        ESP_LOGE(TAG, "Upload failed, partial file removed: %s", path);
     }
+
+    // Send response - use fallback if heap is low
+    // Always return ESP_OK if file was written successfully,
+    // even if JSON response fails (file is already on disk)
+    send_json_resp(req, ret == ESP_OK,
+                   ret == ESP_OK ? "File uploaded successfully" : "Upload failed");
 
     free(path);
     return ret;
@@ -266,37 +274,29 @@ static esp_err_t api_upload_handler(httpd_req_t *req)
 
 /**
  * GET /api/files/list - List files in a directory
- *
- * Query params: path (directory path, e.g. /storage/www)
  */
 static esp_err_t api_file_list_handler(httpd_req_t *req)
 {
-    // Get directory path from query string
     char *path = get_query_param(req, "path");
     if (!path) {
         path = strdup("/storage/www");
     }
 
     if (!url_decode_inplace(path)) {
-        send_json_error(req, "Invalid URL encoding");
+        send_json_resp(req, false, "Invalid URL encoding");
         free(path);
         return ESP_FAIL;
     }
-    ESP_LOGD(TAG, "List files: %s", path);
 
-    // Security: validate the directory path to prevent path traversal
     validation_result_t vresult = validate_file_path(path);
     if (vresult != VALIDATION_OK) {
-        ESP_LOGW(TAG, "List path validation failed: %s", validation_result_str(vresult));
-        send_json_error(req, "Invalid path");
+        send_json_resp(req, false, "Invalid path");
         free(path);
         return ESP_FAIL;
     }
 
-    // Restrict to /storage/ prefix to prevent accessing arbitrary directories
     if (strncmp(path, "/storage/", 9) != 0) {
-        ESP_LOGW(TAG, "List path outside /storage/: %s", path);
-        send_json_error(req, "Access denied");
+        send_json_resp(req, false, "Access denied");
         free(path);
         return ESP_FAIL;
     }
@@ -305,86 +305,93 @@ static esp_err_t api_file_list_handler(httpd_req_t *req)
     esp_err_t ret = file_manager_list(path, &list);
 
     if (ret != ESP_OK) {
-        send_json_error(req, "Failed to list files");
+        send_json_resp(req, false, "Failed to list files");
         free(path);
         return ESP_FAIL;
     }
 
     // Build JSON response
     cJSON *root = cJSON_CreateObject();
-    cJSON_AddStringToObject(root, "path", path);
+    if (root) {
+        cJSON_AddStringToObject(root, "path", path);
 
-    cJSON *files_array = cJSON_CreateArray();
-    for (int i = 0; i < list.count; i++) {
-        cJSON *item = cJSON_CreateObject();
-        cJSON_AddStringToObject(item, "name", list.files[i].name);
-        cJSON_AddStringToObject(item, "path", list.files[i].path);
-        cJSON_AddNumberToObject(item, "size", list.files[i].size);
-        cJSON_AddBoolToObject(item, "is_dir", list.files[i].is_dir);
-        cJSON_AddItemToArray(files_array, item);
+        cJSON *files_array = cJSON_CreateArray();
+        if (files_array) {
+            for (int i = 0; i < list.count; i++) {
+                cJSON *item = cJSON_CreateObject();
+                if (item) {
+                    cJSON_AddStringToObject(item, "name", list.files[i].name);
+                    cJSON_AddStringToObject(item, "path", list.files[i].path);
+                    cJSON_AddNumberToObject(item, "size", list.files[i].size);
+                    cJSON_AddBoolToObject(item, "is_dir", list.files[i].is_dir);
+                    cJSON_AddItemToArray(files_array, item);
+                }
+            }
+        }
+        cJSON_AddItemToObject(root, "files", files_array);
+        cJSON_AddNumberToObject(root, "count", list.count);
+
+        char *json = cJSON_PrintUnformatted(root);
+        cJSON_Delete(root);
+        if (json) {
+            httpd_resp_set_type(req, "application/json");
+            httpd_resp_send(req, json, strlen(json));
+            free(json);
+        } else {
+            send_json_resp(req, false, "Out of memory");
+        }
+    } else {
+        send_json_resp(req, false, "Out of memory");
     }
-    cJSON_AddItemToObject(root, "files", files_array);
-    cJSON_AddNumberToObject(root, "count", list.count);
 
-    char *json = cJSON_PrintUnformatted(root);
-    httpd_resp_set_type(req, "application/json");
-    httpd_resp_send(req, json, strlen(json));
-
-    free(json);
-    cJSON_Delete(root);
     file_manager_list_free(&list);
     free(path);
-
     return ESP_OK;
 }
 
 /**
  * DELETE /api/files/delete - Delete a file
- *
- * Query params: path (file path, e.g. /storage/www/test.html)
  */
 static esp_err_t api_file_delete_handler(httpd_req_t *req)
 {
-    // Get file path from query string
     char *path = get_query_param(req, "path");
     if (!path) {
-        send_json_error(req, "Missing 'path' parameter");
+        send_json_resp(req, false, "Missing 'path' parameter");
         return ESP_FAIL;
     }
 
     if (!url_decode_inplace(path)) {
-        send_json_error(req, "Invalid URL encoding");
+        send_json_resp(req, false, "Invalid URL encoding");
         free(path);
         return ESP_FAIL;
     }
+
     ESP_LOGI(TAG, "Delete file: %s", path);
 
-    // Validate path
     validation_result_t vresult = validate_file_path(path);
     if (vresult != VALIDATION_OK) {
-        ESP_LOGW(TAG, "Delete path validation failed: %s", validation_result_str(vresult));
-        send_json_error(req, validation_result_str(vresult));
+        send_json_resp(req, false, validation_result_str(vresult));
         free(path);
         return ESP_FAIL;
     }
 
-    // Prevent deletion of critical directories
     if (strcmp(path, "/storage") == 0 ||
         strcmp(path, "/storage/www") == 0 ||
         strcmp(path, "/storage/logs") == 0 ||
         strcmp(path, "/storage/config") == 0) {
-        send_json_error(req, "Cannot delete system directory");
+        send_json_resp(req, false, "Cannot delete system directory");
         free(path);
         return ESP_FAIL;
     }
 
     esp_err_t ret = file_manager_delete(path);
+    send_json_resp(req, ret == ESP_OK,
+                   ret == ESP_OK ? "File deleted" : "Delete failed");
+
     if (ret == ESP_OK) {
         ESP_LOGI(TAG, "File deleted: %s", path);
-        send_json_ok(req, "File deleted");
     } else {
         ESP_LOGE(TAG, "Delete failed: %s - %s", path, esp_err_to_name(ret));
-        send_json_error(req, "Delete failed");
     }
 
     free(path);
@@ -400,23 +407,30 @@ static esp_err_t api_fs_info_handler(httpd_req_t *req)
     esp_err_t ret = file_manager_get_fs_info(&info);
 
     if (ret != ESP_OK) {
-        send_json_error(req, "Failed to get filesystem info");
+        send_json_resp(req, false, "Failed to get filesystem info");
         return ESP_FAIL;
     }
 
     cJSON *root = cJSON_CreateObject();
-    cJSON_AddNumberToObject(root, "total_bytes", info.total_bytes);
-    cJSON_AddNumberToObject(root, "used_bytes", info.used_bytes);
-    cJSON_AddNumberToObject(root, "free_bytes", info.free_bytes);
-    cJSON_AddNumberToObject(root, "file_count", info.file_count);
-    cJSON_AddNumberToObject(root, "dir_count", info.dir_count);
+    if (root) {
+        cJSON_AddNumberToObject(root, "total_bytes", info.total_bytes);
+        cJSON_AddNumberToObject(root, "used_bytes", info.used_bytes);
+        cJSON_AddNumberToObject(root, "free_bytes", info.free_bytes);
+        cJSON_AddNumberToObject(root, "file_count", info.file_count);
+        cJSON_AddNumberToObject(root, "dir_count", info.dir_count);
 
-    char *json = cJSON_PrintUnformatted(root);
-    httpd_resp_set_type(req, "application/json");
-    httpd_resp_send(req, json, strlen(json));
-
-    free(json);
-    cJSON_Delete(root);
+        char *json = cJSON_PrintUnformatted(root);
+        cJSON_Delete(root);
+        if (json) {
+            httpd_resp_set_type(req, "application/json");
+            httpd_resp_send(req, json, strlen(json));
+            free(json);
+        } else {
+            send_json_resp(req, false, "Out of memory");
+        }
+    } else {
+        send_json_resp(req, false, "Out of memory");
+    }
 
     return ESP_OK;
 }
@@ -429,13 +443,8 @@ static esp_err_t api_fs_format_handler(httpd_req_t *req)
     ESP_LOGW(TAG, "Storage format requested!");
 
     esp_err_t ret = file_manager_format();
-    if (ret == ESP_OK) {
-        ESP_LOGI(TAG, "Storage formatted successfully");
-        send_json_ok(req, "Storage formatted");
-    } else {
-        ESP_LOGE(TAG, "Format failed: %s", esp_err_to_name(ret));
-        send_json_error(req, "Format failed");
-    }
+    send_json_resp(req, ret == ESP_OK,
+                   ret == ESP_OK ? "Storage formatted" : "Format failed");
 
     return ret;
 }
@@ -450,82 +459,21 @@ esp_err_t upload_handler_register(httpd_handle_t server)
 
     esp_err_t ret;
 
-    // GET /upload - File manager page
-    httpd_uri_t upload_page_uri = {
-        .uri = "/upload",
-        .method = HTTP_GET,
-        .handler = upload_page_handler,
-        .user_ctx = NULL
+    httpd_uri_t uris[] = {
+        { .uri = "/upload",            .method = HTTP_GET,    .handler = upload_page_handler,    .user_ctx = NULL },
+        { .uri = "/api/files/upload",  .method = HTTP_POST,   .handler = api_upload_handler,    .user_ctx = NULL },
+        { .uri = "/api/files/list",    .method = HTTP_GET,    .handler = api_file_list_handler, .user_ctx = NULL },
+        { .uri = "/api/files/delete",  .method = HTTP_DELETE, .handler = api_file_delete_handler,.user_ctx = NULL },
+        { .uri = "/api/fs/info",       .method = HTTP_GET,    .handler = api_fs_info_handler,   .user_ctx = NULL },
+        { .uri = "/api/fs/format",     .method = HTTP_POST,   .handler = api_fs_format_handler, .user_ctx = NULL },
     };
-    ret = httpd_register_uri_handler(server, &upload_page_uri);
-    if (ret != ESP_OK) {
-        ESP_LOGE(TAG, "Failed to register /upload");
-        return ret;
-    }
 
-    // POST /api/files/upload
-    httpd_uri_t upload_uri = {
-        .uri = "/api/files/upload",
-        .method = HTTP_POST,
-        .handler = api_upload_handler,
-        .user_ctx = NULL
-    };
-    ret = httpd_register_uri_handler(server, &upload_uri);
-    if (ret != ESP_OK) {
-        ESP_LOGE(TAG, "Failed to register /api/files/upload");
-        return ret;
-    }
-
-    // GET /api/files/list
-    httpd_uri_t list_uri = {
-        .uri = "/api/files/list",
-        .method = HTTP_GET,
-        .handler = api_file_list_handler,
-        .user_ctx = NULL
-    };
-    ret = httpd_register_uri_handler(server, &list_uri);
-    if (ret != ESP_OK) {
-        ESP_LOGE(TAG, "Failed to register /api/files/list");
-        return ret;
-    }
-
-    // DELETE /api/files/delete
-    httpd_uri_t delete_uri = {
-        .uri = "/api/files/delete",
-        .method = HTTP_DELETE,
-        .handler = api_file_delete_handler,
-        .user_ctx = NULL
-    };
-    ret = httpd_register_uri_handler(server, &delete_uri);
-    if (ret != ESP_OK) {
-        ESP_LOGE(TAG, "Failed to register /api/files/delete");
-        return ret;
-    }
-
-    // GET /api/fs/info
-    httpd_uri_t fs_info_uri = {
-        .uri = "/api/fs/info",
-        .method = HTTP_GET,
-        .handler = api_fs_info_handler,
-        .user_ctx = NULL
-    };
-    ret = httpd_register_uri_handler(server, &fs_info_uri);
-    if (ret != ESP_OK) {
-        ESP_LOGE(TAG, "Failed to register /api/fs/info");
-        return ret;
-    }
-
-    // POST /api/fs/format
-    httpd_uri_t format_uri = {
-        .uri = "/api/fs/format",
-        .method = HTTP_POST,
-        .handler = api_fs_format_handler,
-        .user_ctx = NULL
-    };
-    ret = httpd_register_uri_handler(server, &format_uri);
-    if (ret != ESP_OK) {
-        ESP_LOGE(TAG, "Failed to register /api/fs/format");
-        return ret;
+    for (size_t i = 0; i < sizeof(uris) / sizeof(uris[0]); i++) {
+        ret = httpd_register_uri_handler(server, &uris[i]);
+        if (ret != ESP_OK) {
+            ESP_LOGE(TAG, "Failed to register %s", uris[i].uri);
+            return ret;
+        }
     }
 
     ESP_LOGI(TAG, "Upload handlers registered (6 endpoints)");
