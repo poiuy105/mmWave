@@ -150,8 +150,8 @@ void server_config_get_defaults(server_config_t *config)
     config->http_stack_size = 12288;
     config->http_max_uri_handlers = 32;
     config->http_max_open_sockets = 7;
-    config->http_recv_timeout = 5;
-    config->http_send_timeout = 5;
+    config->http_recv_timeout = 30;   // 30s for slow WiFi uploads
+    config->http_send_timeout = 30;   // 30s for slow responses
     config->max_upload_size = 100 * 1024;
     config->request_timeout_ms = 5000;
 

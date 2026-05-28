@@ -17,6 +17,8 @@
 #include <stdio.h>
 #include <errno.h>
 #include <cJSON.h>
+#include "freertos/FreeRTOS.h"
+#include "freertos/task.h"
 
 static const char *TAG = "UPLOAD";
 
@@ -223,21 +225,44 @@ static esp_err_t api_upload_handler(httpd_req_t *req)
     ESP_LOGI(TAG, "File opened, streaming upload...");
 
     // Stream: read chunks and write directly
+    // EAGAIN (errno=11) means no data available yet - retry with delay
     uint8_t buf[UPLOAD_BUF_SIZE];
     size_t total_written = 0;
     esp_err_t ret = ESP_OK;
+    int recv_retry = 0;
+    const int max_recv_retry = 10;  // Retry EAGAIN up to 10 times (500ms total)
 
     while (total_written < content_length) {
         size_t remaining = content_length - total_written;
         int to_read = (remaining > UPLOAD_BUF_SIZE) ? UPLOAD_BUF_SIZE : (int)remaining;
 
         int received = httpd_req_recv(req, (char *)buf, to_read);
-        if (received <= 0) {
+
+        if (received < 0) {
+            if (errno == 11 && recv_retry < max_recv_retry) {
+                // EAGAIN: socket not ready yet, small delay and retry
+                recv_retry++;
+                ESP_LOGW(TAG, "recv EAGAIN at offset %lu, retry %d/%d",
+                         (unsigned long)total_written, recv_retry, max_recv_retry);
+                vTaskDelay(pdMS_TO_TICKS(50));
+                continue;
+            }
             ESP_LOGE(TAG, "recv failed at offset %lu (recv=%d, errno=%d)",
                      (unsigned long)total_written, received, errno);
             ret = ESP_FAIL;
             break;
         }
+
+        if (received == 0) {
+            // Connection closed
+            ESP_LOGW(TAG, "Connection closed at offset %lu (expected %lu)",
+                     (unsigned long)total_written, (unsigned long)content_length);
+            ret = ESP_FAIL;
+            break;
+        }
+
+        // Reset retry counter on successful receive
+        recv_retry = 0;
 
         size_t written = fwrite(buf, 1, received, file);
         if (written != (size_t)received) {
