@@ -272,6 +272,8 @@ esp_err_t file_manager_get_fs_info(fs_info_t *info)
 
     // Recursive helper: count files and accumulate sizes in subdirectories
     // Uses opendir/readdir directly to avoid malloc overhead of file_manager_list
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wformat-truncation"
     const char *dirs_to_scan[] = { "/storage", NULL };
     for (int d = 0; dirs_to_scan[d] != NULL; d++) {
         DIR *dir = opendir(dirs_to_scan[d]);
@@ -321,6 +323,7 @@ esp_err_t file_manager_get_fs_info(fs_info_t *info)
         }
         closedir(dir);
     }
+#pragma GCC diagnostic pop
 
     // Get actual partition size from partition table
     const esp_partition_t *part = esp_partition_find_first(ESP_PARTITION_TYPE_DATA, ESP_PARTITION_SUBTYPE_DATA_FAT, "storage");
