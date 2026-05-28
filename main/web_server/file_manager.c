@@ -283,7 +283,7 @@ esp_err_t file_manager_get_fs_info(fs_info_t *info)
                 continue;
             }
 
-            char full_path[512];
+            char full_path[256];
             snprintf(full_path, sizeof(full_path), "%s/%s", dirs_to_scan[d], entry->d_name);
 
             if (entry->d_type == DT_DIR) {
@@ -296,7 +296,7 @@ esp_err_t file_manager_get_fs_info(fs_info_t *info)
                         if (strcmp(sub_entry->d_name, ".") == 0 || strcmp(sub_entry->d_name, "..") == 0) {
                             continue;
                         }
-                        char sub_path[512];
+                        char sub_path[256];
                         snprintf(sub_path, sizeof(sub_path), "%s/%s", full_path, sub_entry->d_name);
 
                         if (sub_entry->d_type == DT_DIR) {
