@@ -157,10 +157,13 @@ static esp_err_t static_file_handler(httpd_req_t *req)
              ctx->config->static_file_root,
              uri);
 
+    ESP_LOGI(TAG, "Static file request: uri=%s, mount=%s, root=%s, filepath=%s",
+             uri, ctx->config->fatfs_mount_path, ctx->config->static_file_root, filepath);
+
     // Check if file exists
     struct stat st;
     if (stat(filepath, &st) != 0 || !S_ISREG(st.st_mode)) {
-        ESP_LOGW(TAG, "File not found: %s (heap=%lu)", filepath, (unsigned long)esp_get_free_heap_size());
+        ESP_LOGW(TAG, "File not found: %s (heap=%lu, errno=%d)", filepath, (unsigned long)esp_get_free_heap_size(), errno);
         httpd_resp_send_404(req);
         return ESP_OK;  // Response already sent, return OK to prevent double-send
     }
