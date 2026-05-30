@@ -285,6 +285,12 @@ esp_err_t http_server_start(void)
         return ret;
     }
 
+    // Verify config was copied correctly
+    server_context_t *ctx_verify = server_context_get();
+    ESP_LOGI(TAG, "Config verify: mount='%s', root='%s'", 
+             ctx_verify->config->fatfs_mount_path, 
+             ctx_verify->config->static_file_root);
+
     // 3. Initialize security modules (non-critical, graceful degradation)
     rate_limiter_config_t rl_config = {
         .max_requests = config.rate_limit_max_requests,
