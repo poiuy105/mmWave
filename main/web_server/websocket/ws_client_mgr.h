@@ -49,7 +49,7 @@ typedef struct {
 /**
  * @brief 带数据的消息（用于队列传递）
  */
-#define WS_MSG_PAYLOAD_MAX 2048
+#define WS_MSG_PAYLOAD_MAX 512
 typedef struct {
     httpd_ws_type_t type;
     size_t len;

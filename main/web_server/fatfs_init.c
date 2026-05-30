@@ -22,8 +22,8 @@ esp_err_t fatfs_init(void)
 
     const esp_vfs_fat_mount_config_t mount_config = {
         .format_if_mount_failed = true,
-        .max_files = 10,
-        .allocation_unit_size = 16 * 1024
+        .max_files = 16,
+        .allocation_unit_size = 4 * 1024
     };
 
     ESP_LOGI(TAG, "Mounting FATFS...");

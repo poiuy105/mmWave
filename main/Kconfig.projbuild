@@ -43,16 +43,16 @@ menu "HTTP/WebSocket Server"
 
     config HTTP_RECV_TIMEOUT
         int "HTTP Receive Timeout (seconds)"
-        default 5
-        range 1 30
+        default 30
+        range 1 60
         depends on HTTP_SERVER_ENABLED
         help
             Timeout for receiving HTTP request data.
 
     config HTTP_SEND_TIMEOUT
         int "HTTP Send Timeout (seconds)"
-        default 5
-        range 1 30
+        default 30
+        range 1 60
         depends on HTTP_SERVER_ENABLED
         help
             Timeout for sending HTTP response data.
