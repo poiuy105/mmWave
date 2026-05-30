@@ -91,7 +91,7 @@ static const char* upload_page_html =
 "                    <p>Drag and drop files here, or click to select</p>\n"
 "                    <p style=\"font-size: 12px; margin-top: 10px;\">Files will be uploaded to /www/ directory</p>\n"
 "                </label>\n"
-"                <input type=\"file\" id=\"fileInput\" multiple webkitdirectory>\n"
+"                <input type=\"file\" id=\"fileInput\" multiple>\n"
 "            </div>\n"
 "            <div class=\"progress\" id=\"progress\">\n"
 "                <div class=\"progress-bar\" id=\"progressBar\"></div>\n"
