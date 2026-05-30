@@ -152,10 +152,14 @@ static esp_err_t static_file_handler(httpd_req_t *req)
     }
 
     // Build file path
-    snprintf(filepath, sizeof(filepath), "%s%s%s",
-             ctx->config->fatfs_mount_path,
-             ctx->config->static_file_root,
-             uri);
+    const char *mount = ctx->config->fatfs_mount_path;
+    const char *root = ctx->config->static_file_root;
+    
+    // Fallback if config values are empty
+    if (mount[0] == '\0') mount = "/storage";
+    if (root[0] == '\0') root = "/www";
+    
+    snprintf(filepath, sizeof(filepath), "%s%s%s", mount, root, uri);
 
     ESP_LOGI(TAG, "Static file request: uri=%s, mount=%s, root=%s, filepath=%s",
              uri, ctx->config->fatfs_mount_path, ctx->config->static_file_root, filepath);
