@@ -116,7 +116,7 @@ static esp_err_t static_file_handler(httpd_req_t *req)
     if (esp_get_free_heap_size() < 4096) {
         ESP_LOGW(TAG, "Low heap (%lu bytes), returning 503", (unsigned long)esp_get_free_heap_size());
         httpd_resp_send_err(req, HTTPD_503_SERVICE_UNAVAILABLE, "Server busy");
-        return ESP_FAIL;
+        return ESP_OK;  // Response already sent
     }
 
     char filepath[768];
@@ -137,7 +137,7 @@ static esp_err_t static_file_handler(httpd_req_t *req)
         if (!rate_limiter_check(client_ip)) {
             server_stats_inc_rate_limit();
             httpd_resp_send_err(req, HTTPD_429_TOO_MANY_REQUESTS, "Rate limit exceeded");
-            return ESP_FAIL;
+            return ESP_OK;  // Response already sent
         }
     }
 
@@ -160,9 +160,9 @@ static esp_err_t static_file_handler(httpd_req_t *req)
     // Check if file exists
     struct stat st;
     if (stat(filepath, &st) != 0 || !S_ISREG(st.st_mode)) {
-        ESP_LOGD(TAG, "File not found: %s", filepath);
+        ESP_LOGW(TAG, "File not found: %s (heap=%lu)", filepath, (unsigned long)esp_get_free_heap_size());
         httpd_resp_send_404(req);
-        return ESP_FAIL;
+        return ESP_OK;  // Response already sent, return OK to prevent double-send
     }
 
     // Read and send file
@@ -170,7 +170,7 @@ static esp_err_t static_file_handler(httpd_req_t *req)
     if (!file) {
         ESP_LOGE(TAG, "Failed to open file: %s", filepath);
         httpd_resp_send_500(req);
-        return ESP_FAIL;
+        return ESP_OK;  // Response already sent
     }
 
     httpd_resp_set_type(req, get_mime_type(filepath));
