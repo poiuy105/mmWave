@@ -248,10 +248,11 @@ static esp_err_t api_options_handler(httpd_req_t *req)
 // ============================================================
 
 static const httpd_uri_t uri_handlers[] = {
-    // Static files
+    // Static files (exact matches first, wildcard last)
     { .uri = "/",           .method = HTTP_GET, .handler = static_file_handler },
     { .uri = "/index.html", .method = HTTP_GET, .handler = static_file_handler },
-    { .uri = "/*",          .method = HTTP_GET, .handler = static_file_handler },
+    { .uri = "/upload",     .method = HTTP_GET, .handler = upload_page_handler },  // Must be before /*
+    { .uri = "/*",          .method = HTTP_GET, .handler = static_file_handler },  // Wildcard catches rest
 
     // API
     { .uri = "/api/status",      .method = HTTP_GET, .handler = api_status_handler },

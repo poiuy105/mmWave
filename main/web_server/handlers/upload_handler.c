@@ -462,7 +462,7 @@ esp_err_t upload_handler_register(httpd_handle_t server)
     if (!server) return ESP_ERR_INVALID_ARG;
 
     httpd_uri_t uris[] = {
-        { .uri = "/upload",             .method = HTTP_GET,    .handler = upload_page_handler,   .user_ctx = NULL },
+        // Note: /upload is registered in http_server.c uri_handlers[] before /* wildcard
         { .uri = "/api/files/upload",   .method = HTTP_POST,   .handler = api_upload_handler,   .user_ctx = NULL },
         { .uri = "/api/files/list",     .method = HTTP_GET,    .handler = api_file_list_handler,.user_ctx = NULL },
         { .uri = "/api/files/delete",   .method = HTTP_DELETE, .handler = api_file_delete_handler,.user_ctx = NULL },

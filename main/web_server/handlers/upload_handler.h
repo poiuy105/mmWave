@@ -23,6 +23,13 @@ extern "C" {
  */
 esp_err_t upload_handler_register(httpd_handle_t server);
 
+/**
+ * @brief GET /upload - Upload page handler
+ * @param req HTTP request
+ * @return ESP_OK on success
+ */
+esp_err_t upload_page_handler(httpd_req_t *req);
+
 #ifdef __cplusplus
 }
 #endif
