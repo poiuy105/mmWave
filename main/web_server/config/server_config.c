@@ -187,7 +187,7 @@ void server_config_get_defaults(server_config_t *config)
     strcpy(config->allowed_extensions, ".html,.htm,.css,.js,.json,.png,.jpg,.jpeg,.gif,.svg,.ico,.woff,.woff2,.ttf");
 }
 
-bool server_config_validate(const server_config_t *config)
+bool server_config_validate(server_config_t *config)
 {
     if (config->http_port == 0 || config->http_port > 65535) {
         ESP_LOGE(TAG, "Invalid HTTP port: %d", config->http_port);

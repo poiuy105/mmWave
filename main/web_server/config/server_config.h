@@ -160,7 +160,7 @@ void server_config_get_defaults(server_config_t *config);
  * @return true 配置有效
  * @return false 配置无效
  */
-bool server_config_validate(const server_config_t *config);
+bool server_config_validate(server_config_t *config);
 
 #ifdef __cplusplus
 }
