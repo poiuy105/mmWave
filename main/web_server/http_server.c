@@ -248,11 +248,11 @@ static esp_err_t api_options_handler(httpd_req_t *req)
 // ============================================================
 
 static const httpd_uri_t uri_handlers[] = {
-    // Static files (exact matches first, wildcard last)
+    // Static files (exact matches first)
     { .uri = "/",           .method = HTTP_GET, .handler = static_file_handler },
     { .uri = "/index.html", .method = HTTP_GET, .handler = static_file_handler },
-    { .uri = "/upload",     .method = HTTP_GET, .handler = upload_page_handler },  // Must be before /*
-    { .uri = "/*",          .method = HTTP_GET, .handler = static_file_handler },  // Wildcard catches rest
+    { .uri = "/upload",     .method = HTTP_GET, .handler = upload_page_handler },
+    // Note: /* wildcard is registered LAST in http_server_start() to not override other handlers
 
     // API
     { .uri = "/api/status",      .method = HTTP_GET, .handler = api_status_handler },
@@ -358,6 +358,21 @@ esp_err_t http_server_start(void)
         if (ctx->ws_server == NULL) {
             ESP_LOGW(TAG, "Failed to create WebSocket server, continuing without WS");
         }
+    }
+
+    // 9. Register /* wildcard LAST (after all exact matches)
+    // This ensures /api/* and other handlers are matched before static file fallback
+    httpd_uri_t wildcard_uri = {
+        .uri = "/*",
+        .method = HTTP_GET,
+        .handler = static_file_handler,
+        .user_ctx = NULL
+    };
+    esp_err_t wc_ret = httpd_register_uri_handler(handle, &wildcard_uri);
+    if (wc_ret == ESP_ERR_HTTPD_HANDLER_EXISTS) {
+        ESP_LOGW(TAG, "Handler /* already registered, skipping");
+    } else if (wc_ret != ESP_OK) {
+        ESP_LOGE(TAG, "Failed to register /* wildcard: %s", esp_err_to_name(wc_ret));
     }
 
     ESP_LOGI(TAG, "HTTP/WebSocket server started successfully");
