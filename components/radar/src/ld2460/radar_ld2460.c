@@ -117,6 +117,10 @@ static esp_err_t send_command(ld2460_handle_t handle,
     ctx->cmd_success = false;
     memset(ctx->cmd_ack_data, 0, sizeof(ctx->cmd_ack_data));
 
+    /* Flush RX buffer before sending command to avoid stale data */
+    uart_flush_input(ctx->uart_port);
+    parser_reset(ctx);
+
     /* Send command */
     ESP_LOG_BUFFER_HEX(TAG, cmd_buf, cmd_len);
     int written = uart_write_bytes(ctx->uart_port, cmd_buf, cmd_len);
@@ -127,7 +131,17 @@ static esp_err_t send_command(ld2460_handle_t handle,
 
     /* Wait for ACK with timeout */
     if (xSemaphoreTake(ctx->cmd_sem, pdMS_TO_TICKS(LD2460_CMD_TIMEOUT_MS)) != pdTRUE) {
-        ESP_LOGW(TAG, "Command 0x%02X timeout", func_code);
+        /* Debug: Check if any data was received */
+        size_t buffered_len = 0;
+        uart_get_buffered_data_len(ctx->uart_port, &buffered_len);
+        ESP_LOGW(TAG, "Command 0x%02X timeout, RX buffered: %d bytes", func_code, buffered_len);
+        if (buffered_len > 0 && buffered_len < 64) {
+            uint8_t debug_buf[64];
+            int read_len = uart_read_bytes(ctx->uart_port, debug_buf, buffered_len, 0);
+            if (read_len > 0) {
+                ESP_LOG_BUFFER_HEX(TAG, debug_buf, read_len);
+            }
+        }
         return ESP_ERR_TIMEOUT;
     }
 
@@ -216,6 +230,8 @@ static void parse_ack_frame(struct ld2460_context *ctx)
     /* Verify it's an ACK (function code matches a known command) */
     uint8_t func = buf[4];
     uint16_t total_len = buf[5] | (buf[6] << 8);
+    ESP_LOGI(TAG, "ACK frame received: func=0x%02X, len=%d", func, total_len);
+    ESP_LOG_BUFFER_HEX(TAG, buf, total_len > 32 ? 32 : total_len);
 
     /* Store ACK data for command synchronization */
     uint16_t copy_len = total_len;
