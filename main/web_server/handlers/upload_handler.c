@@ -124,7 +124,7 @@ static bool url_decode_inplace(char *str)
 
 // ==================== Handlers ====================
 
-static esp_err_t upload_page_handler(httpd_req_t *req)
+esp_err_t upload_page_handler(httpd_req_t *req)
 {
     ESP_LOGI(TAG, "Serving upload page");
     httpd_resp_set_type(req, "text/html");
