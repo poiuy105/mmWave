@@ -18,6 +18,7 @@ set(srcs
     "web_server/security/security_headers.c"
     "web_server/handlers/health_handler.c"
     "web_server/handlers/upload_handler.c"
+    "web_server/handlers/radar_handler.c"
     "web_server/http_server.c"
     "web_server/fatfs_init.c"
     "web_server/file_manager.c"

@@ -18,6 +18,7 @@
 #include "security/security_headers.h"
 #include "handlers/health_handler.h"
 #include "handlers/upload_handler.h"
+#include "handlers/radar_handler.h"
 #include "radar_broadcast.h"
 #include "esp_log.h"
 #include "esp_http_server.h"
@@ -259,6 +260,13 @@ static const httpd_uri_t uri_handlers[] = {
     { .uri = "/api/status",      .method = HTTP_GET, .handler = api_status_handler },
     { .uri = "/api/system/info", .method = HTTP_GET, .handler = api_system_info_handler },
     { .uri = "/api/*",           .method = HTTP_OPTIONS, .handler = api_options_handler },
+
+    // Radar API
+    { .uri = "/api/radar/status",       .method = HTTP_GET,  .handler = api_radar_status_handler },
+    { .uri = "/api/radar/install_mode", .method = HTTP_GET,  .handler = api_radar_install_mode_get_handler },
+    { .uri = "/api/radar/install_mode", .method = HTTP_PUT,  .handler = api_radar_install_mode_put_handler },
+    { .uri = "/api/radar/range",        .method = HTTP_GET,  .handler = api_radar_range_get_handler },
+    { .uri = "/api/radar/range",        .method = HTTP_PUT,  .handler = api_radar_range_put_handler },
 
     // WebSocket /ws is registered by ws_server_create() - do NOT register here
 };
