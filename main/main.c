@@ -20,6 +20,7 @@
 #include "web_server/http_server.h"
 #include "web_server/file_manager.h"
 #include "radar_adapter/radar_adapter.h"
+#include "radar_test/radar_test.h"
 
 static const char *TAG = "MAIN";
 
@@ -180,6 +181,17 @@ void app_main(void)
     ESP_LOGI(TAG, "=================================");
     ESP_LOGI(TAG, "System Ready!");
     ESP_LOGI(TAG, "=================================");
+
+    // 运行雷达控制命令验证测试（仅 LD2460）
+    // 测试会在启动后 5 秒执行，验证底层驱动写命令
+    vTaskDelay(pdMS_TO_TICKS(5000));
+    ESP_LOGI(TAG, "Running radar control command verification test...");
+    esp_err_t test_err = radar_test_run_all();
+    if (test_err == ESP_OK) {
+        ESP_LOGI(TAG, "Radar control test completed successfully");
+    } else {
+        ESP_LOGW(TAG, "Radar control test failed or skipped: %s", esp_err_to_name(test_err));
+    }
 
     // 主循环 - 打印系统状态
     while (1) {

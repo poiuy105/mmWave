@@ -6,6 +6,7 @@
 set(srcs
     "main.c"
     "radar_adapter/radar_adapter.c"
+    "radar_test/radar_test.c"
     # web_server 模块
     "web_server/core/server_context.c"
     "web_server/core/http_server_core.c"
@@ -28,6 +29,7 @@ set(srcs
 # 头文件目录
 set(includes
     "."
+    "radar_test"
     "web_server"
     "web_server/core"
     "web_server/handlers"
