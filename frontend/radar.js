@@ -55,11 +55,17 @@ class RadarDataManager {
             this._fpsLastCalc = now;
         }
 
-        // 处理目标数据
+        // 处理目标数据（带验证）
         const incomingIds = new Set();
         const targetList = data.targets || [];
 
         for (const t of targetList) {
+            // 验证必需字段
+            if (!t || typeof t.id !== 'number') continue;
+            if (typeof t.x !== 'number' || typeof t.y !== 'number') continue;
+            // 数值范围检查（雷达检测范围 ±20m）
+            if (t.x < -20 || t.x > 20 || t.y < -20 || t.y > 20) continue;
+
             incomingIds.add(t.id);
             this._updateTarget(t);
         }

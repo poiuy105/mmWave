@@ -264,35 +264,49 @@ class RadarCanvas {
      * 渲染一帧
      */
     _render() {
-        const ctx = this.ctx;
-        const w = this._displayWidth;
-        const h = this._displayHeight;
+        try {
+            const ctx = this.ctx;
+            const w = this._displayWidth;
+            const h = this._displayHeight;
 
-        // 清空
-        ctx.fillStyle = '#0d1117';
-        ctx.fillRect(0, 0, w, h);
+            // 清空
+            ctx.fillStyle = '#0d1117';
+            ctx.fillRect(0, 0, w, h);
 
-        // 绘制网格
-        if (this.showGrid) {
-            this._drawGrid(ctx);
+            // 绘制网格
+            if (this.showGrid) {
+                this._drawGrid(ctx);
+            }
+
+            // 绘制雷达探测范围
+            this._drawRadarRange(ctx);
+
+            // 绘制坐标轴
+            this._drawAxes(ctx);
+
+            // 绘制轨迹
+            if (this.showTrail) {
+                this._drawTrails(ctx);
+            }
+
+            // 绘制目标
+            this._drawTargets(ctx);
+
+            // 绘制雷达位置
+            this._drawRadar(ctx);
+        } catch (e) {
+            console.error('[Canvas] Render error:', e);
+            // 尝试恢复：清空画布并显示错误
+            try {
+                this.ctx.fillStyle = '#0d1117';
+                this.ctx.fillRect(0, 0, this._displayWidth, this._displayHeight);
+                this.ctx.fillStyle = '#ff4444';
+                this.ctx.font = '14px sans-serif';
+                this.ctx.fillText('渲染错误，请刷新页面', 10, 30);
+            } catch (e2) {
+                // 二次失败，无法恢复
+            }
         }
-
-        // 绘制雷达探测范围
-        this._drawRadarRange(ctx);
-
-        // 绘制坐标轴
-        this._drawAxes(ctx);
-
-        // 绘制轨迹
-        if (this.showTrail) {
-            this._drawTrails(ctx);
-        }
-
-        // 绘制目标
-        this._drawTargets(ctx);
-
-        // 绘制雷达位置
-        this._drawRadar(ctx);
     }
 
     /**

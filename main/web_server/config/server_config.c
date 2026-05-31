@@ -214,6 +214,22 @@ bool server_config_validate(const server_config_t *config)
         return false;
     }
 
+    // 广播配置验证（防止未初始化导致 FreeRTOS 断言失败）
+    if (config->broadcast_task_priority < 1 || config->broadcast_task_priority > 24) {
+        ESP_LOGW(TAG, "Invalid broadcast_task_priority: %d, resetting to 5", config->broadcast_task_priority);
+        config->broadcast_task_priority = 5;
+    }
+
+    if (config->broadcast_interval < 50 || config->broadcast_interval > 5000) {
+        ESP_LOGW(TAG, "Invalid broadcast_interval: %d, resetting to 100", config->broadcast_interval);
+        config->broadcast_interval = 100;
+    }
+
+    if (config->broadcast_task_stack < 2048 || config->broadcast_task_stack > 32768) {
+        ESP_LOGW(TAG, "Invalid broadcast_task_stack: %lu, resetting to 4096", (unsigned long)config->broadcast_task_stack);
+        config->broadcast_task_stack = 4096;
+    }
+
     return true;
 }
 
