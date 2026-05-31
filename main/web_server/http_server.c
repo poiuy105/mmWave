@@ -18,6 +18,7 @@
 #include "security/security_headers.h"
 #include "handlers/health_handler.h"
 #include "handlers/upload_handler.h"
+#include "radar_broadcast.h"
 #include "esp_log.h"
 #include "esp_http_server.h"
 #include "esp_netif.h"
@@ -360,6 +361,14 @@ esp_err_t http_server_start(void)
         }
     }
 
+    // 8.5. Start radar broadcast task (after ws_server is ready)
+    if (ctx->ws_server && config.broadcast_enabled) {
+        esp_err_t broadcast_ret = radar_broadcast_start(ctx);
+        if (broadcast_ret != ESP_OK) {
+            ESP_LOGW(TAG, "Failed to start radar broadcast: %s", esp_err_to_name(broadcast_ret));
+        }
+    }
+
     // 9. Register /* wildcard LAST (after all exact matches)
     // This ensures /api/* and other handlers are matched before static file fallback
     httpd_uri_t wildcard_uri = {
@@ -391,6 +400,9 @@ esp_err_t http_server_stop(void)
     if (ctx == NULL) {
         return ESP_OK;
     }
+
+    // 0. Stop radar broadcast first (before ws_server is destroyed)
+    radar_broadcast_stop();
 
     // 1. Stop WebSocket server
     if (ctx->ws_server) {
