@@ -21,6 +21,7 @@ set(srcs
     "web_server/http_server.c"
     "web_server/fatfs_init.c"
     "web_server/file_manager.c"
+    "web_server/radar_broadcast.c"
 )
 
 # 头文件目录
