@@ -73,12 +73,7 @@ static void radar_broadcast_task(void *arg)
     uint32_t frame_counter = 0;
     uint32_t broadcast_interval_ms = 100; // 10Hz default
 
-    if (s_ctx && s_ctx->config) {
-        broadcast_interval_ms = s_ctx->config->broadcast_interval;
-        if (broadcast_interval_ms < 50) broadcast_interval_ms = 50;
-        if (broadcast_interval_ms > 5000) broadcast_interval_ms = 5000;
-    }
-
+    // Use hardcoded interval to avoid uninitialized config
     ESP_LOGI(TAG, "Broadcast task started, interval=%lums", (unsigned long)broadcast_interval_ms);
 
     while (s_running) {
@@ -125,8 +120,9 @@ esp_err_t radar_broadcast_start(server_context_t *ctx)
     s_ctx = ctx;
     s_running = true;
 
-    uint32_t stack_size = ctx->config ? ctx->config->broadcast_task_stack : 4096;
-    uint8_t priority = ctx->config ? ctx->config->broadcast_task_priority : 5;
+    // Use hardcoded values to avoid uninitialized config fields
+    uint32_t stack_size = 4096;
+    uint8_t priority = 5;  // Low priority, below HTTP server (12) and WiFi (23)
 
     BaseType_t ret = xTaskCreate(
         radar_broadcast_task,
