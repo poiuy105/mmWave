@@ -118,6 +118,7 @@ static esp_err_t send_command(ld2460_handle_t handle,
     memset(ctx->cmd_ack_data, 0, sizeof(ctx->cmd_ack_data));
 
     /* Send command */
+    ESP_LOG_BUFFER_HEX(TAG, cmd_buf, cmd_len);
     int written = uart_write_bytes(ctx->uart_port, cmd_buf, cmd_len);
     if (written != cmd_len) {
         ESP_LOGE(TAG, "Failed to send command (written %d/%d)", written, cmd_len);
@@ -262,6 +263,7 @@ static void process_uart_data(struct ld2460_context *ctx, uint8_t *data, size_t 
             } else if (byte == LD2460_CMD_HEADER_0) {
                 ctx->rx_buffer[ctx->parse_pos++] = byte;
                 ctx->parse_state = PARSE_STATE_CMD_HEADER;
+                ESP_LOGD(TAG, "CMD header start: 0x%02X", byte);
             }
             break;
 
