@@ -190,10 +190,22 @@ esp_err_t radar_test_run_all(void)
 
     esp_err_t err;
 
+    // 关键步骤：先停止上报，否则雷达可能无法响应配置命令
+    ESP_LOGI(TAG, "Stopping radar report before configuration...");
+    err = ld2460_enable_report(handle, false);
+    if (err != ESP_OK) {
+        ESP_LOGW(TAG, "Failed to stop report: %s (continuing anyway)", esp_err_to_name(err));
+    } else {
+        ESP_LOGI(TAG, "Report stopped successfully");
+    }
+    vTaskDelay(pdMS_TO_TICKS(500));  // 等待上报停止
+
     // 测试 1: 安装模式
     err = test_install_mode(handle);
     if (err != ESP_OK) {
         ESP_LOGE(TAG, "Install mode test FAILED");
+        // 恢复上报后返回
+        ld2460_enable_report(handle, true);
         return err;
     }
     ESP_LOGI(TAG, "Install mode test PASSED");
@@ -203,6 +215,7 @@ esp_err_t radar_test_run_all(void)
     err = test_sensitivity(handle);
     if (err != ESP_OK) {
         ESP_LOGE(TAG, "Sensitivity test FAILED");
+        ld2460_enable_report(handle, true);
         return err;
     }
     ESP_LOGI(TAG, "Sensitivity test PASSED");
@@ -212,9 +225,19 @@ esp_err_t radar_test_run_all(void)
     err = test_detection_range(handle);
     if (err != ESP_OK) {
         ESP_LOGE(TAG, "Detection range test FAILED");
+        ld2460_enable_report(handle, true);
         return err;
     }
     ESP_LOGI(TAG, "Detection range test PASSED");
+
+    // 恢复上报
+    ESP_LOGI(TAG, "Restoring radar report...");
+    err = ld2460_enable_report(handle, true);
+    if (err != ESP_OK) {
+        ESP_LOGW(TAG, "Failed to restore report: %s", esp_err_to_name(err));
+    } else {
+        ESP_LOGI(TAG, "Report restored successfully");
+    }
 
     ESP_LOGI(TAG, "========================================");
     ESP_LOGI(TAG, "ALL TESTS PASSED!");
