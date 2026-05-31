@@ -472,13 +472,16 @@ esp_err_t upload_handler_register(httpd_handle_t server)
 
     for (size_t i = 0; i < sizeof(uris) / sizeof(uris[0]); i++) {
         esp_err_t r = httpd_register_uri_handler(server, &uris[i]);
-        if (r != ESP_OK) {
+        if (r == ESP_ERR_HTTPD_HANDLER_EXISTS) {
+            ESP_LOGW(TAG, "%s already registered, skipping", uris[i].uri);
+        } else if (r != ESP_OK) {
             ESP_LOGE(TAG, "Failed to register %s: %s", uris[i].uri, esp_err_to_name(r));
             return r;
+        } else {
+            ESP_LOGI(TAG, "Registered: %s (%s)", uris[i].uri,
+                     uris[i].method == HTTP_GET ? "GET" :
+                     uris[i].method == HTTP_POST ? "POST" : "DELETE");
         }
-        ESP_LOGI(TAG, "Registered: %s (%s)", uris[i].uri,
-                 uris[i].method == HTTP_GET ? "GET" :
-                 uris[i].method == HTTP_POST ? "POST" : "DELETE");
     }
 
     ESP_LOGI(TAG, "All upload handlers registered");

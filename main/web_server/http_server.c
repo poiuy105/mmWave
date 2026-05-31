@@ -320,10 +320,17 @@ esp_err_t http_server_start(void)
     ctx->http_server_obj = (void *)http;
     ctx->http_server = http_server_core_get_handle(http);
 
-    // 5. Register URI handlers
+    // 5. Register URI handlers (skip if already registered from previous crash)
     httpd_handle_t handle = http_server_core_get_handle(http);
     for (size_t i = 0; i < sizeof(uri_handlers) / sizeof(uri_handlers[0]); i++) {
-        ESP_ERROR_CHECK(httpd_register_uri_handler(handle, &uri_handlers[i]));
+        esp_err_t reg_ret = httpd_register_uri_handler(handle, &uri_handlers[i]);
+        if (reg_ret == ESP_ERR_HTTPD_HANDLER_EXISTS) {
+            ESP_LOGW(TAG, "Handler %s already registered, skipping", uri_handlers[i].uri);
+        } else if (reg_ret != ESP_OK) {
+            ESP_LOGE(TAG, "Failed to register handler %s: %s", uri_handlers[i].uri, esp_err_to_name(reg_ret));
+            http_server_core_destroy(http);
+            return reg_ret;
+        }
     }
 
     // 6. Register health check handlers

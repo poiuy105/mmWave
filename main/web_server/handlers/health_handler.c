@@ -160,9 +160,12 @@ esp_err_t health_handler_register(httpd_handle_t server)
         .user_ctx = NULL
     };
 
-    if (httpd_register_uri_handler(server, &health_uri) != ESP_OK) {
-        ESP_LOGE("HEALTH", "Failed to register /api/health");
-        return ESP_FAIL;
+    esp_err_t ret = httpd_register_uri_handler(server, &health_uri);
+    if (ret == ESP_ERR_HTTPD_HANDLER_EXISTS) {
+        ESP_LOGW("HEALTH", "/api/health already registered, skipping");
+    } else if (ret != ESP_OK) {
+        ESP_LOGE("HEALTH", "Failed to register /api/health: %s", esp_err_to_name(ret));
+        return ret;
     }
 
     // Readiness check
@@ -173,9 +176,12 @@ esp_err_t health_handler_register(httpd_handle_t server)
         .user_ctx = NULL
     };
 
-    if (httpd_register_uri_handler(server, &ready_uri) != ESP_OK) {
-        ESP_LOGE("HEALTH", "Failed to register /api/ready");
-        return ESP_FAIL;
+    ret = httpd_register_uri_handler(server, &ready_uri);
+    if (ret == ESP_ERR_HTTPD_HANDLER_EXISTS) {
+        ESP_LOGW("HEALTH", "/api/ready already registered, skipping");
+    } else if (ret != ESP_OK) {
+        ESP_LOGE("HEALTH", "Failed to register /api/ready: %s", esp_err_to_name(ret));
+        return ret;
     }
 
     // Liveness check
@@ -186,9 +192,12 @@ esp_err_t health_handler_register(httpd_handle_t server)
         .user_ctx = NULL
     };
 
-    if (httpd_register_uri_handler(server, &live_uri) != ESP_OK) {
-        ESP_LOGE("HEALTH", "Failed to register /api/live");
-        return ESP_FAIL;
+    ret = httpd_register_uri_handler(server, &live_uri);
+    if (ret == ESP_ERR_HTTPD_HANDLER_EXISTS) {
+        ESP_LOGW("HEALTH", "/api/live already registered, skipping");
+    } else if (ret != ESP_OK) {
+        ESP_LOGE("HEALTH", "Failed to register /api/live: %s", esp_err_to_name(ret));
+        return ret;
     }
 
     ESP_LOGI("HEALTH", "Health handlers registered");
