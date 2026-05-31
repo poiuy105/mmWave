@@ -162,6 +162,28 @@ static esp_err_t test_detection_range(void *handle)
 }
 
 /**
+ * @brief 测试 LD2460 固件版本查询（最基本的命令）
+ */
+static esp_err_t test_firmware_version(void *handle)
+{
+    ESP_LOGI(TAG, "=== Test: Get Firmware Version ===");
+
+    ld2460_version_t version;
+    esp_err_t err = ld2460_get_firmware_version(handle, &version);
+    if (err != ESP_OK) {
+        ESP_LOGE(TAG, "Failed to get firmware version: %s", esp_err_to_name(err));
+        return err;
+    }
+
+    ESP_LOGI(TAG, "Firmware version: %d.%d, date: %d/%02d, install_mode=%d",
+             version.version_major, version.version_minor,
+             2000 + version.year, version.month,
+             version.mode);
+
+    return ESP_OK;
+}
+
+/**
  * @brief 运行所有雷达控制测试
  */
 esp_err_t radar_test_run_all(void)
@@ -199,6 +221,16 @@ esp_err_t radar_test_run_all(void)
         ESP_LOGI(TAG, "Report stopped successfully");
     }
     vTaskDelay(pdMS_TO_TICKS(500));  // 等待上报停止
+
+    // 测试 0: 固件版本查询（最基本的命令）
+    err = test_firmware_version(handle);
+    if (err != ESP_OK) {
+        ESP_LOGE(TAG, "Firmware version test FAILED - radar may not be responding");
+        ld2460_enable_report(handle, true);
+        return err;
+    }
+    ESP_LOGI(TAG, "Firmware version test PASSED");
+    vTaskDelay(pdMS_TO_TICKS(1000));
 
     // 测试 1: 安装模式
     err = test_install_mode(handle);
