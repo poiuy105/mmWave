@@ -119,7 +119,8 @@ static esp_err_t send_command(ld2460_handle_t handle,
 
     /* Flush RX buffer before sending command to avoid stale data */
     uart_flush_input(ctx->uart_port);
-    parser_reset(ctx);
+    ctx->parse_state = PARSE_STATE_IDLE;
+    ctx->parse_pos = 0;
 
     /* Send command */
     ESP_LOG_BUFFER_HEX(TAG, cmd_buf, cmd_len);
