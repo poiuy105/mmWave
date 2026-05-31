@@ -3,7 +3,7 @@
 docs/
 # Firmware build output directories
 firmware*/
-frontend/
+# frontend/  # Removed: frontend now tracked in git
 frontend*.7z
 logs.txt
 网址.txt
