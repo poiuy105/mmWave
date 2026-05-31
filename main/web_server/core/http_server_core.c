@@ -70,6 +70,7 @@ esp_err_t http_server_core_start(http_server_t *server)
     config.recv_wait_timeout = server->config.http_recv_timeout;
     config.send_wait_timeout = server->config.http_send_timeout;
     config.lru_purge_enable = true;
+    config.uri_match_fn = httpd_uri_match_wildcard;  // Enable wildcard URI matching for /*
 
     ESP_LOGI(TAG, "Starting HTTP server on port %d...", config.server_port);
 
