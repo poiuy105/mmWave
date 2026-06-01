@@ -108,9 +108,17 @@ class RadarCanvas {
         this.scale = Math.min(scaleX, scaleY);
         this.scale = Math.max(10, Math.min(200, this.scale)); // 限制范围
 
-        // 居中偏移
-        this.offsetX = this._displayWidth / 2;
-        this.offsetY = this._displayHeight / 2;
+        // 居中偏移 - 根据安装模式调整
+        if (this.mountMode === 'side') {
+            // 侧装：雷达在底部中央，扇形向上展开
+            // 让扇形整体居中，下方留出较少空间
+            this.offsetX = this._displayWidth / 2;
+            this.offsetY = this._displayHeight - padding; // 雷达位置靠近底部
+        } else {
+            // 顶装：雷达在中央，圆形向四周展开
+            this.offsetX = this._displayWidth / 2;
+            this.offsetY = this._displayHeight / 2;
+        }
     }
 
     /**
