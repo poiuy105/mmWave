@@ -161,7 +161,7 @@ void server_config_get_defaults(server_config_t *config)
     config->ws_client_timeout = 60;
     config->ws_msg_queue_size = 10;
     config->ws_max_msg_size = 2048;
-    config->ws_task_stack_size = 4096;
+    config->ws_task_stack_size = 2048;  // 缩减以节省 heap（心跳任务工作量小）
     config->ws_task_priority = 5;
 
     // å®‰å…¨é»˜è®¤å€?    config->rate_limit_enabled = true;

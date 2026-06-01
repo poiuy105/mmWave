@@ -251,7 +251,7 @@ typedef struct {
         .baud_rate = 0,                       \
         .event_queue_size = 16,               \
         .ring_buffer_size = 1024,             \
-        .task_stack_size = 4096,              \
+        .task_stack_size = 3072,              /* 缩减以节省 heap */ \
         .task_priority = 10,                  \
     }
 
