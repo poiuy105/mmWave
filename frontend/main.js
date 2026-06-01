@@ -16,6 +16,12 @@ const App = {
     // DOM 引用
     els: {},
 
+    // 定时器引用（用于清理）
+    timers: {
+        uptime: null,
+        toasts: new Set()
+    },
+
     /**
      * 初始化
      */
@@ -349,13 +355,28 @@ const App = {
      */
     _startTimers() {
         // 运行时间更新
-        setInterval(() => {
+        this.timers.uptime = setInterval(() => {
             const elapsed = Math.floor((Date.now() - this.startTime) / 1000);
             const h = Math.floor(elapsed / 3600).toString().padStart(2, '0');
             const m = Math.floor((elapsed % 3600) / 60).toString().padStart(2, '0');
             const s = (elapsed % 60).toString().padStart(2, '0');
             this.els.uptime.textContent = `${h}:${m}:${s}`;
         }, 1000);
+    },
+
+    /**
+     * 清理所有定时器
+     */
+    _cleanupTimers() {
+        // 清理运行时间定时器
+        if (this.timers.uptime) {
+            clearInterval(this.timers.uptime);
+            this.timers.uptime = null;
+        }
+
+        // 清理所有 toast 定时器
+        this.timers.toasts.forEach(timer => clearTimeout(timer));
+        this.timers.toasts.clear();
     },
 
     /**
@@ -368,10 +389,46 @@ const App = {
         toast.textContent = message;
         container.appendChild(toast);
 
-        setTimeout(() => {
+        const timer1 = setTimeout(() => {
             toast.classList.add('toast-out');
-            setTimeout(() => toast.remove(), 300);
+            const timer2 = setTimeout(() => {
+                toast.remove();
+                this.timers.toasts.delete(timer1);
+                this.timers.toasts.delete(timer2);
+            }, 300);
+            this.timers.toasts.add(timer2);
         }, duration);
+        this.timers.toasts.add(timer1);
+    },
+
+    /**
+     * 销毁应用
+     */
+    destroy() {
+        console.log('[App] 正在销毁...');
+
+        // 清理定时器
+        this._cleanupTimers();
+
+        // 断开 WebSocket
+        if (this.ws) {
+            this.ws.disconnect();
+            this.ws = null;
+        }
+
+        // 销毁画布
+        if (this.canvas) {
+            this.canvas.destroy();
+            this.canvas = null;
+        }
+
+        // 清理数据管理器
+        if (this.radarData) {
+            this.radarData.clear && this.radarData.clear();
+            this.radarData = null;
+        }
+
+        console.log('[App] 销毁完成');
     }
 };
 

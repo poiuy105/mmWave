@@ -8,6 +8,8 @@ class RadarDataManager {
         // 配置
         this.trailLength = options.trailLength || 60; // 轨迹帧数（6秒 @10Hz）
         this.targetTimeout = options.targetTimeout || 1000; // 目标超时 1s
+        this.maxTargets = options.maxTargets || 20; // 最大目标数限制（防止内存泄漏）
+        this.maxTrailLength = options.maxTrailLength || 120; // 最大轨迹长度限制
 
         // 目标数据 Map: id -> { x, y, z, speed, snr, confidence, trail: [{x,y,z}], lastUpdate }
         this.targets = new Map();
@@ -19,10 +21,40 @@ class RadarDataManager {
         this.latency = 0;
         this._fpsFrames = 0;
         this._fpsLastCalc = performance.now();
+        this._validationErrors = 0; // 连续验证错误计数
 
         // 回调
         this.onTargetsUpdate = null; // (targets) => void
         this.onStatsUpdate = null;   // (stats) => void
+        this.onError = null;         // (error) => void
+    }
+
+    /**
+     * 验证目标数据完整性
+     * @param {object} t - 目标数据
+     * @returns {boolean} 是否有效
+     */
+    _validateTarget(t) {
+        // 基础类型检查
+        if (!t || typeof t !== 'object') return false;
+        if (typeof t.id !== 'number' || !Number.isFinite(t.id)) return false;
+        if (typeof t.x !== 'number' || !Number.isFinite(t.x)) return false;
+        if (typeof t.y !== 'number' || !Number.isFinite(t.y)) return false;
+
+        // 可选字段类型检查
+        if (t.z !== undefined && (typeof t.z !== 'number' || !Number.isFinite(t.z))) return false;
+        if (t.speed !== undefined && (typeof t.speed !== 'number' || !Number.isFinite(t.speed))) return false;
+        if (t.snr !== undefined && (typeof t.snr !== 'number' || !Number.isFinite(t.snr))) return false;
+        if (t.confidence !== undefined && (typeof t.confidence !== 'number' || !Number.isFinite(t.confidence))) return false;
+
+        // 数值范围检查（雷达检测范围 ±20m）
+        if (t.x < -20 || t.x > 20 || t.y < -20 || t.y > 20) return false;
+        if (t.z !== undefined && (t.z < -10 || t.z > 10)) return false;
+        if (t.speed !== undefined && (t.speed < 0 || t.speed > 100)) return false; // 速度 0-100 m/s
+        if (t.snr !== undefined && (t.snr < -50 || t.snr > 100)) return false; // SNR 合理范围
+        if (t.confidence !== undefined && (t.confidence < 0 || t.confidence > 1)) return false; // 置信度 0-1
+
+        return true;
     }
 
     /**
@@ -59,15 +91,38 @@ class RadarDataManager {
         const incomingIds = new Set();
         const targetList = data.targets || [];
 
-        for (const t of targetList) {
-            // 验证必需字段
-            if (!t || typeof t.id !== 'number') continue;
-            if (typeof t.x !== 'number' || typeof t.y !== 'number') continue;
-            // 数值范围检查（雷达检测范围 ±20m）
-            if (t.x < -20 || t.x > 20 || t.y < -20 || t.y > 20) continue;
+        // 检查目标数量是否超过限制
+        if (targetList.length > this.maxTargets) {
+            console.warn(`[RadarData] 目标数量(${targetList.length})超过限制(${this.maxTargets})，只处理前${this.maxTargets}个`);
+            targetList.splice(this.maxTargets);
+        }
 
+        let validCount = 0;
+        let invalidCount = 0;
+
+        for (const t of targetList) {
+            // 使用完整验证
+            if (!this._validateTarget(t)) {
+                invalidCount++;
+                continue;
+            }
+
+            validCount++;
             incomingIds.add(t.id);
             this._updateTarget(t);
+        }
+
+        // 记录验证错误
+        if (invalidCount > 0) {
+            this._validationErrors++;
+            if (this._validationErrors >= 10) {
+                console.error(`[RadarData] 连续${this._validationErrors}帧数据验证失败，请检查雷达协议`);
+                if (this.onError) {
+                    this.onError({ type: 'validation_error', message: '数据验证持续失败' });
+                }
+            }
+        } else {
+            this._validationErrors = 0;
         }
 
         // 清理不再出现的目标
@@ -100,12 +155,30 @@ class RadarDataManager {
             existing.confidence = targetData.confidence || 0;
             existing.lastUpdate = performance.now();
 
-            // 追加轨迹点
+            // 追加轨迹点（限制最大长度）
             existing.trail.push({ x: targetData.x, y: targetData.y, z: targetData.z || 0 });
-            if (existing.trail.length > this.trailLength) {
-                existing.trail.splice(0, existing.trail.length - this.trailLength);
+            const maxLen = Math.min(this.trailLength, this.maxTrailLength);
+            if (existing.trail.length > maxLen) {
+                existing.trail.splice(0, existing.trail.length - maxLen);
             }
         } else {
+            // 检查总目标数限制
+            if (this.targets.size >= this.maxTargets) {
+                // 删除最旧的目标（最早更新的）
+                let oldestId = null;
+                let oldestTime = Infinity;
+                for (const [tid, target] of this.targets) {
+                    if (target.lastUpdate < oldestTime) {
+                        oldestTime = target.lastUpdate;
+                        oldestId = tid;
+                    }
+                }
+                if (oldestId !== null) {
+                    this.targets.delete(oldestId);
+                    console.log(`[RadarData] 目标数超限，删除最旧目标 #${oldestId}`);
+                }
+            }
+
             // 新目标
             this.targets.set(id, {
                 id: id,

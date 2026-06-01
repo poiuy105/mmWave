@@ -44,6 +44,17 @@ class RadarCanvas {
         this.animFrameId = null;
         this._dpr = window.devicePixelRatio || 1;
 
+        // 性能监控
+        this._perf = {
+            frameCount: 0,
+            lastFpsTime: performance.now(),
+            fps: 0,
+            frameTime: 0,
+            lastFrameTime: 0,
+            renderTime: 0
+        };
+        this.onPerformanceUpdate = null; // (perf) => void
+
         this._init();
     }
 
@@ -106,83 +117,100 @@ class RadarCanvas {
      * 设置事件监听
      */
     _setupEvents() {
+        // 存储所有事件处理器以便清理
+        this._eventHandlers = [];
+
+        const addListener = (element, type, handler, options) => {
+            element.addEventListener(type, handler, options);
+            this._eventHandlers.push({ element, type, handler, options });
+        };
+
         // 窗口大小变化
         this._resizeHandler = () => {
             this._resize();
             this._centerView();
         };
-        window.addEventListener('resize', this._resizeHandler);
+        addListener(window, 'resize', this._resizeHandler);
 
         // 鼠标滚轮缩放
-        this.canvas.addEventListener('wheel', (e) => {
+        this._wheelHandler = (e) => {
             e.preventDefault();
             const zoomFactor = e.deltaY < 0 ? 1.1 : 0.9;
             this.scale *= zoomFactor;
             this.scale = Math.max(10, Math.min(200, this.scale));
-        }, { passive: false });
+        };
+        addListener(this.canvas, 'wheel', this._wheelHandler, { passive: false });
 
         // 鼠标拖拽平移
-        this.canvas.addEventListener('mousedown', (e) => {
+        this._mouseDownHandler = (e) => {
             this.isDragging = true;
             this.lastMouseX = e.clientX;
             this.lastMouseY = e.clientY;
-        });
+        };
+        addListener(this.canvas, 'mousedown', this._mouseDownHandler);
 
-        window.addEventListener('mousemove', (e) => {
+        this._mouseMoveHandler = (e) => {
             if (this.isDragging) {
                 this.offsetX += e.clientX - this.lastMouseX;
                 this.offsetY += e.clientY - this.lastMouseY;
                 this.lastMouseX = e.clientX;
                 this.lastMouseY = e.clientY;
             }
-        });
+        };
+        addListener(window, 'mousemove', this._mouseMoveHandler);
 
-        window.addEventListener('mouseup', () => {
+        this._mouseUpHandler = () => {
             this.isDragging = false;
-        });
+        };
+        addListener(window, 'mouseup', this._mouseUpHandler);
 
         // 触摸支持
-        let touchStartDist = 0;
-        let touchStartScale = 0;
-        let lastTouchX = 0;
-        let lastTouchY = 0;
+        this._touchState = {
+            touchStartDist: 0,
+            touchStartScale: 0,
+            lastTouchX: 0,
+            lastTouchY: 0
+        };
 
-        this.canvas.addEventListener('touchstart', (e) => {
+        this._touchStartHandler = (e) => {
             if (e.touches.length === 1) {
                 this.isDragging = true;
-                lastTouchX = e.touches[0].clientX;
-                lastTouchY = e.touches[0].clientY;
+                this._touchState.lastTouchX = e.touches[0].clientX;
+                this._touchState.lastTouchY = e.touches[0].clientY;
             } else if (e.touches.length === 2) {
                 this.isDragging = false;
                 const dx = e.touches[0].clientX - e.touches[1].clientX;
                 const dy = e.touches[0].clientY - e.touches[1].clientY;
-                touchStartDist = Math.sqrt(dx * dx + dy * dy);
-                touchStartScale = this.scale;
+                this._touchState.touchStartDist = Math.sqrt(dx * dx + dy * dy);
+                this._touchState.touchStartScale = this.scale;
             }
-        }, { passive: true });
+        };
+        addListener(this.canvas, 'touchstart', this._touchStartHandler, { passive: true });
 
-        this.canvas.addEventListener('touchmove', (e) => {
+        this._touchMoveHandler = (e) => {
             e.preventDefault();
             if (e.touches.length === 1 && this.isDragging) {
-                this.offsetX += e.touches[0].clientX - lastTouchX;
-                this.offsetY += e.touches[0].clientY - lastTouchY;
-                lastTouchX = e.touches[0].clientX;
-                lastTouchY = e.touches[0].clientY;
+                this.offsetX += e.touches[0].clientX - this._touchState.lastTouchX;
+                this.offsetY += e.touches[0].clientY - this._touchState.lastTouchY;
+                this._touchState.lastTouchX = e.touches[0].clientX;
+                this._touchState.lastTouchY = e.touches[0].clientY;
             } else if (e.touches.length === 2) {
                 const dx = e.touches[0].clientX - e.touches[1].clientX;
                 const dy = e.touches[0].clientY - e.touches[1].clientY;
                 const dist = Math.sqrt(dx * dx + dy * dy);
-                this.scale = touchStartScale * (dist / touchStartDist);
+                this.scale = this._touchState.touchStartScale * (dist / this._touchState.touchStartDist);
                 this.scale = Math.max(10, Math.min(200, this.scale));
             }
-        }, { passive: false });
+        };
+        addListener(this.canvas, 'touchmove', this._touchMoveHandler, { passive: false });
 
-        this.canvas.addEventListener('touchend', () => {
+        this._touchEndHandler = () => {
             this.isDragging = false;
-        });
+        };
+        addListener(this.canvas, 'touchend', this._touchEndHandler);
 
         // 鼠标位置显示
-        this.canvas.addEventListener('mousemove', (e) => {
+        this._mouseMoveInfoHandler = (e) => {
             if (this.isDragging) return;
             const rect = this.canvas.getBoundingClientRect();
             const sx = e.clientX - rect.left;
@@ -191,7 +219,8 @@ class RadarCanvas {
             if (this.onMouseMove) {
                 this.onMouseMove(world);
             }
-        });
+        };
+        addListener(this.canvas, 'mousemove', this._mouseMoveInfoHandler);
     }
 
     /**
@@ -244,7 +273,40 @@ class RadarCanvas {
      */
     start() {
         const loop = () => {
+            const frameStart = performance.now();
+
             this._render();
+
+            const frameEnd = performance.now();
+            const renderTime = frameEnd - frameStart;
+
+            // 更新性能统计
+            this._perf.frameCount++;
+            this._perf.renderTime = renderTime;
+            this._perf.frameTime = frameStart - this._perf.lastFrameTime;
+            this._perf.lastFrameTime = frameStart;
+
+            // 每秒计算一次 FPS
+            if (frameEnd - this._perf.lastFpsTime >= 1000) {
+                this._perf.fps = this._perf.frameCount;
+                this._perf.frameCount = 0;
+                this._perf.lastFpsTime = frameEnd;
+
+                // 触发性能更新回调
+                if (this.onPerformanceUpdate) {
+                    this.onPerformanceUpdate({
+                        fps: this._perf.fps,
+                        frameTime: Math.round(this._perf.frameTime * 10) / 10,
+                        renderTime: Math.round(this._perf.renderTime * 10) / 10
+                    });
+                }
+
+                // 性能警告
+                if (this._perf.fps < 30) {
+                    console.warn(`[Canvas] 性能警告: FPS=${this._perf.fps}, 渲染时间=${this._perf.renderTime.toFixed(1)}ms`);
+                }
+            }
+
             this.animFrameId = requestAnimationFrame(loop);
         };
         loop();
@@ -650,6 +712,22 @@ class RadarCanvas {
      */
     destroy() {
         this.stop();
-        window.removeEventListener('resize', this._resizeHandler);
+
+        // 清理所有事件监听器
+        if (this._eventHandlers) {
+            for (const { element, type, handler, options } of this._eventHandlers) {
+                element.removeEventListener(type, handler, options);
+            }
+            this._eventHandlers = [];
+        }
+
+        // 清理触摸状态
+        if (this._touchState) {
+            this._touchState = null;
+        }
+
+        // 清理画布引用
+        this.ctx = null;
+        this.canvas = null;
     }
 }

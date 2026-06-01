@@ -11,7 +11,8 @@ class WebSocketClient {
             reconnectBaseDelay: 1000,   // 初始重连延迟 1s
             reconnectMaxDelay: 30000,   // 最大重连延迟 30s
             heartbeatInterval: 30000,   // 心跳间隔 30s
-            maxReconnectAttempts: Infinity,
+            heartbeatTimeout: 10000,    // 心跳超时 10s
+            maxReconnectAttempts: 10,   // 最大重连次数
             ...options
         };
 
@@ -20,6 +21,8 @@ class WebSocketClient {
         this.reconnectAttempt = 0;
         this.reconnectTimer = null;
         this.heartbeatTimer = null;
+        this.heartbeatTimeoutTimer = null;  // 心跳超时检测
+        this.lastPongTime = 0;              // 上次收到 pong 的时间
         this.messageHandlers = new Map(); // type -> Set<handler>
         this.eventListeners = new Map();  // event -> Set<listener>
 
@@ -96,6 +99,12 @@ class WebSocketClient {
 
         // 心跳响应
         if (type === 'pong') {
+            this.lastPongTime = Date.now();
+            // 清除心跳超时定时器
+            if (this.heartbeatTimeoutTimer) {
+                clearTimeout(this.heartbeatTimeoutTimer);
+                this.heartbeatTimeoutTimer = null;
+            }
             return;
         }
 
@@ -155,6 +164,17 @@ class WebSocketClient {
     _scheduleReconnect() {
         if (this.reconnectTimer) return;
 
+        // 检查是否超过最大重连次数
+        if (this.reconnectAttempt >= this.options.maxReconnectAttempts) {
+            console.error(`[WS] 重连次数超过上限 (${this.options.maxReconnectAttempts})，停止重连`);
+            this._setState('disconnected');
+            this._emit('reconnect_failed', {
+                attempts: this.reconnectAttempt,
+                reason: 'max_attempts_exceeded'
+            });
+            return;
+        }
+
         const delay = Math.min(
             this.options.reconnectBaseDelay * Math.pow(2, this.reconnectAttempt),
             this.options.reconnectMaxDelay
@@ -163,11 +183,12 @@ class WebSocketClient {
         this.reconnectAttempt++;
         this._setState('reconnecting');
 
-        console.log(`[WS] 将在 ${Math.round(delay / 1000)}s 后重连 (第 ${this.reconnectAttempt} 次)`);
+        console.log(`[WS] 将在 ${Math.round(delay / 1000)}s 后重连 (第 ${this.reconnectAttempt}/${this.options.maxReconnectAttempts} 次)`);
 
         this._emit('reconnecting', {
             attempt: this.reconnectAttempt,
-            delay: delay
+            delay: delay,
+            maxAttempts: this.options.maxReconnectAttempts
         });
 
         this.reconnectTimer = setTimeout(() => {
@@ -181,9 +202,28 @@ class WebSocketClient {
      */
     _startHeartbeat() {
         this._stopHeartbeat();
+        this.lastPongTime = Date.now();
+
+        // 心跳发送定时器
         this.heartbeatTimer = setInterval(() => {
             if (this.ws && this.ws.readyState === WebSocket.OPEN) {
                 this.send({ type: 'ping' });
+
+                // 设置心跳超时检测
+                if (this.heartbeatTimeoutTimer) {
+                    clearTimeout(this.heartbeatTimeoutTimer);
+                }
+                this.heartbeatTimeoutTimer = setTimeout(() => {
+                    console.warn('[WS] 心跳超时，强制断开连接');
+                    this._emit('heartbeat_timeout', {
+                        lastPongTime: this.lastPongTime,
+                        timeout: this.options.heartbeatTimeout
+                    });
+                    // 强制关闭连接，触发重连
+                    if (this.ws) {
+                        this.ws.close(3000, 'Heartbeat timeout');
+                    }
+                }, this.options.heartbeatTimeout);
             }
         }, this.options.heartbeatInterval);
     }
@@ -195,6 +235,10 @@ class WebSocketClient {
         if (this.heartbeatTimer) {
             clearInterval(this.heartbeatTimer);
             this.heartbeatTimer = null;
+        }
+        if (this.heartbeatTimeoutTimer) {
+            clearTimeout(this.heartbeatTimeoutTimer);
+            this.heartbeatTimeoutTimer = null;
         }
     }
 
