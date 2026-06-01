@@ -11,7 +11,7 @@ class WebSocketClient {
             reconnectBaseDelay: 1000,   // 初始重连延迟 1s
             reconnectMaxDelay: 30000,   // 最大重连延迟 30s
             heartbeatInterval: 30000,   // 心跳间隔 30s
-            heartbeatTimeout: 10000,    // 心跳超时 10s
+            heartbeatTimeout: 30000,    // 心跳超时 30s（延长以避免误断）
             maxReconnectAttempts: 10,   // 最大重连次数
             ...options
         };
