@@ -1,9 +1,54 @@
+# IDE and editor files
 .trae/
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# Upload and temporary files
 .uploads/
+*.tmp
+*.temp
+*.log
+
+# Documentation (large PDFs)
 docs/
+
 # Firmware build output directories
 firmware*/
-# frontend/  # Removed: frontend now tracked in git
+build/
+cmake-build-*/
+
+# ESP-IDF generated files
+sdkconfig
+sdkconfig.old
+dependencies.lock
+managed_components/
+
+# Frontend build artifacts
 frontend*.7z
+dist/
+node_modules/
+
+# Python cache
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+.Python
+
+# OS generated files
+.DS_Store
+Thumbs.db
+desktop.ini
+
+# Project specific
 logs.txt
 网址.txt
+
+# Temporary scripts used for debugging
+*_test.py
+read_*.py
+serial_*.py
+upload*.py
