@@ -280,17 +280,29 @@ class ApiClient {
             this.getRadarStatus(),
             this.getSystemInfo(),
             this.getStatus(),
-            this.getConfig()
+            this.getConfig()  // 可能 404，配置 API 尚未实现
         ]);
+
+        const errors = results
+            .map((r, i) => {
+                if (r.status === 'rejected') {
+                    const name = ['radarStatus', 'systemInfo', 'serverStatus', 'config'][i];
+                    // config 404 是预期行为，不视为错误
+                    if (name === 'config' && r.reason && r.reason.status === 404) {
+                        return null;
+                    }
+                    return name;
+                }
+                return null;
+            })
+            .filter(Boolean);
 
         return {
             radarStatus: results[0].status === 'fulfilled' ? results[0].value : null,
             systemInfo: results[1].status === 'fulfilled' ? results[1].value : null,
             serverStatus: results[2].status === 'fulfilled' ? results[2].value : null,
             config: results[3].status === 'fulfilled' ? results[3].value : null,
-            errors: results
-                .map((r, i) => r.status === 'rejected' ? ['radarStatus', 'systemInfo', 'serverStatus', 'config'][i] : null)
-                .filter(Boolean)
+            errors: errors
         };
     }
 }
