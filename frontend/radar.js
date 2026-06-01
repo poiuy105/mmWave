@@ -37,22 +37,11 @@ class RadarDataManager {
     _validateTarget(t) {
         // 基础类型检查
         if (!t || typeof t !== 'object') return false;
-        if (typeof t.id !== 'number' || !Number.isFinite(t.id)) return false;
-        if (typeof t.x !== 'number' || !Number.isFinite(t.x)) return false;
-        if (typeof t.y !== 'number' || !Number.isFinite(t.y)) return false;
-
-        // 可选字段类型检查
-        if (t.z !== undefined && (typeof t.z !== 'number' || !Number.isFinite(t.z))) return false;
-        if (t.speed !== undefined && (typeof t.speed !== 'number' || !Number.isFinite(t.speed))) return false;
-        if (t.snr !== undefined && (typeof t.snr !== 'number' || !Number.isFinite(t.snr))) return false;
-        if (t.confidence !== undefined && (typeof t.confidence !== 'number' || !Number.isFinite(t.confidence))) return false;
+        if (typeof t.id !== 'number') return false;
+        if (typeof t.x !== 'number' || typeof t.y !== 'number') return false;
 
         // 数值范围检查（雷达检测范围 ±20m）
         if (t.x < -20 || t.x > 20 || t.y < -20 || t.y > 20) return false;
-        if (t.z !== undefined && (t.z < -10 || t.z > 10)) return false;
-        if (t.speed !== undefined && (t.speed < 0 || t.speed > 100)) return false; // 速度 0-100 m/s
-        if (t.snr !== undefined && (t.snr < -50 || t.snr > 100)) return false; // SNR 合理范围
-        if (t.confidence !== undefined && (t.confidence < 0 || t.confidence > 1)) return false; // 置信度 0-1
 
         return true;
     }
