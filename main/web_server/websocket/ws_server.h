@@ -169,6 +169,13 @@ bool ws_server_get_client_ip(ws_server_t *server, int fd, char *ip_buffer, size_
 void ws_server_dump_status(ws_server_t *server);
 
 /**
+ * @brief 更新客户端活动时间戳（用于心跳超时计算）
+ * @param server 服务器句柄
+ * @param fd 客户端文件描述符
+ */
+void ws_server_update_client_activity(ws_server_t *server, int fd);
+
+/**
  * @brief WebSocket URI Handler（供 httpd 注册使用）
  * @param req HTTP 请求
  * @return esp_err_t

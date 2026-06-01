@@ -38,7 +38,7 @@ static esp_err_t send_json_resp(httpd_req_t *req, int status_code, bool success,
                                status_code == 413 ? "413 Payload Too Large" :
                                status_code == 500 ? "500 Internal Server Error" : "500");
     httpd_resp_set_type(req, "application/json");
-    httpd_resp_set_hdr(req, "Access-Control-Allow-Origin", "*");
+    // CORS: 不硬编码 *，由 api_options_handler 统一处理 preflight
     httpd_resp_set_hdr(req, "Access-Control-Allow-Methods", "GET, POST, PUT, DELETE, OPTIONS");
     httpd_resp_set_hdr(req, "Access-Control-Allow-Headers", "Content-Type");
 
@@ -399,6 +399,15 @@ static esp_err_t api_file_delete_handler(httpd_req_t *req)
     }
 
     ESP_LOGI(TAG, "Delete request: %s", path);
+
+    // 完整路径校验（防止路径遍历攻击）
+    validation_result_t vresult = validate_file_path(path);
+    if (vresult != VALIDATION_OK) {
+        ESP_LOGW(TAG, "Delete path validation failed: %s", validation_result_str(vresult));
+        send_json_resp(req, 400, false, validation_result_str(vresult));
+        free(path);
+        return ESP_OK;
+    }
 
     if (strncmp(path, "/storage/", 9) != 0) {
         send_json_resp(req, 403, false, "Access denied");

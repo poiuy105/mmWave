@@ -125,6 +125,8 @@ const App = {
         this.els.mountMode.addEventListener('change', () => {
             const mode = this.els.mountMode.value;
             this._setMountMode(mode);
+            // 同步到后端持久化
+            this.api.setInstallMode(mode).catch(() => {});
         });
 
         // 设置面板
@@ -168,10 +170,16 @@ const App = {
 
         this.ws.on('disconnected', () => {
             this._updateConnectionUI('disconnected');
+            // 清空过时的雷达目标数据，避免误导用户
+            this.radarData.clearTargets();
         });
 
         this.ws.on('reconnecting', (info) => {
             this._updateConnectionUI('reconnecting');
+        });
+
+        this.ws.on('reconnect_failed', () => {
+            this._showToast('连接失败，请刷新页面重试', 'error');
         });
 
         // 尝试连接
@@ -205,9 +213,11 @@ const App = {
 
             if (state.errors.length > 0) {
                 console.warn('[App] 部分初始状态加载失败:', state.errors);
+                this._showToast('部分数据加载失败，功能可能受限', 'warning');
             }
         } catch (e) {
             console.warn('[App] 加载初始状态失败:', e);
+            this._showToast('数据加载失败，请检查网络连接', 'error');
         }
     },
 
@@ -341,7 +351,7 @@ const App = {
 
         // 调用 API 设置安装模式
         try {
-            await this.api.setInstallMode(mountMode === 'ceiling' ? 'top' : 'side', height, angle);
+            await this.api.setInstallMode(mountMode, height, angle);
             this._showToast('设置已保存', 'success');
         } catch (e) {
             this._showToast('设置保存失败: ' + e.message, 'error');

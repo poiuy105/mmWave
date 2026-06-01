@@ -247,6 +247,13 @@ void ws_server_destroy(ws_server_t *server)
     ESP_LOGI(TAG, "WebSocket server destroyed");
 }
 
+void ws_server_update_client_activity(ws_server_t *server, int fd)
+{
+    if (server) {
+        ws_client_mgr_update_activity(&server->client_mgr, fd);
+    }
+}
+
 esp_err_t ws_server_send_text(ws_server_t *server, int fd, const char *text)
 {
     if (server == NULL || fd < 0 || text == NULL) {

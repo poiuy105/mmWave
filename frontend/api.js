@@ -151,9 +151,14 @@ class ApiClient {
         return this.request('GET', '/api/radar/install_mode');
     }
 
-    async setInstallMode(mode, height, angle) {
+    /**
+     * 设置安装模式（自动转换前端 UI 值到后端 API 值）
+     * @param {string} uiMode - 前端 UI 值: 'side' 或 'ceiling'
+     */
+    async setInstallMode(uiMode, height, angle) {
+        const apiMode = uiMode === 'ceiling' ? 'top' : 'side';
         return this.request('PUT', '/api/radar/install_mode', {
-            mode: mode,
+            mode: apiMode,
             height: height || 2.5,
             angle: angle || 0
         });
@@ -279,19 +284,13 @@ class ApiClient {
         const results = await Promise.allSettled([
             this.getRadarStatus(),
             this.getSystemInfo(),
-            this.getStatus(),
-            this.getConfig()  // 可能 404，配置 API 尚未实现
+            this.getStatus()
         ]);
 
         const errors = results
             .map((r, i) => {
                 if (r.status === 'rejected') {
-                    const name = ['radarStatus', 'systemInfo', 'serverStatus', 'config'][i];
-                    // config 404 是预期行为，不视为错误
-                    if (name === 'config' && r.reason && r.reason.status === 404) {
-                        return null;
-                    }
-                    return name;
+                    return ['radarStatus', 'systemInfo', 'serverStatus'][i];
                 }
                 return null;
             })
@@ -301,7 +300,6 @@ class ApiClient {
             radarStatus: results[0].status === 'fulfilled' ? results[0].value : null,
             systemInfo: results[1].status === 'fulfilled' ? results[1].value : null,
             serverStatus: results[2].status === 'fulfilled' ? results[2].value : null,
-            config: results[3].status === 'fulfilled' ? results[3].value : null,
             errors: errors
         };
     }

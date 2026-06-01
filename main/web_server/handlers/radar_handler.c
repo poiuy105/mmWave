@@ -4,6 +4,7 @@
  */
 
 #include "radar_handler.h"
+#include "radar_adapter/radar_adapter.h"
 #include "cJSON.h"
 #include "esp_log.h"
 #include "esp_system.h"
@@ -73,7 +74,7 @@ static esp_err_t send_error_response(httpd_req_t *req, const char *message)
 {
     cJSON *error = cJSON_CreateObject();
     cJSON_AddBoolToObject(error, "success", false);
-    cJSON_AddStringToObject(error, "error", message);
+    cJSON_AddStringToObject(error, "message", message);
     char *json = cJSON_PrintUnformatted(error);
     cJSON_Delete(error);
 
@@ -136,6 +137,22 @@ esp_err_t api_radar_status_handler(httpd_req_t *req)
     cJSON_AddStringToObject(root, "status", "running");
     cJSON_AddStringToObject(root, "install_mode", s_radar_config.install_mode);
     cJSON_AddNumberToObject(root, "target_count", 0);  // TODO: 从 radar_adapter 获取
+
+    // 添加雷达型号和能力信息
+    radar_info_t info;
+    if (radar_adapter_get_info(&info) == ESP_OK) {
+        cJSON_AddStringToObject(root, "type", info.type);
+        cJSON_AddStringToObject(root, "name", info.name);
+
+        cJSON *caps = cJSON_CreateObject();
+        cJSON_AddBoolToObject(caps, "has_install_mode", info.has_install_mode);
+        cJSON_AddBoolToObject(caps, "has_3d", info.has_3d);
+        cJSON_AddBoolToObject(caps, "has_region_filter", info.has_region_filter);
+        cJSON_AddBoolToObject(caps, "has_sensitivity", info.has_sensitivity);
+        cJSON_AddBoolToObject(caps, "has_sleep_monitoring", info.has_sleep_monitoring);
+        cJSON_AddStringToObject(caps, "install_mode", s_radar_config.install_mode);
+        cJSON_AddItemToObject(root, "capabilities", caps);
+    }
 
     char *json = cJSON_PrintUnformatted(root);
     cJSON_Delete(root);

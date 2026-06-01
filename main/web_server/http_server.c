@@ -86,6 +86,12 @@ static void ws_on_message(int fd, const uint8_t *data, size_t len, httpd_ws_type
     ESP_LOGD(TAG, "WebSocket message from fd=%d: type=%d, len=%lu",
              fd, type, (unsigned long)len);
 
+    // 更新客户端活动时间戳，避免心跳超时误断
+    server_context_t *ctx = server_context_get();
+    if (ctx && ctx->ws_server) {
+        ws_server_update_client_activity(ctx->ws_server, fd);
+    }
+
     // Handle subscription requests
     if (type == HTTPD_WS_TYPE_TEXT) {
         cJSON *msg = cJSON_Parse((char*)data);
@@ -244,9 +250,8 @@ static esp_err_t api_options_handler(httpd_req_t *req)
     server_context_t *ctx = server_context_get();
     if (ctx->config->cors_enabled) {
         security_headers_set_cors(req, ctx->config->cors_origin);
-    } else {
-        security_headers_set_cors(req, "*");
     }
+    // cors_enabled=false 时不设置 CORS 头（拒绝跨域请求）
     httpd_resp_send(req, NULL, 0);
     return ESP_OK;
 }
@@ -265,7 +270,15 @@ static const httpd_uri_t uri_handlers[] = {
     // API
     { .uri = "/api/status",      .method = HTTP_GET, .handler = api_status_handler },
     { .uri = "/api/system/info", .method = HTTP_GET, .handler = api_system_info_handler },
-    { .uri = "/api/*",           .method = HTTP_OPTIONS, .handler = api_options_handler },
+
+    // CORS OPTIONS handlers (ESP-IDF httpd 不支持通配符子路径匹配)
+    { .uri = "/api/radar/status",       .method = HTTP_OPTIONS, .handler = api_options_handler },
+    { .uri = "/api/radar/install_mode", .method = HTTP_OPTIONS, .handler = api_options_handler },
+    { .uri = "/api/radar/range",        .method = HTTP_OPTIONS, .handler = api_options_handler },
+    { .uri = "/api/files/upload",       .method = HTTP_OPTIONS, .handler = api_options_handler },
+    { .uri = "/api/files/delete",       .method = HTTP_OPTIONS, .handler = api_options_handler },
+    { .uri = "/api/files/list",         .method = HTTP_OPTIONS, .handler = api_options_handler },
+    { .uri = "/api/fs/info",            .method = HTTP_OPTIONS, .handler = api_options_handler },
 
     // Radar API
     { .uri = "/api/radar/status",       .method = HTTP_GET,  .handler = api_radar_status_handler },

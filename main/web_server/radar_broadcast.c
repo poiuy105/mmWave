@@ -72,6 +72,7 @@ static void radar_broadcast_task(void *arg)
 {
     uint32_t frame_counter = 0;
     uint32_t broadcast_interval_ms = 100; // 10Hz default
+    uint32_t idle_interval_ms = 2000;    // 无目标时 0.5Hz
 
     // Use hardcoded interval to avoid uninitialized config
     ESP_LOGI(TAG, "Broadcast task started, interval=%lums", (unsigned long)broadcast_interval_ms);
@@ -97,7 +98,7 @@ static void radar_broadcast_task(void *arg)
             }
         }
 
-        vTaskDelay(pdMS_TO_TICKS(broadcast_interval_ms));
+        vTaskDelay(pdMS_TO_TICKS(frame.target_count > 0 ? broadcast_interval_ms : idle_interval_ms));
     }
 
     ESP_LOGI(TAG, "Broadcast task stopped");
