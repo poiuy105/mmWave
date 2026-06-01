@@ -1,0 +1,34 @@
+name: Build ESP32C3
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+  workflow_dispatch:
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+    - uses: actions/checkout@v4
+
+    - name: Build and Merge BIN
+      uses: espressif/esp-idf-ci-action@v1
+      with:
+        esp_idf_version: v5.4.4
+        target: esp32c3
+        path: ./
+        command: >
+          bash -c "rm -rf build sdkconfig && idf.py build &&
+          esptool.py --chip esp32c3 merge_bin
+          -o build/ld_radar_monitor_merged.bin
+          --flash_mode dio --flash_freq 80m --flash_size 4MB
+          0x0 build/bootloader/bootloader.bin
+          0x8000 build/partition_table/partition-table.bin
+          0x10000 build/ld_radar_monitor.bin"
+
+    - uses: actions/upload-artifact@v4
+      with:
+        name: ld_radar_monitor_merged
+        path: build/ld_radar_monitor_merged.bin

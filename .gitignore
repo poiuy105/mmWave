@@ -1,0 +1,11 @@
+.trae/
+.uploads/
+docs/
+# Firmware build output directories
+firmware*/
+frontend/
+frontend*.7z
+logs.txt
+网址.txt
+git token.txt
+*.py

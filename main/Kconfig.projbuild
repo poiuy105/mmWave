@@ -1,0 +1,252 @@
+# HTTP/WebSocket Server Configuration
+# 工业级重构配置参数
+
+menu "HTTP/WebSocket Server"
+
+    config HTTP_SERVER_ENABLED
+        bool "Enable HTTP Server"
+        default y
+        help
+            Enable the embedded HTTP server for web interface access.
+
+    config HTTP_SERVER_PORT
+        int "HTTP Server Port"
+        default 80
+        range 1 65535
+        depends on HTTP_SERVER_ENABLED
+        help
+            TCP port number for HTTP server to listen on.
+
+    config HTTP_SERVER_STACK_SIZE
+        int "HTTP Server Task Stack Size (bytes)"
+        default 12288
+        range 4096 32768
+        depends on HTTP_SERVER_ENABLED
+        help
+            Stack size for HTTP server task. 12288 is recommended minimum.
+
+    config HTTP_SERVER_MAX_URI_HANDLERS
+        int "Maximum URI Handlers"
+        default 32
+        range 8 64
+        depends on HTTP_SERVER_ENABLED
+        help
+            Maximum number of URI handlers that can be registered.
+
+    config HTTP_SERVER_MAX_OPEN_SOCKETS
+        int "Maximum Open Sockets"
+        default 7
+        range 1 16
+        depends on HTTP_SERVER_ENABLED
+        help
+            Maximum number of simultaneous HTTP connections.
+
+    config HTTP_RECV_TIMEOUT
+        int "HTTP Receive Timeout (seconds)"
+        default 30
+        range 1 60
+        depends on HTTP_SERVER_ENABLED
+        help
+            Timeout for receiving HTTP request data.
+
+    config HTTP_SEND_TIMEOUT
+        int "HTTP Send Timeout (seconds)"
+        default 30
+        range 1 60
+        depends on HTTP_SERVER_ENABLED
+        help
+            Timeout for sending HTTP response data.
+
+    config MAX_UPLOAD_SIZE
+        int "Maximum Upload File Size (KB)"
+        default 100
+        range 10 1024
+        depends on HTTP_SERVER_ENABLED
+        help
+            Maximum file upload size in kilobytes.
+
+endmenu
+
+menu "WebSocket Configuration"
+    visible if HTTP_SERVER_ENABLED
+
+    config WS_SERVER_ENABLED
+        bool "Enable WebSocket Server"
+        default y
+        help
+            Enable WebSocket support for real-time radar data streaming.
+
+    config WS_MAX_CLIENTS
+        int "Maximum WebSocket Clients"
+        default 4
+        range 1 8
+        depends on WS_SERVER_ENABLED
+        help
+            Maximum number of simultaneous WebSocket clients.
+
+    config WS_HEARTBEAT_INTERVAL
+        int "Heartbeat Check Interval (seconds)"
+        default 30
+        range 10 120
+        depends on WS_SERVER_ENABLED
+        help
+            Interval between client heartbeat/liveness checks.
+
+    config WS_CLIENT_TIMEOUT
+        int "Client Timeout (seconds)"
+        default 60
+        range 30 300
+        depends on WS_SERVER_ENABLED
+        help
+            Time after which an inactive client is disconnected.
+
+    config WS_MSG_QUEUE_SIZE
+        int "Message Queue Size Per Client"
+        default 10
+        range 5 50
+        depends on WS_SERVER_ENABLED
+        help
+            Number of messages that can be queued per client for sending.
+
+    config WS_MAX_MSG_SIZE
+        int "Maximum Message Size (bytes)"
+        default 2048
+        range 512 8192
+        depends on WS_SERVER_ENABLED
+        help
+            Maximum size of a single WebSocket message.
+
+    config WS_TASK_STACK_SIZE
+        int "WebSocket Task Stack Size (bytes)"
+        default 4096
+        range 2048 8192
+        depends on WS_SERVER_ENABLED
+        help
+            Stack size for WebSocket internal tasks.
+
+endmenu
+
+menu "Security Configuration"
+
+    config RATE_LIMIT_ENABLED
+        bool "Enable Rate Limiting"
+        default y
+        help
+            Enable per-IP request rate limiting to prevent DoS attacks.
+
+    config RATE_LIMIT_MAX_REQUESTS
+        int "Max Requests Per Second"
+        default 20
+        range 5 100
+        depends on RATE_LIMIT_ENABLED
+        help
+            Maximum requests allowed per IP per second.
+
+    config RATE_LIMIT_WINDOW_MS
+        int "Rate Limit Window (milliseconds)"
+        default 1000
+        range 500 5000
+        depends on RATE_LIMIT_ENABLED
+        help
+            Time window for rate limiting in milliseconds.
+
+    config RATE_LIMIT_BLOCK_DURATION
+        int "Block Duration (seconds)"
+        default 5
+        range 1 60
+        depends on RATE_LIMIT_ENABLED
+        help
+            Duration to block an IP that exceeds the rate limit.
+
+    config RATE_LIMIT_MAX_ENTRIES
+        int "Max Rate Limit Entries"
+        default 32
+        range 8 128
+        depends on RATE_LIMIT_ENABLED
+        help
+            Maximum number of IP addresses to track for rate limiting.
+
+    config CORS_ENABLED
+        bool "Enable CORS"
+        default n
+        help
+            Enable Cross-Origin Resource Sharing.
+
+    config CORS_ORIGIN
+        string "CORS Allowed Origin"
+        default "*"
+        depends on CORS_ENABLED
+        help
+            Allowed origin for CORS. Use "*" for any origin, or specify a domain.
+
+    config SECURITY_HEADERS_ENABLED
+        bool "Enable Security Headers"
+        default y
+        help
+            Add security headers (X-Content-Type-Options, X-Frame-Options, etc.) to responses.
+
+    config X_CONTENT_TYPE_OPTIONS
+        bool "X-Content-Type-Options: nosniff"
+        default y
+        depends on SECURITY_HEADERS_ENABLED
+        help
+            Prevent MIME type sniffing.
+
+    config X_FRAME_OPTIONS
+        bool "X-Frame-Options: DENY"
+        default y
+        depends on SECURITY_HEADERS_ENABLED
+        help
+            Prevent clickjacking by disabling iframe embedding.
+
+    config CONTENT_SECURITY_POLICY
+        bool "Enable Content-Security-Policy"
+        default n
+        depends on SECURITY_HEADERS_ENABLED
+        help
+            Enable CSP header. Recommended for production.
+
+endmenu
+
+menu "Broadcast Configuration"
+    visible if WS_SERVER_ENABLED
+
+    config RADAR_BROADCAST_ENABLED
+        bool "Enable Radar Data Broadcast"
+        default y
+        help
+            Broadcast radar detection data to WebSocket clients.
+
+    config RADAR_BROADCAST_INTERVAL
+        int "Broadcast Interval (milliseconds)"
+        default 100
+        range 50 1000
+        depends on RADAR_BROADCAST_ENABLED
+        help
+            Interval between radar data broadcasts in milliseconds. 100ms = 10Hz.
+
+    config RADAR_BROADCAST_TASK_STACK
+        int "Broadcast Task Stack Size (bytes)"
+        default 4096
+        range 2048 8192
+        depends on RADAR_BROADCAST_ENABLED
+        help
+            Stack size for radar broadcast task.
+
+endmenu
+
+menu "File System Configuration"
+
+    config FATFS_MOUNT_PATH
+        string "FATFS Mount Path"
+        default "/storage"
+        help
+            Mount path for FATFS partition.
+
+    config STATIC_FILE_ROOT
+        string "Static Files Root Directory"
+        default "/www"
+        help
+            Directory under mount path where static files are served from.
+
+endmenu
