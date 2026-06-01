@@ -59,7 +59,7 @@ static const char* upload_page_html =
 "    <div class=\"container\">\n"
 "        <div class=\"nav\">\n"
 "            <h1>📁 File Manager</h1>\n"
-"            <a href=\"/app/\">→ Open Radar App</a>\n"
+"            <a href=\"/\">→ Open Radar App</a>\n"
 "        </div>\n"
 "        <div class=\"status\" id=\"status\"></div>\n"
 "        <div class=\"card\">\n"
