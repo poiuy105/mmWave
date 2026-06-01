@@ -209,7 +209,10 @@ static esp_err_t api_status_handler(httpd_req_t *req)
 
     char *json = cJSON_PrintUnformatted(root);
     httpd_resp_set_type(req, "application/json");
-    httpd_resp_send(req, json, strlen(json));
+    esp_err_t ret = httpd_resp_send(req, json, strlen(json));
+    if (ret != ESP_OK) {
+        ESP_LOGW(TAG, "Failed to send status response");
+    }
 
     free(json);
     cJSON_Delete(root);
@@ -226,7 +229,10 @@ static esp_err_t api_system_info_handler(httpd_req_t *req)
 
     char *json = cJSON_PrintUnformatted(root);
     httpd_resp_set_type(req, "application/json");
-    httpd_resp_send(req, json, strlen(json));
+    esp_err_t ret = httpd_resp_send(req, json, strlen(json));
+    if (ret != ESP_OK) {
+        ESP_LOGW(TAG, "Failed to send system info response");
+    }
 
     free(json);
     cJSON_Delete(root);

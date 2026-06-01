@@ -45,7 +45,9 @@ esp_err_t file_manager_init(void)
     snprintf(www_path, sizeof(www_path), "%s/www", STORAGE_MOUNT_POINT);
     if (stat(www_path, &st) != 0) {
         ESP_LOGI(TAG, "Creating www directory...");
-        mkdir(www_path, 0755);
+        if (mkdir(www_path, 0755) != 0 && errno != EEXIST) {
+            ESP_LOGE(TAG, "Failed to create www directory: %s", strerror(errno));
+        }
     }
 
     s_initialized = true;

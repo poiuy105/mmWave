@@ -32,7 +32,11 @@ static const char *TAG = "MAIN";
 
 static EventGroupHandle_t s_wifi_event_group;
 #define WIFI_CONNECTED_BIT BIT0
-#define WIFI_FAIL_BIT      BIT1
+#define WIFI_FAIL_BIT     BIT1
+
+#define WIFI_CONNECT_TIMEOUT_MS   15000  // WiFi 连接超时 15s
+#define RADAR_TEST_DELAY_MS       5000   // 雷达测试延迟 5s
+#define MAIN_LOOP_INTERVAL_MS     10000  // 主循环间隔 10s
 
 static int s_retry_num = 0;
 #define MAX_RETRY  5
@@ -44,10 +48,16 @@ static void wifi_event_handler(void* arg, esp_event_base_t event_base,
                                int32_t event_id, void* event_data)
 {
     if (event_base == WIFI_EVENT && event_id == WIFI_EVENT_STA_START) {
-        esp_wifi_connect();
+        esp_err_t ret = esp_wifi_connect();
+        if (ret != ESP_OK) {
+            ESP_LOGE(TAG, "WiFi connect failed: %s", esp_err_to_name(ret));
+        }
     } else if (event_base == WIFI_EVENT && event_id == WIFI_EVENT_STA_DISCONNECTED) {
         if (s_retry_num < MAX_RETRY) {
-            esp_wifi_connect();
+            esp_err_t ret = esp_wifi_connect();
+            if (ret != ESP_OK) {
+                ESP_LOGW(TAG, "WiFi reconnect failed: %s", esp_err_to_name(ret));
+            }
             s_retry_num++;
             ESP_LOGI(TAG, "Retry to connect to the AP (%d/%d)", s_retry_num, MAX_RETRY);
         } else {
@@ -150,8 +160,12 @@ void app_main(void)
     esp_err_t radar_err = radar_adapter_init();
     if (radar_err == ESP_OK) {
         radar_info_t radar_info;
-        radar_adapter_get_info(&radar_info);
-        ESP_LOGI(TAG, "Radar initialized: %s", radar_info.name);
+        esp_err_t info_err = radar_adapter_get_info(&radar_info);
+        if (info_err == ESP_OK) {
+            ESP_LOGI(TAG, "Radar initialized: %s", radar_info.name);
+        } else {
+            ESP_LOGW(TAG, "Failed to get radar info: %s", esp_err_to_name(info_err));
+        }
     } else {
         ESP_LOGW(TAG, "Radar initialization failed: %s (continuing without radar)", esp_err_to_name(radar_err));
     }
@@ -164,7 +178,7 @@ void app_main(void)
     EventBits_t bits = xEventGroupWaitBits(s_wifi_event_group,
                                             WIFI_CONNECTED_BIT | WIFI_FAIL_BIT,
                                             pdFALSE, pdFALSE,
-                                            pdMS_TO_TICKS(15000));  // 15s timeout
+                                            pdMS_TO_TICKS(WIFI_CONNECT_TIMEOUT_MS));
 
     if (bits & WIFI_CONNECTED_BIT) {
         ESP_LOGI(TAG, "WiFi connected successfully");
@@ -184,7 +198,7 @@ void app_main(void)
 
     // 运行雷达控制命令验证测试（仅 LD2460）
     // 测试会在启动后 5 秒执行，验证底层驱动写命令
-    vTaskDelay(pdMS_TO_TICKS(5000));
+    vTaskDelay(pdMS_TO_TICKS(RADAR_TEST_DELAY_MS));
     ESP_LOGI(TAG, "Running radar control command verification test...");
     esp_err_t test_err = radar_test_run_all();
     if (test_err == ESP_OK) {
@@ -195,7 +209,7 @@ void app_main(void)
 
     // 主循环 - 打印系统状态
     while (1) {
-        vTaskDelay(pdMS_TO_TICKS(10000)); // 每 10 秒
+        vTaskDelay(pdMS_TO_TICKS(MAIN_LOOP_INTERVAL_MS));
 
         // 打印内存状态
         ESP_LOGI(TAG, "Free heap: %lu bytes", esp_get_free_heap_size());

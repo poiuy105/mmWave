@@ -107,7 +107,10 @@ server_context_t* server_context_get(void)
 void server_stats_inc_request(void)
 {
     if (s_ctx && s_ctx->stats_mutex) {
-        xSemaphoreTake(s_ctx->stats_mutex, portMAX_DELAY);
+        if (xSemaphoreTake(s_ctx->stats_mutex, pdMS_TO_TICKS(100)) != pdTRUE) {
+            ESP_LOGW(TAG, "Failed to acquire stats mutex (inc_request)");
+            return;
+        }
         s_ctx->stats.total_requests++;
         s_ctx->stats.active_requests++;
         xSemaphoreGive(s_ctx->stats_mutex);
@@ -117,7 +120,10 @@ void server_stats_inc_request(void)
 void server_stats_dec_request(void)
 {
     if (s_ctx && s_ctx->stats_mutex) {
-        xSemaphoreTake(s_ctx->stats_mutex, portMAX_DELAY);
+        if (xSemaphoreTake(s_ctx->stats_mutex, pdMS_TO_TICKS(100)) != pdTRUE) {
+            ESP_LOGW(TAG, "Failed to acquire stats mutex (dec_request)");
+            return;
+        }
         if (s_ctx->stats.active_requests > 0) {
             s_ctx->stats.active_requests--;
         }
@@ -125,10 +131,17 @@ void server_stats_dec_request(void)
     }
 }
 
+#define STATS_LOCK() do { \
+    if (xSemaphoreTake(s_ctx->stats_mutex, pdMS_TO_TICKS(100)) != pdTRUE) { \
+        ESP_LOGW(TAG, "Failed to acquire stats mutex"); \
+        return; \
+    } \
+} while(0)
+
 void server_stats_inc_error(void)
 {
     if (s_ctx && s_ctx->stats_mutex) {
-        xSemaphoreTake(s_ctx->stats_mutex, portMAX_DELAY);
+        STATS_LOCK();
         s_ctx->stats.error_requests++;
         xSemaphoreGive(s_ctx->stats_mutex);
     }
@@ -137,7 +150,7 @@ void server_stats_inc_error(void)
 void server_stats_inc_ws_connection(void)
 {
     if (s_ctx && s_ctx->stats_mutex) {
-        xSemaphoreTake(s_ctx->stats_mutex, portMAX_DELAY);
+        STATS_LOCK();
         s_ctx->stats.ws_connections++;
         xSemaphoreGive(s_ctx->stats_mutex);
     }
@@ -146,7 +159,7 @@ void server_stats_inc_ws_connection(void)
 void server_stats_inc_ws_disconnect(void)
 {
     if (s_ctx && s_ctx->stats_mutex) {
-        xSemaphoreTake(s_ctx->stats_mutex, portMAX_DELAY);
+        STATS_LOCK();
         s_ctx->stats.ws_disconnections++;
         xSemaphoreGive(s_ctx->stats_mutex);
     }
@@ -155,7 +168,7 @@ void server_stats_inc_ws_disconnect(void)
 void server_stats_inc_ws_message_sent(void)
 {
     if (s_ctx && s_ctx->stats_mutex) {
-        xSemaphoreTake(s_ctx->stats_mutex, portMAX_DELAY);
+        STATS_LOCK();
         s_ctx->stats.ws_messages_sent++;
         xSemaphoreGive(s_ctx->stats_mutex);
     }
@@ -164,7 +177,7 @@ void server_stats_inc_ws_message_sent(void)
 void server_stats_inc_ws_message_failed(void)
 {
     if (s_ctx && s_ctx->stats_mutex) {
-        xSemaphoreTake(s_ctx->stats_mutex, portMAX_DELAY);
+        STATS_LOCK();
         s_ctx->stats.ws_messages_failed++;
         xSemaphoreGive(s_ctx->stats_mutex);
     }
@@ -173,7 +186,7 @@ void server_stats_inc_ws_message_failed(void)
 void server_stats_inc_rate_limit(void)
 {
     if (s_ctx && s_ctx->stats_mutex) {
-        xSemaphoreTake(s_ctx->stats_mutex, portMAX_DELAY);
+        STATS_LOCK();
         s_ctx->stats.rate_limit_hits++;
         xSemaphoreGive(s_ctx->stats_mutex);
     }
@@ -182,7 +195,7 @@ void server_stats_inc_rate_limit(void)
 void server_stats_inc_validation_failure(void)
 {
     if (s_ctx && s_ctx->stats_mutex) {
-        xSemaphoreTake(s_ctx->stats_mutex, portMAX_DELAY);
+        STATS_LOCK();
         s_ctx->stats.validation_failures++;
         xSemaphoreGive(s_ctx->stats_mutex);
     }
@@ -191,7 +204,7 @@ void server_stats_inc_validation_failure(void)
 void server_stats_inc_timeout(void)
 {
     if (s_ctx && s_ctx->stats_mutex) {
-        xSemaphoreTake(s_ctx->stats_mutex, portMAX_DELAY);
+        STATS_LOCK();
         s_ctx->stats.timeout_errors++;
         xSemaphoreGive(s_ctx->stats_mutex);
     }
@@ -200,7 +213,7 @@ void server_stats_inc_timeout(void)
 void server_stats_update_heap(void)
 {
     if (s_ctx && s_ctx->stats_mutex) {
-        xSemaphoreTake(s_ctx->stats_mutex, portMAX_DELAY);
+        STATS_LOCK();
         s_ctx->stats.free_heap_current = esp_get_free_heap_size();
         if (s_ctx->stats.free_heap_current < s_ctx->stats.free_heap_min) {
             s_ctx->stats.free_heap_min = s_ctx->stats.free_heap_current;
@@ -216,7 +229,10 @@ void server_stats_get_copy(server_stats_t *stats)
     }
 
     if (s_ctx->stats_mutex) {
-        xSemaphoreTake(s_ctx->stats_mutex, portMAX_DELAY);
+        if (xSemaphoreTake(s_ctx->stats_mutex, pdMS_TO_TICKS(100)) != pdTRUE) {
+            ESP_LOGW(TAG, "Failed to acquire stats mutex (get_copy)");
+            return;
+        }
         *stats = s_ctx->stats;
         xSemaphoreGive(s_ctx->stats_mutex);
     } else {

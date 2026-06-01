@@ -12,6 +12,8 @@
 #include "freertos/semphr.h"
 #include <string.h>
 
+#define FRAME_MUTEX_TIMEOUT_MS  10  /*!< 帧互斥锁超时 10ms */
+
 static const char *TAG = "RADAR_ADAPT";
 
 // 雷达句柄
@@ -148,7 +150,7 @@ static void convert_ld2460_data(const ld2460_data_t *src, radar_frame_t *dst)
     dst->target_count = src->target_count;
     dst->has_data = true;
     
-    for (int i = 0; i < src->target_count && i < 8; i++) {
+    for (int i = 0; i < src->target_count && i < RADAR_MAX_TARGETS; i++) {
         dst->targets[i].id = i + 1;
         dst->targets[i].x = src->targets[i].x * 0.1f;  // 0.1m → m
         dst->targets[i].y = src->targets[i].y * 0.1f;  // 0.1m → m
@@ -160,7 +162,7 @@ static void convert_ld2460_data(const ld2460_data_t *src, radar_frame_t *dst)
     }
     
     // 清空未使用的目标槽位
-    for (int i = src->target_count; i < 8; i++) {
+    for (int i = src->target_count; i < RADAR_MAX_TARGETS; i++) {
         memset(&dst->targets[i], 0, sizeof(radar_target_t));
         dst->targets[i].valid = false;
     }
@@ -181,7 +183,7 @@ static void convert_ld2450_data(const ld2450_data_t *src, radar_frame_t *dst)
     dst->target_count = src->target_count;
     dst->has_data = true;
     
-    for (int i = 0; i < src->target_count && i < 8; i++) {
+    for (int i = 0; i < src->target_count && i < RADAR_MAX_TARGETS; i++) {
         dst->targets[i].id = i + 1;
         dst->targets[i].x = src->targets[i].x * 0.001f;  // mm → m
         dst->targets[i].y = src->targets[i].y * 0.001f;  // mm → m
@@ -192,7 +194,7 @@ static void convert_ld2450_data(const ld2450_data_t *src, radar_frame_t *dst)
         dst->targets[i].valid = true;
     }
     
-    for (int i = src->target_count; i < 8; i++) {
+    for (int i = src->target_count; i < RADAR_MAX_TARGETS; i++) {
         memset(&dst->targets[i], 0, sizeof(radar_target_t));
         dst->targets[i].valid = false;
     }
@@ -210,7 +212,7 @@ static void convert_ld2452_data(const ld2452_data_t *src, radar_frame_t *dst)
     dst->target_count = src->target_count;
     dst->has_data = true;
     
-    for (int i = 0; i < src->target_count && i < 8; i++) {
+    for (int i = 0; i < src->target_count && i < RADAR_MAX_TARGETS; i++) {
         dst->targets[i].id = i + 1;
         dst->targets[i].x = src->targets[i].x * 0.001f;  // mm → m
         dst->targets[i].y = src->targets[i].y * 0.001f;  // mm → m
@@ -221,7 +223,7 @@ static void convert_ld2452_data(const ld2452_data_t *src, radar_frame_t *dst)
         dst->targets[i].valid = true;
     }
     
-    for (int i = src->target_count; i < 8; i++) {
+    for (int i = src->target_count; i < RADAR_MAX_TARGETS; i++) {
         memset(&dst->targets[i], 0, sizeof(radar_target_t));
         dst->targets[i].valid = false;
     }
@@ -248,7 +250,7 @@ static void convert_ld6002b_data(const ld6002b_data_t *src, radar_frame_t *dst)
     dst->targets[0].confidence = 100;
     dst->targets[0].valid = true;
     
-    for (int i = 1; i < 8; i++) {
+    for (int i = 1; i < RADAR_MAX_TARGETS; i++) {
         memset(&dst->targets[i], 0, sizeof(radar_target_t));
         dst->targets[i].valid = false;
     }
@@ -275,7 +277,7 @@ static void convert_ld6004_data(const ld6004_data_t *src, radar_frame_t *dst)
     dst->targets[0].confidence = 100;
     dst->targets[0].valid = true;
     
-    for (int i = 1; i < 8; i++) {
+    for (int i = 1; i < RADAR_MAX_TARGETS; i++) {
         memset(&dst->targets[i], 0, sizeof(radar_target_t));
         dst->targets[i].valid = false;
     }
@@ -297,7 +299,7 @@ static void radar_event_handler(void *handler_args, esp_event_base_t base,
     radar_data_t *data = (radar_data_t *)event_data;
     
     // 获取互斥锁
-    if (xSemaphoreTake(s_frame_mutex, pdMS_TO_TICKS(10)) != pdTRUE) {
+    if (xSemaphoreTake(s_frame_mutex, pdMS_TO_TICKS(FRAME_MUTEX_TIMEOUT_MS)) != pdTRUE) {
         ESP_LOGW(TAG, "Failed to take mutex, frame dropped");
         s_status.error_count++;
         return;
@@ -322,9 +324,12 @@ static void radar_event_handler(void *handler_args, esp_event_base_t base,
     s_status.frame_count++;
     s_status.last_update_ms = esp_timer_get_time() / 1000;
     
+    uint32_t frame_id = s_frame_counter;
+    int target_count = s_latest_frame.target_count;
+    
     xSemaphoreGive(s_frame_mutex);
     
-    ESP_LOGD(TAG, "Frame %lu: %d targets", s_frame_counter, s_latest_frame.target_count);
+    ESP_LOGD(TAG, "Frame %lu: %d targets", (unsigned long)frame_id, target_count);
 }
 
 /* ============ 公共 API 实现 ============ */
@@ -420,7 +425,7 @@ esp_err_t radar_adapter_get_frame(radar_frame_t *frame)
         return ESP_ERR_INVALID_STATE;
     }
     
-    if (xSemaphoreTake(s_frame_mutex, pdMS_TO_TICKS(10)) != pdTRUE) {
+    if (xSemaphoreTake(s_frame_mutex, pdMS_TO_TICKS(FRAME_MUTEX_TIMEOUT_MS)) != pdTRUE) {
         return ESP_ERR_TIMEOUT;
     }
     

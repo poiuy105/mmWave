@@ -41,11 +41,13 @@ typedef struct {
 /**
  * @brief 统一的雷达帧数据
  */
+#define RADAR_MAX_TARGETS 8  /*!< 最大目标数量 */
+
 typedef struct {
     uint32_t frame_id;                    /*!< 帧序号 */
     uint64_t timestamp_ms;                /*!< 时间戳 (毫秒) */
     uint8_t target_count;                 /*!< 有效目标数量 */
-    radar_target_t targets[8];            /*!< 目标数组 */
+    radar_target_t targets[RADAR_MAX_TARGETS];  /*!< 目标数组 */
     bool has_data;                        /*!< 是否有数据 */
 } radar_frame_t;
 

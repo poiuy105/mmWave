@@ -50,10 +50,8 @@ static esp_err_t api_health_handler(httpd_req_t *req)
     cJSON_AddNumberToObject(root, "free_heap", free_heap);
     cJSON_AddNumberToObject(root, "min_free_heap", min_free);
 
-    // Update min heap in context
-    if (ctx && free_heap < ctx->stats.free_heap_min) {
-        ctx->stats.free_heap_min = free_heap;
-    }
+    // Update min heap in context (use stats API to avoid direct access)
+    server_stats_update_heap();
 
     // HTTP statistics (from thread-safe copy)
     cJSON *http = cJSON_CreateObject();
