@@ -86,18 +86,6 @@ static uint8_t tf_cksum(const uint8_t *data, size_t len)
     return ~ret;
 }
 
-/* ============ Helper: Header checksum (rebuild header bytes then XOR-NOT) ============ */
-static uint8_t tf_cksum_header(struct ld6004_context *ctx)
-{
-    uint8_t hdr[LD6004_TF_HEADER_LEN];
-    int pos = 0;
-    hdr[pos++] = 0x55; /* SOF */
-    write_u16_be(hdr + pos, ctx->frame_id); pos += 2;
-    write_u16_be(hdr + pos, ctx->frame_len); pos += 2;
-    write_u16_be(hdr + pos, ctx->frame_type); pos += 2;
-    return tf_cksum(hdr, LD6004_TF_HEADER_LEN);
-}
-
 /* ============ Helper: Alternative checksum (sum then & 0xFF) ============ */
 static uint8_t sum_cksum(const uint8_t *data, size_t len)
 {
@@ -138,6 +126,18 @@ static void write_u16_be(uint8_t *buf, uint16_t val)
 {
     buf[0] = (val >> 8) & 0xFF;
     buf[1] = val & 0xFF;
+}
+
+/* ============ Helper: Header checksum (rebuild header bytes then XOR-NOT) ============ */
+static uint8_t tf_cksum_header(struct ld6004_context *ctx)
+{
+    uint8_t hdr[LD6004_TF_HEADER_LEN];
+    int pos = 0;
+    hdr[pos++] = 0x55; /* SOF */
+    write_u16_be(hdr + pos, ctx->frame_id); pos += 2;
+    write_u16_be(hdr + pos, ctx->frame_len); pos += 2;
+    write_u16_be(hdr + pos, ctx->frame_type); pos += 2;
+    return tf_cksum(hdr, LD6004_TF_HEADER_LEN);
 }
 
 /* ============ Helper: write int32 little-endian ============ */
