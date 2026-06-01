@@ -147,7 +147,7 @@ void server_config_get_defaults(server_config_t *config)
 
     // HTTP é»˜è®¤å€?    config->http_enabled = true;
     config->http_port = 80;
-    config->http_stack_size = 12288;
+    config->http_stack_size = 8192;   // HTTP server 任务栈大小（无 TLS 场景足够）
     config->http_max_uri_handlers = 32;
     config->http_max_open_sockets = 12;  // 增加以支持更多并发连接
     config->http_recv_timeout = 10;      // 10s，加快 socket 回收

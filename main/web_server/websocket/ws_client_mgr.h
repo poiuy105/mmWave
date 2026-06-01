@@ -49,7 +49,7 @@ typedef struct {
 /**
  * @brief 带数据的消息（用于队列传递）
  */
-#define WS_MSG_PAYLOAD_MAX 512
+#define WS_MSG_PAYLOAD_MAX 256  // 缩减以节省 heap（雷达 JSON 通常 <200B）
 typedef struct {
     httpd_ws_type_t type;
     size_t len;

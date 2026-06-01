@@ -22,7 +22,7 @@ esp_err_t fatfs_init(void)
 
     const esp_vfs_fat_mount_config_t mount_config = {
         .format_if_mount_failed = true,
-        .max_files = 16,
+        .max_files = 8,  // 缩减以节省 heap（实际同时打开文件很少超过 4 个）
         .allocation_unit_size = 4 * 1024
     };
 
