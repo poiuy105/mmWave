@@ -231,10 +231,36 @@ static void run_state_connecting(void)
 {
     ESP_LOGI(TAG, ">>> Entering CONNECTING state (connecting MQTT)");
 
+    // 检查是否已经在连接中或已连接
+    if (app_mqtt_is_connected()) {
+        ESP_LOGW(TAG, "MQTT already connected, skip to RUNNING");
+        state_machine_trigger_event(EVENT_MQTT_CONNECTED);
+        return;
+    }
+
+    static bool s_mqtt_connecting = false;
+    if (s_mqtt_connecting) {
+        ESP_LOGW(TAG, "MQTT connection in progress, waiting...");
+        // 等待连接完成
+        uint32_t start = xTaskGetTickCount() * portTICK_PERIOD_MS;
+        while (!app_mqtt_is_connected()) {
+            if ((xTaskGetTickCount() * portTICK_PERIOD_MS) - start > MQTT_CONNECT_TIMEOUT_MS) {
+                ESP_LOGW(TAG, "MQTT wait timeout");
+                break;
+            }
+            vTaskDelay(pdMS_TO_TICKS(100));
+        }
+        if (app_mqtt_is_connected()) {
+            state_machine_trigger_event(EVENT_MQTT_CONNECTED);
+        }
+        return;
+    }
+    s_mqtt_connecting = true;
+
     esp_err_t err = app_mqtt_init();
     if (err != ESP_OK) {
         ESP_LOGE(TAG, "MQTT init failed, skipping MQTT");
-        // 即使 MQTT 失败也进入 RUNNING（雷达功能仍可用）
+        s_mqtt_connecting = false;
         state_machine_trigger_event(EVENT_MQTT_CONNECTED);
         return;
     }
@@ -248,7 +274,7 @@ static void run_state_connecting(void)
     err = app_mqtt_connect(&mqtt_cfg);
     if (err != ESP_OK) {
         ESP_LOGE(TAG, "MQTT connect failed: %s", esp_err_to_name(err));
-        // 即使 MQTT 失败也进入 RUNNING
+        s_mqtt_connecting = false;
         state_machine_trigger_event(EVENT_MQTT_CONNECTED);
         return;
     }
@@ -269,6 +295,7 @@ static void run_state_connecting(void)
         app_mqtt_publish_ha_discovery();
     }
 
+    s_mqtt_connecting = false;
     state_machine_trigger_event(EVENT_MQTT_CONNECTED);
 }
 

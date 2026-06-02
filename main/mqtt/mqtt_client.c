@@ -168,6 +168,12 @@ esp_err_t app_mqtt_connect(const mqtt_config_t *config)
     char *colon = strchr(hostname, ':');
     if (colon) *colon = '\0';
     
+    // Check if already connected
+    if (s_mqtt_state == MQTT_STATE_CONNECTED) {
+        ESP_LOGW(TAG, "MQTT already connected, skipping new connection");
+        return ESP_OK;
+    }
+    
     // Configure MQTT client
     esp_mqtt_client_config_t mqtt_cfg = {
         .broker = {
@@ -176,6 +182,7 @@ esp_err_t app_mqtt_connect(const mqtt_config_t *config)
             .address.transport = MQTT_TRANSPORT_OVER_TCP,
         },
         .credentials = {
+            .client_id = s_node_id,  // 显式设置Client ID，避免重复
             .username = config->username,
             .authentication.password = config->password,
         },
@@ -189,7 +196,7 @@ esp_err_t app_mqtt_connect(const mqtt_config_t *config)
             .keepalive = 30,
         },
         .network = {
-            .reconnect_timeout_ms = 1000,
+            .reconnect_timeout_ms = 5000,  // 增加到5秒，避免频繁重连
             .disable_auto_reconnect = false,
         },
     };
