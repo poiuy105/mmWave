@@ -1,11 +1,15 @@
 #include <string.h>
 #include "app_mqtt.h"
 #include "drivers/gpio_control.h"
+#include "utils/system_info.h"
 #include "esp_log.h"
 #include "mqtt_client.h"
 #include "freertos/FreeRTOS.h"
 #include "freertos/semphr.h"
 #include "esp_mac.h"
+#include "esp_netif.h"
+#include "esp_wifi.h"
+#include "esp_timer.h"
 #include "cJSON.h"
 
 static const char *TAG = "mqtt_client";
@@ -347,10 +351,17 @@ esp_err_t app_mqtt_publish_system_info(void)
         return ESP_ERR_INVALID_STATE;
     }
     
+    system_info_t info;
+    system_info_get(&info);
+    
     cJSON *root = cJSON_CreateObject();
-    cJSON_AddNumberToObject(root, "free_heap", esp_get_free_heap_size());
-    cJSON_AddNumberToObject(root, "min_free_heap", esp_get_minimum_free_heap_size());
-    cJSON_AddNumberToObject(root, "uptime", xTaskGetTickCount() / configTICK_RATE_HZ);
+    cJSON_AddNumberToObject(root, "free_heap", info.free_heap);
+    cJSON_AddNumberToObject(root, "min_free_heap", info.min_free_heap);
+    cJSON_AddNumberToObject(root, "uptime_seconds", info.uptime_seconds);
+    cJSON_AddNumberToObject(root, "wifi_rssi", info.wifi_rssi);
+    cJSON_AddStringToObject(root, "wifi_ip", info.wifi_ip);
+    cJSON_AddBoolToObject(root, "wifi_connected", info.wifi_connected);
+    cJSON_AddNumberToObject(root, "wifi_channel", info.wifi_channel);
     
     char *json_str = cJSON_PrintUnformatted(root);
     cJSON_Delete(root);
@@ -478,8 +489,98 @@ esp_err_t app_mqtt_publish_ha_discovery(void)
     // Publish initial LED state
     app_mqtt_publish_led_state(gpio_control_get_led());
     
-    ESP_LOGI(TAG, "HA discovery published (including LED switch)");
-    return err;
+    // System info state topic
+    char system_state_topic[64];
+    snprintf(system_state_topic, sizeof(system_state_topic), "%s/system/state", s_node_id);
+    
+    // Sensor: Free Heap
+    snprintf(config_topic, sizeof(config_topic),
+             "homeassistant/sensor/%s/free_heap/config", s_node_id);
+    config = cJSON_CreateObject();
+    cJSON_AddStringToObject(config, "name", "Free Heap");
+    cJSON_AddStringToObject(config, "state_topic", system_state_topic);
+    cJSON_AddStringToObject(config, "value_template", "{{ value_json.free_heap }}");
+    cJSON_AddStringToObject(config, "unit_of_measurement", "B");
+    cJSON_AddStringToObject(config, "device_class", "data_size");
+    cJSON_AddStringToObject(config, "state_class", "measurement");
+    cJSON_AddStringToObject(config, "unique_id", "free_heap");
+    device = cJSON_CreateObject();
+    cJSON_AddStringToObject(device, "identifiers", s_node_id);
+    cJSON_AddStringToObject(device, "name", "LD Radar Monitor");
+    cJSON_AddItemToObject(config, "device", device);
+    json_str = cJSON_PrintUnformatted(config);
+    cJSON_Delete(config);
+    if (json_str) {
+        app_mqtt_publish(config_topic, json_str, 0, 1, true);
+        free(json_str);
+    }
+    
+    // Sensor: Uptime
+    snprintf(config_topic, sizeof(config_topic),
+             "homeassistant/sensor/%s/uptime/config", s_node_id);
+    config = cJSON_CreateObject();
+    cJSON_AddStringToObject(config, "name", "Uptime");
+    cJSON_AddStringToObject(config, "state_topic", system_state_topic);
+    cJSON_AddStringToObject(config, "value_template", "{{ value_json.uptime_seconds }}");
+    cJSON_AddStringToObject(config, "unit_of_measurement", "s");
+    cJSON_AddStringToObject(config, "device_class", "duration");
+    cJSON_AddStringToObject(config, "state_class", "total_increasing");
+    cJSON_AddStringToObject(config, "unique_id", "uptime");
+    device = cJSON_CreateObject();
+    cJSON_AddStringToObject(device, "identifiers", s_node_id);
+    cJSON_AddStringToObject(device, "name", "LD Radar Monitor");
+    cJSON_AddItemToObject(config, "device", device);
+    json_str = cJSON_PrintUnformatted(config);
+    cJSON_Delete(config);
+    if (json_str) {
+        app_mqtt_publish(config_topic, json_str, 0, 1, true);
+        free(json_str);
+    }
+    
+    // Sensor: WiFi RSSI
+    snprintf(config_topic, sizeof(config_topic),
+             "homeassistant/sensor/%s/wifi_rssi/config", s_node_id);
+    config = cJSON_CreateObject();
+    cJSON_AddStringToObject(config, "name", "WiFi RSSI");
+    cJSON_AddStringToObject(config, "state_topic", system_state_topic);
+    cJSON_AddStringToObject(config, "value_template", "{{ value_json.wifi_rssi }}");
+    cJSON_AddStringToObject(config, "unit_of_measurement", "dBm");
+    cJSON_AddStringToObject(config, "device_class", "signal_strength");
+    cJSON_AddStringToObject(config, "state_class", "measurement");
+    cJSON_AddStringToObject(config, "unique_id", "wifi_rssi");
+    device = cJSON_CreateObject();
+    cJSON_AddStringToObject(device, "identifiers", s_node_id);
+    cJSON_AddStringToObject(device, "name", "LD Radar Monitor");
+    cJSON_AddItemToObject(config, "device", device);
+    json_str = cJSON_PrintUnformatted(config);
+    cJSON_Delete(config);
+    if (json_str) {
+        app_mqtt_publish(config_topic, json_str, 0, 1, true);
+        free(json_str);
+    }
+    
+    // Sensor: WiFi IP
+    snprintf(config_topic, sizeof(config_topic),
+             "homeassistant/sensor/%s/wifi_ip/config", s_node_id);
+    config = cJSON_CreateObject();
+    cJSON_AddStringToObject(config, "name", "WiFi IP");
+    cJSON_AddStringToObject(config, "state_topic", system_state_topic);
+    cJSON_AddStringToObject(config, "value_template", "{{ value_json.wifi_ip }}");
+    cJSON_AddStringToObject(config, "icon", "mdi:ip-network");
+    cJSON_AddStringToObject(config, "unique_id", "wifi_ip");
+    device = cJSON_CreateObject();
+    cJSON_AddStringToObject(device, "identifiers", s_node_id);
+    cJSON_AddStringToObject(device, "name", "LD Radar Monitor");
+    cJSON_AddItemToObject(config, "device", device);
+    json_str = cJSON_PrintUnformatted(config);
+    cJSON_Delete(config);
+    if (json_str) {
+        app_mqtt_publish(config_topic, json_str, 0, 1, true);
+        free(json_str);
+    }
+    
+    ESP_LOGI(TAG, "HA discovery published (LED + System Info sensors)");
+    return ESP_OK;
 }
 
 esp_err_t app_mqtt_publish_led_state(bool on)

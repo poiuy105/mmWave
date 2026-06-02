@@ -24,6 +24,7 @@
 #include "wifi/softap.h"
 #include "core/state_machine.h"
 #include "drivers/gpio_control.h"
+#include "utils/system_info.h"
 #include "web_server/fatfs_init.h"
 #include "web_server/http_server.h"
 #include "web_server/file_manager.h"
@@ -231,6 +232,10 @@ static void run_state_config(void)
 static bool s_mqtt_connecting = false;
 static uint32_t s_mqtt_connect_start_time = 0;
 
+// 运行状态跟踪
+static bool s_running_initialized = false;
+static uint32_t s_system_info_report_tick = 0;
+
 static void run_state_connecting(void)
 {
     ESP_LOGI(TAG, ">>> Entering CONNECTING state (connecting MQTT)");
@@ -303,6 +308,9 @@ static void run_state_running(void)
     } else {
         ESP_LOGW(TAG, "GPIO control init failed: %s", esp_err_to_name(gpio_err));
     }
+
+    // 初始化系统信息监控
+    system_info_init();
 
     // 启动主 HTTP 服务器（雷达 WebSocket + REST API）
     ESP_ERROR_CHECK(http_server_start());
@@ -391,7 +399,22 @@ static void app_task(void *pvParameters)
                 break;
 
             case STATE_RUNNING:
-                run_state_running();
+                // 首次进入RUNNING状态，执行初始化
+                if (!s_running_initialized) {
+                    run_state_running();
+                    s_running_initialized = true;
+                    s_system_info_report_tick = 0;
+                }
+                
+                // 定时发布系统信息（每30秒）
+                if (app_mqtt_is_connected()) {
+                    s_system_info_report_tick++;
+                    if (s_system_info_report_tick >= 30) {
+                        s_system_info_report_tick = 0;
+                        app_mqtt_publish_system_info();
+                    }
+                }
+                vTaskDelay(pdMS_TO_TICKS(1000));
                 break;
 
             case STATE_ERROR:

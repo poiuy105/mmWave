@@ -16,6 +16,8 @@ set(srcs
     "core/state_machine.c"
     # drivers 模块（GPIO 控制）
     "drivers/gpio_control.c"
+    # utils 模块（系统信息）
+    "utils/system_info.c"
     "radar_adapter/radar_adapter.c"
     "radar_test/radar_test.c"
     # web_server 模块
@@ -47,6 +49,7 @@ set(includes
     "wifi"
     "core"
     "drivers"
+    "utils"
     "radar_test"
     "web_server"
     "web_server/core"
