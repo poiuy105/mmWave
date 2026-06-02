@@ -129,7 +129,7 @@ esp_err_t radar_broadcast_start(server_context_t *ctx)
     s_running = true;
 
     // Use hardcoded values to avoid uninitialized config fields
-    uint32_t stack_size = 2048;  // 缩减以节省 heap（广播任务工作量小）
+    uint32_t stack_size = 8192;  // 增加栈大小，cJSON操作需要大量栈空间
     uint8_t priority = 5;  // Low priority, below HTTP server (12) and WiFi (23)
 
     BaseType_t ret = xTaskCreate(
