@@ -16,6 +16,11 @@ typedef struct {
 } system_info_t;
 
 /**
+ * @brief 初始化系统信息模块
+ */
+void system_info_init(void);
+
+/**
  * @brief 获取系统信息
  */
 void system_info_get(system_info_t *info);
