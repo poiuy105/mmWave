@@ -20,6 +20,8 @@ set(srcs
     "utils/system_info.c"
     "radar_adapter/radar_adapter.c"
     "radar_test/radar_test.c"
+    # zone_detector 模块（区域检测配置）
+    "zone_detector/zone_config.c"
     # web_server 模块
     "web_server/core/server_context.c"
     "web_server/dns_server.c"
@@ -51,6 +53,7 @@ set(includes
     "drivers"
     "utils"
     "radar_test"
+    "zone_detector"
     "web_server"
     "web_server/core"
     "web_server/handlers"
