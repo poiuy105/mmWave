@@ -14,6 +14,8 @@ set(srcs
     "wifi/softap.c"
     # core 模块（状态机）
     "core/state_machine.c"
+    # drivers 模块（GPIO 控制）
+    "drivers/gpio_control.c"
     "radar_adapter/radar_adapter.c"
     "radar_test/radar_test.c"
     # web_server 模块
@@ -44,6 +46,7 @@ set(includes
     "mqtt"
     "wifi"
     "core"
+    "drivers"
     "radar_test"
     "web_server"
     "web_server/core"

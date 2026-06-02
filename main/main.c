@@ -23,6 +23,7 @@
 #include "wifi/wifi_manager.h"
 #include "wifi/softap.h"
 #include "core/state_machine.h"
+#include "drivers/gpio_control.h"
 #include "web_server/fatfs_init.h"
 #include "web_server/http_server.h"
 #include "web_server/file_manager.h"
@@ -276,6 +277,14 @@ static void run_state_connecting(void)
 static void run_state_running(void)
 {
     ESP_LOGI(TAG, ">>> Entering RUNNING state");
+
+    // 初始化 GPIO 控制（LED）
+    esp_err_t gpio_err = gpio_control_init();
+    if (gpio_err == ESP_OK) {
+        ESP_LOGI(TAG, "GPIO control initialized");
+    } else {
+        ESP_LOGW(TAG, "GPIO control init failed: %s", esp_err_to_name(gpio_err));
+    }
 
     // 启动主 HTTP 服务器（雷达 WebSocket + REST API）
     ESP_ERROR_CHECK(http_server_start());

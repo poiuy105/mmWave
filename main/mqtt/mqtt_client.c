@@ -1,5 +1,6 @@
 #include <string.h>
 #include "app_mqtt.h"
+#include "drivers/gpio_control.h"
 #include "esp_log.h"
 #include "mqtt_client.h"
 #include "freertos/FreeRTOS.h"
@@ -17,6 +18,10 @@ static SemaphoreHandle_t s_mqtt_mutex = NULL;
 static char s_node_id[32] = {0};
 static char s_lwt_topic[64] = {0};
 
+// LED 控制 Topic
+static char s_led_state_topic[64] = {0};
+static char s_led_cmd_topic[64] = {0};
+
 // Helper macros for mutex
 #define MQTT_LOCK()   do { if (s_mqtt_mutex) xSemaphoreTake(s_mqtt_mutex, pdMS_TO_TICKS(100)); } while(0)
 #define MQTT_UNLOCK() do { if (s_mqtt_mutex) xSemaphoreGive(s_mqtt_mutex); } while(0)
@@ -32,8 +37,13 @@ static void init_node_id(void)
     snprintf(s_node_id, sizeof(s_node_id), "ldradar_%02x%02x%02x%02x",
              mac[2], mac[3], mac[4], mac[5]);
     snprintf(s_lwt_topic, sizeof(s_lwt_topic), "%s/status", s_node_id);
+    snprintf(s_led_state_topic, sizeof(s_led_state_topic), "%s/led/state", s_node_id);
+    snprintf(s_led_cmd_topic, sizeof(s_led_cmd_topic), "%s/led/set", s_node_id);
     
-    ESP_LOGI(TAG, "Node ID: %s, LWT topic: %s", s_node_id, s_lwt_topic);
+    ESP_LOGI(TAG, "Node ID: %s", s_node_id);
+    ESP_LOGI(TAG, "LWT topic: %s", s_lwt_topic);
+    ESP_LOGI(TAG, "LED state topic: %s", s_led_state_topic);
+    ESP_LOGI(TAG, "LED cmd topic: %s", s_led_cmd_topic);
 }
 
 // MQTT event handler
@@ -51,6 +61,11 @@ static void mqtt_event_handler(void *handler_args, esp_event_base_t base,
             
             // Publish online status
             app_mqtt_publish_status("online");
+            
+            // Subscribe to LED control topic
+            init_node_id();
+            esp_mqtt_client_subscribe(s_mqtt_client, s_led_cmd_topic, 1);
+            ESP_LOGI(TAG, "Subscribed to LED command topic: %s", s_led_cmd_topic);
             break;
             
         case MQTT_EVENT_DISCONNECTED:
@@ -73,6 +88,32 @@ static void mqtt_event_handler(void *handler_args, esp_event_base_t base,
             MQTT_LOCK();
             s_mqtt_state = MQTT_STATE_ERROR;
             MQTT_UNLOCK();
+            break;
+            
+        case MQTT_EVENT_DATA:
+            // Handle incoming MQTT message
+            {
+                char topic[128] = {0};
+                char data[32] = {0};
+                
+                if (event->topic_len < sizeof(topic) && event->data_len < sizeof(data)) {
+                    strncpy(topic, event->topic, event->topic_len);
+                    strncpy(data, event->data, event->data_len);
+                    
+                    ESP_LOGI(TAG, "MQTT data received: topic=%s, data=%s", topic, data);
+                    
+                    // Check if it's LED command
+                    if (strcmp(topic, s_led_cmd_topic) == 0) {
+                        if (strcasecmp(data, "ON") == 0) {
+                            gpio_control_set_led(true);
+                            app_mqtt_publish_led_state(true);
+                        } else if (strcasecmp(data, "OFF") == 0) {
+                            gpio_control_set_led(false);
+                            app_mqtt_publish_led_state(false);
+                        }
+                    }
+                }
+            }
             break;
             
         default:
@@ -398,6 +439,50 @@ esp_err_t app_mqtt_publish_ha_discovery(void)
     err = app_mqtt_publish(config_topic, json_str, 0, 1, true);
     free(json_str);
     
-    ESP_LOGI(TAG, "HA discovery published");
+    // Switch: LED control
+    snprintf(config_topic, sizeof(config_topic),
+             "homeassistant/switch/%s/led/config", s_node_id);
+    
+    config = cJSON_CreateObject();
+    cJSON_AddStringToObject(config, "name", "LED");
+    cJSON_AddStringToObject(config, "state_topic", s_led_state_topic);
+    cJSON_AddStringToObject(config, "command_topic", s_led_cmd_topic);
+    cJSON_AddStringToObject(config, "payload_on", "ON");
+    cJSON_AddStringToObject(config, "payload_off", "OFF");
+    cJSON_AddStringToObject(config, "state_on", "ON");
+    cJSON_AddStringToObject(config, "state_off", "OFF");
+    cJSON_AddStringToObject(config, "unique_id", s_node_id);
+    
+    device = cJSON_CreateObject();
+    cJSON_AddStringToObject(device, "identifiers", s_node_id);
+    cJSON_AddStringToObject(device, "name", "LD Radar Monitor");
+    cJSON_AddItemToObject(config, "device", device);
+    
+    json_str = cJSON_PrintUnformatted(config);
+    cJSON_Delete(config);
+    
+    if (json_str == NULL) {
+        return ESP_ERR_NO_MEM;
+    }
+    
+    err = app_mqtt_publish(config_topic, json_str, 0, 1, true);
+    free(json_str);
+    
+    // Publish initial LED state
+    app_mqtt_publish_led_state(gpio_control_get_led());
+    
+    ESP_LOGI(TAG, "HA discovery published (including LED switch)");
     return err;
+}
+
+esp_err_t app_mqtt_publish_led_state(bool on)
+{
+    if (!app_mqtt_is_connected()) {
+        return ESP_ERR_INVALID_STATE;
+    }
+    
+    const char *state = on ? "ON" : "OFF";
+    ESP_LOGI(TAG, "Publishing LED state: %s", state);
+    
+    return app_mqtt_publish(s_led_state_topic, state, 0, 1, true);
 }

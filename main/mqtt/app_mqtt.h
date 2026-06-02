@@ -41,4 +41,7 @@ esp_err_t app_mqtt_publish_status(const char *status);
 // ============ Home Assistant 发现 ============
 esp_err_t app_mqtt_publish_ha_discovery(void);
 
+// ============ LED 控制 ============
+esp_err_t app_mqtt_publish_led_state(bool on);
+
 #endif
