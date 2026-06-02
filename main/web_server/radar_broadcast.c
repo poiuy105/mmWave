@@ -11,6 +11,7 @@
 #include "radar_adapter/radar_adapter.h"
 #include "websocket/ws_server.h"
 #include "mqtt/app_mqtt.h"
+#include "zone_detector/zone_detector.h"
 #include "esp_log.h"
 #include "esp_timer.h"
 #include "cJSON.h"
@@ -61,6 +62,12 @@ static char* build_radar_json(const radar_frame_t *frame, uint32_t frame_id)
         cJSON_AddItemToObject(root, "targets", targets);
     }
 
+    // 添加区域检测状态
+    cJSON *zones_json = zone_detector_get_status_json();
+    if (zones_json) {
+        cJSON_AddItemToObject(root, "zones", zones_json);
+    }
+
     char *json = cJSON_PrintUnformatted(root);
     cJSON_Delete(root);
     return json;
@@ -78,11 +85,17 @@ static void radar_broadcast_task(void *arg)
     // Use hardcoded interval to avoid uninitialized config
     ESP_LOGI(TAG, "Broadcast task started, interval=%lums", (unsigned long)broadcast_interval_ms);
 
+    // 初始化区域检测器
+    zone_detector_init();
+
     while (s_running) {
         radar_frame_t frame;
 
         // 从 radar_adapter 获取最新帧
         if (radar_adapter_get_frame(&frame) == ESP_OK) {
+            // 处理区域检测
+            zone_detector_process_frame(&frame);
+
             // 即使 target_count=0 也广播（让用户知道雷达工作正常）
             char *json = build_radar_json(&frame, frame_counter++);
 

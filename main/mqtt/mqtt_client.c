@@ -2,6 +2,7 @@
 #include "app_mqtt.h"
 #include "drivers/gpio_control.h"
 #include "utils/system_info.h"
+#include "zone_detector/zone_config.h"
 #include "esp_log.h"
 #include "mqtt_client.h"
 #include "freertos/FreeRTOS.h"
@@ -569,7 +570,65 @@ esp_err_t app_mqtt_publish_ha_discovery(void)
     cJSON_Delete(config);
     if (json_str) { app_mqtt_publish(config_topic, json_str, 0, 1, true); free(json_str); }
     
-    ESP_LOGI(TAG, "HA discovery published with availability (7 entities)");
+    // ---- Zone HA Discovery ----
+    zone_config_list_t zone_list;
+    if (zone_config_get_all(&zone_list) == ESP_OK) {
+        for (int i = 0; i < zone_list.count; i++) {
+            if (!zone_list.zones[i].enabled) continue;
+
+            uint8_t zone_id = zone_list.zones[i].id;
+            char zone_topic[64];
+            char unique_id[64];
+
+            // binary_sensor: zone triggered state
+            snprintf(config_topic, sizeof(config_topic),
+                     "homeassistant/binary_sensor/%s/zone_%d/config", s_node_id, zone_id);
+            snprintf(zone_topic, sizeof(zone_topic), "%s/zone/%d/state", s_node_id, zone_id);
+            snprintf(unique_id, sizeof(unique_id), "zone_triggered_%d", zone_id);
+            config = cJSON_CreateObject();
+            cJSON_AddStringToObject(config, "name", zone_list.zones[i].name);
+            cJSON_AddStringToObject(config, "state_topic", zone_topic);
+            cJSON_AddStringToObject(config, "payload_on", "ON");
+            cJSON_AddStringToObject(config, "payload_off", "OFF");
+            cJSON_AddStringToObject(config, "device_class", "motion");
+            cJSON_AddStringToObject(config, "unique_id", unique_id);
+            cJSON_AddStringToObject(config, "availability_topic", avail_topic);
+            cJSON_AddStringToObject(config, "payload_available", "online");
+            cJSON_AddStringToObject(config, "payload_not_available", "offline");
+            device = cJSON_CreateObject();
+            cJSON_AddStringToObject(device, "identifiers", s_node_id);
+            cJSON_AddStringToObject(device, "name", "LD Radar Monitor");
+            cJSON_AddItemToObject(config, "device", device);
+            json_str = cJSON_PrintUnformatted(config);
+            cJSON_Delete(config);
+            if (json_str) { app_mqtt_publish(config_topic, json_str, 0, 1, true); free(json_str); }
+
+            // sensor: zone target count
+            snprintf(config_topic, sizeof(config_topic),
+                     "homeassistant/sensor/%s/zone_%d_count/config", s_node_id, zone_id);
+            snprintf(zone_topic, sizeof(zone_topic), "%s/zone/%d/count", s_node_id, zone_id);
+            snprintf(unique_id, sizeof(unique_id), "zone_count_%d", zone_id);
+            char zone_count_name[64];
+            snprintf(zone_count_name, sizeof(zone_count_name), "Zone %d Count", zone_id);
+            config = cJSON_CreateObject();
+            cJSON_AddStringToObject(config, "name", zone_count_name);
+            cJSON_AddStringToObject(config, "state_topic", zone_topic);
+            cJSON_AddStringToObject(config, "unit_of_measurement", "targets");
+            cJSON_AddStringToObject(config, "unique_id", unique_id);
+            cJSON_AddStringToObject(config, "availability_topic", avail_topic);
+            cJSON_AddStringToObject(config, "payload_available", "online");
+            cJSON_AddStringToObject(config, "payload_not_available", "offline");
+            device = cJSON_CreateObject();
+            cJSON_AddStringToObject(device, "identifiers", s_node_id);
+            cJSON_AddStringToObject(device, "name", "LD Radar Monitor");
+            cJSON_AddItemToObject(config, "device", device);
+            json_str = cJSON_PrintUnformatted(config);
+            cJSON_Delete(config);
+            if (json_str) { app_mqtt_publish(config_topic, json_str, 0, 1, true); free(json_str); }
+        }
+    }
+
+    ESP_LOGI(TAG, "HA discovery published with availability (7 entities + zones)");
     return ESP_OK;
 }
 
@@ -583,4 +642,36 @@ esp_err_t app_mqtt_publish_led_state(bool on)
     ESP_LOGI(TAG, "Publishing LED state: %s", state);
     
     return app_mqtt_publish(s_led_state_topic, state, 0, 1, true);
+}
+
+esp_err_t app_mqtt_publish_zone_status(void)
+{
+    if (!app_mqtt_is_connected()) {
+        return ESP_ERR_INVALID_STATE;
+    }
+
+    zone_config_list_t zone_list;
+    if (zone_config_get_all(&zone_list) != ESP_OK) {
+        return ESP_ERR_NOT_FOUND;
+    }
+
+    for (int i = 0; i < zone_list.count; i++) {
+        if (!zone_list.zones[i].enabled) continue;
+
+        uint8_t zone_id = zone_list.zones[i].id;
+        char topic[64];
+        char payload[16];
+
+        // Publish zone triggered state
+        snprintf(topic, sizeof(topic), "%s/zone/%d/state", s_node_id, zone_id);
+        const char *state_str = zone_list.zones[i].triggered ? "ON" : "OFF";
+        app_mqtt_publish(topic, state_str, 0, 1, true);
+
+        // Publish zone target count
+        snprintf(topic, sizeof(topic), "%s/zone/%d/count", s_node_id, zone_id);
+        snprintf(payload, sizeof(payload), "%d", zone_list.zones[i].target_count);
+        app_mqtt_publish(topic, payload, 0, 1, true);
+    }
+
+    return ESP_OK;
 }
