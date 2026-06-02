@@ -246,15 +246,18 @@ static void run_state_connecting(void)
     // 检查是否正在连接中
     if (s_mqtt_connecting) {
         uint32_t elapsed = (xTaskGetTickCount() * portTICK_PERIOD_MS) - s_mqtt_connect_start_time;
-        ESP_LOGW(TAG, "MQTT connection in progress (%lu ms)...", elapsed);
         
         // 检查是否超时
         if (elapsed > MQTT_CONNECT_TIMEOUT_MS) {
-            ESP_LOGW(TAG, "MQTT connection timeout, giving up");
+            ESP_LOGW(TAG, "MQTT connection timeout (%lu ms), entering RUNNING", elapsed);
             s_mqtt_connecting = false;
             state_machine_trigger_event(EVENT_MQTT_CONNECTED); // 超时也进入RUNNING
+            return;
         }
-        return; // 不重复发起连接，等待回调或超时
+        
+        // 延时等待，避免 tight loop
+        vTaskDelay(pdMS_TO_TICKS(1000));
+        return;
     }
 
     // 发起新连接

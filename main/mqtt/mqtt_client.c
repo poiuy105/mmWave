@@ -13,6 +13,7 @@ static const char *TAG = "mqtt_client";
 static esp_mqtt_client_handle_t s_mqtt_client = NULL;
 static mqtt_state_t s_mqtt_state = MQTT_STATE_DISCONNECTED;
 static SemaphoreHandle_t s_mqtt_mutex = NULL;
+static bool s_mqtt_initialized = false;  // 一次性初始化标志
 
 // Node ID (MAC-based)
 static char s_node_id[32] = {0};
@@ -146,19 +147,14 @@ esp_err_t app_mqtt_connect(const mqtt_config_t *config)
         return ESP_ERR_INVALID_ARG;
     }
     
-    // Check if already connected - 最高优先级检查
-    if (s_mqtt_state == MQTT_STATE_CONNECTED && s_mqtt_client != NULL) {
-        ESP_LOGI(TAG, "MQTT already connected, skip");
+    // 一次性初始化：如果已经创建过客户端，后续调用全部 no-op
+    // ESP-MQTT 库内部有自动重连机制，不需要应用层重复创建连接
+    if (s_mqtt_initialized) {
+        ESP_LOGI(TAG, "MQTT client already initialized (state=%d), relying on auto-reconnect", s_mqtt_state);
         return ESP_OK;
     }
     
-    // If client exists but not connected, destroy it first
-    if (s_mqtt_client != NULL) {
-        ESP_LOGW(TAG, "MQTT client exists but not connected, destroying...");
-        esp_mqtt_client_destroy(s_mqtt_client);
-        s_mqtt_client = NULL;
-        s_mqtt_state = MQTT_STATE_DISCONNECTED;
-    }
+    s_mqtt_initialized = true;
     
     ESP_LOGI(TAG, "Connecting to MQTT: %s:%d", config->uri, config->port);
     
