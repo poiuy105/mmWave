@@ -399,68 +399,63 @@ esp_err_t app_mqtt_publish_ha_discovery(void)
         return ESP_ERR_INVALID_STATE;
     }
     
-    // HA discovery for radar sensor
     char config_topic[128];
     char state_topic[64];
+    char *json_str;
+    cJSON *config;
+    cJSON *device;
+    esp_err_t err = ESP_OK;
+    
+    // Availability topic (所有实体共用)
+    // LWT: 设备断电时 Broker 自动发布 "offline" 到此 topic
+    // 连接时: 主动发布 "online"
+    const char *avail_topic = s_lwt_topic;
     
     snprintf(state_topic, sizeof(state_topic), "%s/radar/state", s_node_id);
     
-    // Sensor: target count
+    // ---- Sensor: target count ----
     snprintf(config_topic, sizeof(config_topic), 
              "homeassistant/sensor/%s/target_count/config", s_node_id);
-    
-    cJSON *config = cJSON_CreateObject();
+    config = cJSON_CreateObject();
     cJSON_AddStringToObject(config, "name", "Radar Target Count");
     cJSON_AddStringToObject(config, "state_topic", state_topic);
     cJSON_AddStringToObject(config, "value_template", "{{ value_json.target_count }}");
     cJSON_AddStringToObject(config, "unit_of_measurement", "targets");
     cJSON_AddStringToObject(config, "unique_id", s_node_id);
-    
-    cJSON *device = cJSON_CreateObject();
+    cJSON_AddStringToObject(config, "availability_topic", avail_topic);
+    cJSON_AddStringToObject(config, "payload_available", "online");
+    cJSON_AddStringToObject(config, "payload_not_available", "offline");
+    device = cJSON_CreateObject();
     cJSON_AddStringToObject(device, "identifiers", s_node_id);
     cJSON_AddStringToObject(device, "name", "LD Radar Monitor");
     cJSON_AddStringToObject(device, "manufacturer", "ESP32-C3");
     cJSON_AddItemToObject(config, "device", device);
-    
-    char *json_str = cJSON_PrintUnformatted(config);
+    json_str = cJSON_PrintUnformatted(config);
     cJSON_Delete(config);
+    if (json_str) { err = app_mqtt_publish(config_topic, json_str, 0, 1, true); free(json_str); }
     
-    if (json_str == NULL) {
-        return ESP_ERR_NO_MEM;
-    }
-    
-    esp_err_t err = app_mqtt_publish(config_topic, json_str, 0, 1, true);
-    free(json_str);
-    
-    // Binary sensor: presence detection
+    // ---- Binary sensor: presence ----
     snprintf(config_topic, sizeof(config_topic),
              "homeassistant/binary_sensor/%s/presence/config", s_node_id);
-    
     config = cJSON_CreateObject();
     cJSON_AddStringToObject(config, "name", "Radar Presence");
     cJSON_AddStringToObject(config, "state_topic", state_topic);
     cJSON_AddStringToObject(config, "value_template", "{{ 'ON' if value_json.target_count > 0 else 'OFF' }}");
     cJSON_AddStringToObject(config, "unique_id", s_node_id);
-    
+    cJSON_AddStringToObject(config, "availability_topic", avail_topic);
+    cJSON_AddStringToObject(config, "payload_available", "online");
+    cJSON_AddStringToObject(config, "payload_not_available", "offline");
     device = cJSON_CreateObject();
     cJSON_AddStringToObject(device, "identifiers", s_node_id);
     cJSON_AddStringToObject(device, "name", "LD Radar Monitor");
     cJSON_AddItemToObject(config, "device", device);
-    
     json_str = cJSON_PrintUnformatted(config);
     cJSON_Delete(config);
+    if (json_str) { err = app_mqtt_publish(config_topic, json_str, 0, 1, true); free(json_str); }
     
-    if (json_str == NULL) {
-        return ESP_ERR_NO_MEM;
-    }
-    
-    err = app_mqtt_publish(config_topic, json_str, 0, 1, true);
-    free(json_str);
-    
-    // Switch: LED control
+    // ---- Switch: LED ----
     snprintf(config_topic, sizeof(config_topic),
              "homeassistant/switch/%s/led/config", s_node_id);
-    
     config = cJSON_CreateObject();
     cJSON_AddStringToObject(config, "name", "LED");
     cJSON_AddStringToObject(config, "state_topic", s_led_state_topic);
@@ -470,21 +465,16 @@ esp_err_t app_mqtt_publish_ha_discovery(void)
     cJSON_AddStringToObject(config, "state_on", "ON");
     cJSON_AddStringToObject(config, "state_off", "OFF");
     cJSON_AddStringToObject(config, "unique_id", s_node_id);
-    
+    cJSON_AddStringToObject(config, "availability_topic", avail_topic);
+    cJSON_AddStringToObject(config, "payload_available", "online");
+    cJSON_AddStringToObject(config, "payload_not_available", "offline");
     device = cJSON_CreateObject();
     cJSON_AddStringToObject(device, "identifiers", s_node_id);
     cJSON_AddStringToObject(device, "name", "LD Radar Monitor");
     cJSON_AddItemToObject(config, "device", device);
-    
     json_str = cJSON_PrintUnformatted(config);
     cJSON_Delete(config);
-    
-    if (json_str == NULL) {
-        return ESP_ERR_NO_MEM;
-    }
-    
-    err = app_mqtt_publish(config_topic, json_str, 0, 1, true);
-    free(json_str);
+    if (json_str) { err = app_mqtt_publish(config_topic, json_str, 0, 1, true); free(json_str); }
     
     // Publish initial LED state
     app_mqtt_publish_led_state(gpio_control_get_led());
@@ -493,7 +483,7 @@ esp_err_t app_mqtt_publish_ha_discovery(void)
     char system_state_topic[64];
     snprintf(system_state_topic, sizeof(system_state_topic), "%s/system/state", s_node_id);
     
-    // Sensor: Free Heap
+    // ---- Sensor: Free Heap ----
     snprintf(config_topic, sizeof(config_topic),
              "homeassistant/sensor/%s/free_heap/config", s_node_id);
     config = cJSON_CreateObject();
@@ -504,18 +494,18 @@ esp_err_t app_mqtt_publish_ha_discovery(void)
     cJSON_AddStringToObject(config, "device_class", "data_size");
     cJSON_AddStringToObject(config, "state_class", "measurement");
     cJSON_AddStringToObject(config, "unique_id", "free_heap");
+    cJSON_AddStringToObject(config, "availability_topic", avail_topic);
+    cJSON_AddStringToObject(config, "payload_available", "online");
+    cJSON_AddStringToObject(config, "payload_not_available", "offline");
     device = cJSON_CreateObject();
     cJSON_AddStringToObject(device, "identifiers", s_node_id);
     cJSON_AddStringToObject(device, "name", "LD Radar Monitor");
     cJSON_AddItemToObject(config, "device", device);
     json_str = cJSON_PrintUnformatted(config);
     cJSON_Delete(config);
-    if (json_str) {
-        app_mqtt_publish(config_topic, json_str, 0, 1, true);
-        free(json_str);
-    }
+    if (json_str) { app_mqtt_publish(config_topic, json_str, 0, 1, true); free(json_str); }
     
-    // Sensor: Uptime
+    // ---- Sensor: Uptime ----
     snprintf(config_topic, sizeof(config_topic),
              "homeassistant/sensor/%s/uptime/config", s_node_id);
     config = cJSON_CreateObject();
@@ -526,18 +516,18 @@ esp_err_t app_mqtt_publish_ha_discovery(void)
     cJSON_AddStringToObject(config, "device_class", "duration");
     cJSON_AddStringToObject(config, "state_class", "total_increasing");
     cJSON_AddStringToObject(config, "unique_id", "uptime");
+    cJSON_AddStringToObject(config, "availability_topic", avail_topic);
+    cJSON_AddStringToObject(config, "payload_available", "online");
+    cJSON_AddStringToObject(config, "payload_not_available", "offline");
     device = cJSON_CreateObject();
     cJSON_AddStringToObject(device, "identifiers", s_node_id);
     cJSON_AddStringToObject(device, "name", "LD Radar Monitor");
     cJSON_AddItemToObject(config, "device", device);
     json_str = cJSON_PrintUnformatted(config);
     cJSON_Delete(config);
-    if (json_str) {
-        app_mqtt_publish(config_topic, json_str, 0, 1, true);
-        free(json_str);
-    }
+    if (json_str) { app_mqtt_publish(config_topic, json_str, 0, 1, true); free(json_str); }
     
-    // Sensor: WiFi RSSI
+    // ---- Sensor: WiFi RSSI ----
     snprintf(config_topic, sizeof(config_topic),
              "homeassistant/sensor/%s/wifi_rssi/config", s_node_id);
     config = cJSON_CreateObject();
@@ -548,18 +538,18 @@ esp_err_t app_mqtt_publish_ha_discovery(void)
     cJSON_AddStringToObject(config, "device_class", "signal_strength");
     cJSON_AddStringToObject(config, "state_class", "measurement");
     cJSON_AddStringToObject(config, "unique_id", "wifi_rssi");
+    cJSON_AddStringToObject(config, "availability_topic", avail_topic);
+    cJSON_AddStringToObject(config, "payload_available", "online");
+    cJSON_AddStringToObject(config, "payload_not_available", "offline");
     device = cJSON_CreateObject();
     cJSON_AddStringToObject(device, "identifiers", s_node_id);
     cJSON_AddStringToObject(device, "name", "LD Radar Monitor");
     cJSON_AddItemToObject(config, "device", device);
     json_str = cJSON_PrintUnformatted(config);
     cJSON_Delete(config);
-    if (json_str) {
-        app_mqtt_publish(config_topic, json_str, 0, 1, true);
-        free(json_str);
-    }
+    if (json_str) { app_mqtt_publish(config_topic, json_str, 0, 1, true); free(json_str); }
     
-    // Sensor: WiFi IP
+    // ---- Sensor: WiFi IP ----
     snprintf(config_topic, sizeof(config_topic),
              "homeassistant/sensor/%s/wifi_ip/config", s_node_id);
     config = cJSON_CreateObject();
@@ -568,18 +558,18 @@ esp_err_t app_mqtt_publish_ha_discovery(void)
     cJSON_AddStringToObject(config, "value_template", "{{ value_json.wifi_ip }}");
     cJSON_AddStringToObject(config, "icon", "mdi:ip-network");
     cJSON_AddStringToObject(config, "unique_id", "wifi_ip");
+    cJSON_AddStringToObject(config, "availability_topic", avail_topic);
+    cJSON_AddStringToObject(config, "payload_available", "online");
+    cJSON_AddStringToObject(config, "payload_not_available", "offline");
     device = cJSON_CreateObject();
     cJSON_AddStringToObject(device, "identifiers", s_node_id);
     cJSON_AddStringToObject(device, "name", "LD Radar Monitor");
     cJSON_AddItemToObject(config, "device", device);
     json_str = cJSON_PrintUnformatted(config);
     cJSON_Delete(config);
-    if (json_str) {
-        app_mqtt_publish(config_topic, json_str, 0, 1, true);
-        free(json_str);
-    }
+    if (json_str) { app_mqtt_publish(config_topic, json_str, 0, 1, true); free(json_str); }
     
-    ESP_LOGI(TAG, "HA discovery published (LED + System Info sensors)");
+    ESP_LOGI(TAG, "HA discovery published with availability (7 entities)");
     return ESP_OK;
 }
 
