@@ -68,7 +68,6 @@ static void ws_heartbeat_task(void *arg)
                     .type = HTTPD_WS_TYPE_CLOSE,
                     .payload = NULL,
                     .len = 0,
-                    .masked = false,
                 };
                 httpd_ws_send_frame_async(ctx->http_server, actions[i].fd, &close_pkt);
             } else {
@@ -76,7 +75,6 @@ static void ws_heartbeat_task(void *arg)
                     .type = HTTPD_WS_TYPE_PING,
                     .payload = NULL,
                     .len = 0,
-                    .masked = false,
                 };
                 esp_err_t ret = httpd_ws_send_frame_async(ctx->http_server, actions[i].fd, &ping_pkt);
                 if (ret == ESP_OK) ctx->total_pings_sent++;
@@ -184,7 +182,6 @@ esp_err_t ws_heartbeat_send_ping(httpd_handle_t http_server, int fd)
         .type = HTTPD_WS_TYPE_PING,
         .payload = NULL,
         .len = 0,
-        .masked = false,
     };
 
     return httpd_ws_send_frame_async(http_server, fd, &ping_pkt);

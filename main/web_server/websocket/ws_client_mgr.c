@@ -292,7 +292,6 @@ int ws_client_mgr_remove_timeout(ws_client_mgr_t *mgr, httpd_handle_t server, Ti
             .type = HTTPD_WS_TYPE_CLOSE,
             .payload = NULL,
             .len = 0,
-            .masked = false,
         };
         httpd_ws_send_frame_async(server, close_actions[i].fd, &close_pkt);
     }
@@ -324,7 +323,6 @@ int ws_client_mgr_broadcast(ws_client_mgr_t *mgr, httpd_handle_t server,
             .type = type,
             .payload = (uint8_t *)data,
             .len = len,
-            .masked = false,
         };
         esp_err_t ret = httpd_ws_send_frame_async(server, fds[i], &ws_frame);
         if (ret == ESP_OK) {
