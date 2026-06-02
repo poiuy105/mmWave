@@ -4,6 +4,7 @@
 #include "esp_err.h"
 #include "radar_adapter/radar_adapter.h"
 #include "zone_config.h"
+#include "cJSON.h"
 #include <stdbool.h>
 #include <stdint.h>
 

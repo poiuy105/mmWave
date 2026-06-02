@@ -221,9 +221,9 @@ static bool json_to_zone(cJSON *zone_obj, zone_config_t *zone)
     }
 
     if (color && cJSON_IsString(color)) {
-        strncpy(zone->color, color->valuestring, ZONE_COLOR_MAX_LEN - 1);
+        snprintf(zone->color, sizeof(zone->color), "%s", color->valuestring);
     } else {
-        strncpy(zone->color, "#00ff00", ZONE_COLOR_MAX_LEN - 1);
+        snprintf(zone->color, sizeof(zone->color), "%s", "#00ff00");
     }
 
     return true;
