@@ -133,7 +133,7 @@ static uint8_t tf_cksum_header(struct ld6004_context *ctx)
 {
     uint8_t hdr[LD6004_TF_HEADER_LEN];
     int pos = 0;
-    hdr[pos++] = 0x55; /* SOF */
+    hdr[pos++] = LD6004_TF_SOF;
     write_u16_be(hdr + pos, ctx->frame_id); pos += 2;
     write_u16_be(hdr + pos, ctx->frame_len); pos += 2;
     write_u16_be(hdr + pos, ctx->frame_type); pos += 2;
@@ -390,7 +390,7 @@ static void tf_parser_feed_byte(struct ld6004_context *ctx, uint8_t byte)
     uint8_t cksum;
     switch (ctx->parse_state) {
     case TF_PARSE_IDLE:
-        if (byte == 0x55) {
+        if (byte == LD6004_TF_SOF) {
             ctx->parse_state = TF_PARSE_ID_HI;
         }
         break;
