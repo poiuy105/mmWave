@@ -74,6 +74,3 @@ idf_component_register(
 
 # 链接数学库
 target_link_libraries(${COMPONENT_LIB} m)
-
-# 嵌入 HTML 配置页面为二进制数据（ESP-IDF 原生 embed）
-target_add_binary_data(${COMPONENT_LIB} "web_server/portal_html.html" TEXT)

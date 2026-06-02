@@ -1,4 +1,5 @@
 #include "portal_handlers.h"
+#include "portal_html_content.h"
 #include "config/nvs_config.h"
 #include "wifi/wifi_manager.h"
 #include "core/state_machine.h"
@@ -7,10 +8,6 @@
 #include <string.h>
 
 static const char *TAG = "portal_handlers";
-
-// 内嵌 HTML 配置页面（由 CMake embed_txtfile 生成）
-extern const char portal_html_start[] asm("_binary_portal_html_start");
-extern const char portal_html_end[] asm("_binary_portal_html_end");
 
 // ============ 辅助函数 ============
 
@@ -41,8 +38,7 @@ extern const char portal_html_end[] asm("_binary_portal_html_end");
 esp_err_t portal_root_handler(httpd_req_t *req)
 {
     httpd_resp_set_type(req, "text/html");
-    const size_t html_len = portal_html_end - portal_html_start;
-    return httpd_resp_send(req, portal_html_start, html_len);
+    return httpd_resp_send(req, PORTAL_HTML, strlen(PORTAL_HTML));
 }
 
 // ============ WiFi 扫描 ============
