@@ -8,6 +8,10 @@
 
 static const char *TAG = "portal_handlers";
 
+// 内嵌 HTML 配置页面（由 CMake embed_txtfile 生成）
+extern const char portal_html_start[] asm("_binary_portal_html_start");
+extern const char portal_html_end[] asm("_binary_portal_html_end");
+
 // ============ 辅助函数 ============
 
 static esp_err_t send_json(httpd_req_t *req, const char *json)
