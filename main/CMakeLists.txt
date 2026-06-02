@@ -12,6 +12,8 @@ set(srcs
     # wifi 模块（SoftAP 配置门户）
     "wifi/wifi_manager.c"
     "wifi/softap.c"
+    # core 模块（状态机）
+    "core/state_machine.c"
     "radar_adapter/radar_adapter.c"
     "radar_test/radar_test.c"
     # web_server 模块
@@ -40,6 +42,7 @@ set(includes
     "config"
     "mqtt"
     "wifi"
+    "core"
     "radar_test"
     "web_server"
     "web_server/core"
