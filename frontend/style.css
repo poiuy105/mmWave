@@ -472,6 +472,26 @@ body {
     color: var(--danger);
 }
 
+.zone-actions {
+    display: flex;
+    gap: 4px;
+}
+
+.zone-btn {
+    background: none;
+    border: none;
+    cursor: pointer;
+    padding: 2px 4px;
+    font-size: 14px;
+    opacity: 0.6;
+    transition: opacity 0.2s, transform 0.2s;
+}
+
+.zone-btn:hover {
+    opacity: 1;
+    transform: scale(1.2);
+}
+
 @keyframes pulse-zone {
     0%, 100% { opacity: 1; }
     50% { opacity: 0.6; }

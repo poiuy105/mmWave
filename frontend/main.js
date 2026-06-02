@@ -363,10 +363,40 @@ const App = {
                     <span class="zone-color" style="background:${zone.color}"></span>
                     <span class="zone-name">${zone.name}</span>
                     <span class="zone-status${statusClass}">${statusText}</span>
+                    <div class="zone-actions">
+                        <button class="zone-btn zone-btn-edit" data-zone-id="${zone.id}" title="编辑区域">✏️</button>
+                        <button class="zone-btn zone-btn-delete" data-zone-id="${zone.id}" title="删除区域">🗑️</button>
+                    </div>
                 </div>
             `;
         }
         container.innerHTML = html;
+        
+        // 绑定操作按钮事件
+        this._bindZoneActionButtons();
+    },
+    
+    /**
+     * 绑定区域操作按钮事件
+     */
+    _bindZoneActionButtons() {
+        const container = this.els.zoneList;
+        
+        // 编辑按钮
+        container.querySelectorAll('.zone-btn-edit').forEach(btn => {
+            btn.addEventListener('click', (e) => {
+                const zoneId = parseInt(e.target.dataset.zoneId);
+                this.zoneEditor.startEditing(zoneId);
+            });
+        });
+        
+        // 删除按钮
+        container.querySelectorAll('.zone-btn-delete').forEach(btn => {
+            btn.addEventListener('click', (e) => {
+                const zoneId = parseInt(e.target.dataset.zoneId);
+                this.zoneEditor.deleteZone(zoneId);
+            });
+        });
     },
 
     /**

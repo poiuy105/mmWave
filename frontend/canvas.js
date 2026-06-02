@@ -288,6 +288,13 @@ class RadarCanvas {
     }
 
     /**
+     * 设置正在编辑的区域 ID
+     */
+    setEditingZoneId(zoneId) {
+        this.editingZoneId = zoneId;
+    }
+
+    /**
      * 清除预览
      */
     clearPreview() {
@@ -771,10 +778,18 @@ class RadarCanvas {
         // 转换坐标
         const screenPoints = points.map(([x, y]) => this.worldToScreen(x, y));
         
-        // 根据触发状态选择样式
-        const style = zone.triggered ? 
-            { fill: 'rgba(248, 81, 73, 0.25)', stroke: '#f85149', width: 3 } :
-            { fill: zone.color + '20', stroke: zone.color, width: 2 }; // 20 = ~12% 透明度
+        // 根据状态选择样式
+        let style;
+        if (this.editingZoneId === zone.id) {
+            // 正在编辑的区域：黄色高亮
+            style = { fill: 'rgba(255, 196, 25, 0.2)', stroke: '#ffc419', width: 3 };
+        } else if (zone.triggered) {
+            // 触发状态：红色
+            style = { fill: 'rgba(248, 81, 73, 0.25)', stroke: '#f85149', width: 3 };
+        } else {
+            // 正常状态：区域颜色
+            style = { fill: zone.color + '20', stroke: zone.color, width: 2 };
+        }
         
         // 填充
         ctx.fillStyle = style.fill;
@@ -791,6 +806,11 @@ class RadarCanvas {
         ctx.lineWidth = style.width;
         ctx.stroke();
         
+        // 绘制顶点（仅在编辑模式下）
+        if (this.editingZoneId === zone.id) {
+            this._drawZoneVertices(ctx, screenPoints);
+        }
+        
         // 标签背景
         const label = zone.name || `区域${zone.id}`;
         ctx.font = 'bold 11px sans-serif';
@@ -802,7 +822,7 @@ class RadarCanvas {
         ctx.fillRect(labelX - 4, labelY - 12, textWidth + 8, 16);
         
         // 标签文字
-        ctx.fillStyle = zone.triggered ? '#f85149' : zone.color;
+        ctx.fillStyle = this.editingZoneId === zone.id ? '#ffc419' : (zone.triggered ? '#f85149' : zone.color);
         ctx.fillText(label, labelX, labelY);
         
         // 触发状态指示器
@@ -812,6 +832,29 @@ class RadarCanvas {
             ctx.arc(labelX + textWidth + 12, labelY - 6, 3, 0, Math.PI * 2);
             ctx.fill();
         }
+    }
+    
+    /**
+     * 绘制区域顶点（编辑模式）
+     */
+    _drawZoneVertices(ctx, screenPoints) {
+        screenPoints.forEach((point, index) => {
+            // 顶点圆圈
+            ctx.fillStyle = '#ffc419';
+            ctx.strokeStyle = '#fff';
+            ctx.lineWidth = 2;
+            ctx.beginPath();
+            ctx.arc(point.x, point.y, 6, 0, Math.PI * 2);
+            ctx.fill();
+            ctx.stroke();
+            
+            // 顶点编号
+            ctx.fillStyle = '#000';
+            ctx.font = 'bold 10px Arial';
+            ctx.textAlign = 'center';
+            ctx.textBaseline = 'middle';
+            ctx.fillText(index + 1, point.x, point.y);
+        });
     }
 
     /**

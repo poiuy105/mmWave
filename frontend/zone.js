@@ -143,6 +143,24 @@ class ZoneManager {
     }
     
     /**
+     * 删除区域（别名）
+     * @param {number} zoneId - 区域 ID
+     * @returns {boolean} 是否成功
+     */
+    removeZone(zoneId) {
+        return this.deleteZone(zoneId);
+    }
+    
+    /**
+     * 通知更新（用于编辑后刷新）
+     */
+    notifyUpdate() {
+        if (this.onZonesUpdate) {
+            this.onZonesUpdate(this.getZonesArray());
+        }
+    }
+    
+    /**
      * 更新区域
      * @param {number} zoneId - 区域 ID
      * @param {object} updates - 更新的字段

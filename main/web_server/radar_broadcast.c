@@ -79,7 +79,7 @@ static char* build_radar_json(const radar_frame_t *frame, uint32_t frame_id)
 static void radar_broadcast_task(void *arg)
 {
     uint32_t frame_counter = 0;
-    uint32_t broadcast_interval_ms = 100; // 10Hz default
+    uint32_t broadcast_interval_ms = 200; // 5Hz - 减少网络负载
     uint32_t idle_interval_ms = 2000;    // 无目标时 0.5Hz
 
     // Use hardcoded interval to avoid uninitialized config
