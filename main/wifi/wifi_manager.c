@@ -219,7 +219,28 @@ esp_err_t wifi_manager_scan_wifi(wifi_scan_results_t *results)
     
     memset(results, 0, sizeof(wifi_scan_results_t));
     
-    // Start scan
+    // 检查当前 WiFi 模式
+    wifi_mode_t current_mode;
+    esp_err_t ret = esp_wifi_get_mode(&current_mode);
+    if (ret != ESP_OK) {
+        ESP_LOGE(TAG, "Failed to get WiFi mode: %s", esp_err_to_name(ret));
+        return ret;
+    }
+    
+    // 如果是 AP 模式，需要临时切换到 APSTA 模式才能扫描
+    bool need_mode_switch = (current_mode == WIFI_MODE_AP);
+    if (need_mode_switch) {
+        ESP_LOGI(TAG, "Switching to APSTA mode for scanning");
+        ret = esp_wifi_set_mode(WIFI_MODE_APSTA);
+        if (ret != ESP_OK) {
+            ESP_LOGE(TAG, "Failed to set APSTA mode: %s", esp_err_to_name(ret));
+            return ret;
+        }
+        // 短暂延迟让模式切换完成
+        vTaskDelay(pdMS_TO_TICKS(100));
+    }
+    
+    // 配置扫描参数
     wifi_scan_config_t scan_config = {
         .ssid = NULL,
         .bssid = NULL,
@@ -230,30 +251,42 @@ esp_err_t wifi_manager_scan_wifi(wifi_scan_results_t *results)
         .scan_time.active.max = 300,
     };
     
-    esp_err_t ret = esp_wifi_scan_start(&scan_config, true);
+    ret = esp_wifi_scan_start(&scan_config, true);
     if (ret != ESP_OK) {
         ESP_LOGE(TAG, "WiFi scan failed: %s", esp_err_to_name(ret));
+        if (need_mode_switch) {
+            esp_wifi_set_mode(WIFI_MODE_AP);
+        }
         return ret;
     }
     
-    // Get scan results
+    // 获取扫描结果 - 使用静态缓冲区避免栈溢出
+    static wifi_ap_record_t s_ap_records[WIFI_SCAN_MAX_RESULTS];
     uint16_t ap_count = WIFI_SCAN_MAX_RESULTS;
-    wifi_ap_record_t ap_records[WIFI_SCAN_MAX_RESULTS];
     
-    ret = esp_wifi_scan_get_ap_records(&ap_count, ap_records);
+    ret = esp_wifi_scan_get_ap_records(&ap_count, s_ap_records);
     if (ret != ESP_OK) {
         ESP_LOGE(TAG, "Failed to get scan results: %s", esp_err_to_name(ret));
+        if (need_mode_switch) {
+            esp_wifi_set_mode(WIFI_MODE_AP);
+        }
         return ret;
     }
     
-    // Copy results
+    // 恢复原来的模式
+    if (need_mode_switch) {
+        ESP_LOGI(TAG, "Restoring AP mode");
+        esp_wifi_set_mode(WIFI_MODE_AP);
+    }
+    
+    // 复制结果
     results->count = ap_count;
     for (int i = 0; i < ap_count && i < WIFI_SCAN_MAX_RESULTS; i++) {
-        strncpy(results->aps[i].ssid, (char *)ap_records[i].ssid, sizeof(results->aps[i].ssid) - 1);
-        memcpy(results->aps[i].bssid, ap_records[i].bssid, 6);
-        results->aps[i].rssi = ap_records[i].rssi;
-        results->aps[i].channel = ap_records[i].primary;
-        results->aps[i].authmode = ap_records[i].authmode;
+        strncpy(results->aps[i].ssid, (char *)s_ap_records[i].ssid, sizeof(results->aps[i].ssid) - 1);
+        memcpy(results->aps[i].bssid, s_ap_records[i].bssid, 6);
+        results->aps[i].rssi = s_ap_records[i].rssi;
+        results->aps[i].channel = s_ap_records[i].primary;
+        results->aps[i].authmode = s_ap_records[i].authmode;
     }
     
     ESP_LOGI(TAG, "WiFi scan found %d APs", results->count);
