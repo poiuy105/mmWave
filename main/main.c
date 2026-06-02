@@ -227,35 +227,39 @@ static void run_state_config(void)
 
 // ============ MQTT 连接 ============
 
+// MQTT连接状态跟踪（文件级静态变量，跨函数调用保持状态）
+static bool s_mqtt_connecting = false;
+static uint32_t s_mqtt_connect_start_time = 0;
+
 static void run_state_connecting(void)
 {
     ESP_LOGI(TAG, ">>> Entering CONNECTING state (connecting MQTT)");
 
-    // 检查是否已经在连接中或已连接
+    // 检查是否已连接
     if (app_mqtt_is_connected()) {
-        ESP_LOGW(TAG, "MQTT already connected, skip to RUNNING");
+        ESP_LOGI(TAG, "MQTT already connected, transition to RUNNING");
+        s_mqtt_connecting = false;
         state_machine_trigger_event(EVENT_MQTT_CONNECTED);
         return;
     }
 
-    static bool s_mqtt_connecting = false;
+    // 检查是否正在连接中
     if (s_mqtt_connecting) {
-        ESP_LOGW(TAG, "MQTT connection in progress, waiting...");
-        // 等待连接完成
-        uint32_t start = xTaskGetTickCount() * portTICK_PERIOD_MS;
-        while (!app_mqtt_is_connected()) {
-            if ((xTaskGetTickCount() * portTICK_PERIOD_MS) - start > MQTT_CONNECT_TIMEOUT_MS) {
-                ESP_LOGW(TAG, "MQTT wait timeout");
-                break;
-            }
-            vTaskDelay(pdMS_TO_TICKS(100));
+        uint32_t elapsed = (xTaskGetTickCount() * portTICK_PERIOD_MS) - s_mqtt_connect_start_time;
+        ESP_LOGW(TAG, "MQTT connection in progress (%lu ms)...", elapsed);
+        
+        // 检查是否超时
+        if (elapsed > MQTT_CONNECT_TIMEOUT_MS) {
+            ESP_LOGW(TAG, "MQTT connection timeout, giving up");
+            s_mqtt_connecting = false;
+            state_machine_trigger_event(EVENT_MQTT_CONNECTED); // 超时也进入RUNNING
         }
-        if (app_mqtt_is_connected()) {
-            state_machine_trigger_event(EVENT_MQTT_CONNECTED);
-        }
-        return;
+        return; // 不重复发起连接，等待回调或超时
     }
+
+    // 发起新连接
     s_mqtt_connecting = true;
+    s_mqtt_connect_start_time = xTaskGetTickCount() * portTICK_PERIOD_MS;
 
     esp_err_t err = app_mqtt_init();
     if (err != ESP_OK) {
@@ -279,24 +283,8 @@ static void run_state_connecting(void)
         return;
     }
 
-    // 等待 MQTT 连接（最多 15 秒）
-    uint32_t start = xTaskGetTickCount() * portTICK_PERIOD_MS;
-    while (!app_mqtt_is_connected()) {
-        uint32_t elapsed = (xTaskGetTickCount() * portTICK_PERIOD_MS) - start;
-        if (elapsed > MQTT_CONNECT_TIMEOUT_MS) {
-            ESP_LOGW(TAG, "MQTT connect timeout, entering RUNNING anyway");
-            break;
-        }
-        vTaskDelay(pdMS_TO_TICKS(500));
-    }
-
-    if (app_mqtt_is_connected()) {
-        ESP_LOGI(TAG, "MQTT connected to %s:%d", mqtt_cfg.uri, mqtt_cfg.port);
-        app_mqtt_publish_ha_discovery();
-    }
-
-    s_mqtt_connecting = false;
-    state_machine_trigger_event(EVENT_MQTT_CONNECTED);
+    ESP_LOGI(TAG, "MQTT connection initiated, waiting for callback...");
+    // 不在这里等待，让MQTT事件回调触发状态转换
 }
 
 // ============ 正常运行 ============
@@ -390,6 +378,13 @@ static void app_task(void *pvParameters)
 
             case STATE_CONNECTING:
                 run_state_connecting();
+                // 检查MQTT是否已连接（由事件回调触发）
+                if (app_mqtt_is_connected() && s_mqtt_connecting) {
+                    ESP_LOGI(TAG, "MQTT connected detected in app_task");
+                    s_mqtt_connecting = false;
+                    app_mqtt_publish_ha_discovery();
+                    state_machine_trigger_event(EVENT_MQTT_CONNECTED);
+                }
                 break;
 
             case STATE_RUNNING:

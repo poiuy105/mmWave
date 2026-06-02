@@ -132,9 +132,10 @@ esp_err_t app_mqtt_init(void)
     }
     
     init_node_id();
-    s_mqtt_state = MQTT_STATE_DISCONNECTED;
-    
-    ESP_LOGI(TAG, "MQTT module initialized");
+    // 不要重置状态，保持当前连接状态
+    if (s_mqtt_state == MQTT_STATE_DISCONNECTED) {
+        ESP_LOGI(TAG, "MQTT module initialized");
+    }
     return ESP_OK;
 }
 
@@ -145,9 +146,18 @@ esp_err_t app_mqtt_connect(const mqtt_config_t *config)
         return ESP_ERR_INVALID_ARG;
     }
     
+    // Check if already connected - 最高优先级检查
+    if (s_mqtt_state == MQTT_STATE_CONNECTED && s_mqtt_client != NULL) {
+        ESP_LOGI(TAG, "MQTT already connected, skip");
+        return ESP_OK;
+    }
+    
+    // If client exists but not connected, destroy it first
     if (s_mqtt_client != NULL) {
-        ESP_LOGW(TAG, "MQTT client already exists, disconnecting first");
-        app_mqtt_disconnect();
+        ESP_LOGW(TAG, "MQTT client exists but not connected, destroying...");
+        esp_mqtt_client_destroy(s_mqtt_client);
+        s_mqtt_client = NULL;
+        s_mqtt_state = MQTT_STATE_DISCONNECTED;
     }
     
     ESP_LOGI(TAG, "Connecting to MQTT: %s:%d", config->uri, config->port);
@@ -167,12 +177,6 @@ esp_err_t app_mqtt_connect(const mqtt_config_t *config)
     strncpy(hostname, uri_start, sizeof(hostname) - 1);
     char *colon = strchr(hostname, ':');
     if (colon) *colon = '\0';
-    
-    // Check if already connected
-    if (s_mqtt_state == MQTT_STATE_CONNECTED) {
-        ESP_LOGW(TAG, "MQTT already connected, skipping new connection");
-        return ESP_OK;
-    }
     
     // Configure MQTT client
     esp_mqtt_client_config_t mqtt_cfg = {
