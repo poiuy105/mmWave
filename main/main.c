@@ -18,9 +18,12 @@
 
 #include "config/nvs_config.h"
 #include "mqtt/app_mqtt.h"
+#include "wifi/wifi_manager.h"
+#include "wifi/softap.h"
 #include "web_server/fatfs_init.h"
 #include "web_server/http_server.h"
 #include "web_server/file_manager.h"
+#include "web_server/dns_server.h"
 #include "radar_adapter/radar_adapter.h"
 #include "radar_test/radar_test.h"
 
@@ -155,15 +158,14 @@ void app_main(void)
     strncpy(s_wifi_ssid, app_config.wifi_ssid, sizeof(s_wifi_ssid) - 1);
     strncpy(s_wifi_password, app_config.wifi_password, sizeof(s_wifi_password) - 1);
     
-    // 如果 WiFi 未配置，使用默认值（后续可通过 SoftAP 配置）
-    if (strlen(s_wifi_ssid) == 0) {
-        ESP_LOGW(TAG, "WiFi not configured, using default values");
-        // TODO: 阶段4 实现 SoftAP 配置门户
-        strncpy(s_wifi_ssid, "FUCK_cao", sizeof(s_wifi_ssid) - 1);  // 临时默认值
-        strncpy(s_wifi_password, "fuckyou001", sizeof(s_wifi_password) - 1);
+    // 检查是否需要进入 SoftAP 配置模式
+    bool use_softap = false;
+    if (strlen(s_wifi_ssid) == 0 || !app_config.is_configured) {
+        ESP_LOGW(TAG, "WiFi not configured, entering SoftAP configuration mode");
+        use_softap = true;
     }
     
-    ESP_LOGI(TAG, "WiFi config: SSID=%s", s_wifi_ssid);
+    ESP_LOGI(TAG, "WiFi config: SSID=%s, SoftAP=%s", s_wifi_ssid, use_softap ? "yes" : "no");
 
     // 初始化 FATFS
     ESP_ERROR_CHECK(fatfs_init());

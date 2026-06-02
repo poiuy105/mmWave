@@ -9,10 +9,14 @@ set(srcs
     "config/nvs_config.c"
     # mqtt 模块
     "mqtt/mqtt_client.c"
+    # wifi 模块（SoftAP 配置门户）
+    "wifi/wifi_manager.c"
+    "wifi/softap.c"
     "radar_adapter/radar_adapter.c"
     "radar_test/radar_test.c"
     # web_server 模块
     "web_server/core/server_context.c"
+    "web_server/dns_server.c"
     "web_server/core/http_server_core.c"
     "web_server/config/server_config.c"
     "web_server/websocket/ws_client_mgr.c"
@@ -35,6 +39,7 @@ set(includes
     "."
     "config"
     "mqtt"
+    "wifi"
     "radar_test"
     "web_server"
     "web_server/core"
