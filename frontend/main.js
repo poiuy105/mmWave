@@ -451,7 +451,7 @@ const App = {
         }
 
         this._closeSettings();
-    }
+    },
 
     /**
      * 保存区域配置

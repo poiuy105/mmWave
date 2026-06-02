@@ -4,8 +4,10 @@
  */
 
 class ZoneEditor {
-    constructor(canvas, zoneManager, api) {
-        this.canvas = canvas;
+    constructor(radarCanvas, zoneManager, api) {
+        // radarCanvas 是 RadarCanvas 对象，需要获取其内部的 canvas DOM 元素
+        this.radarCanvas = radarCanvas;
+        this.canvas = radarCanvas.canvas; // Canvas DOM 元素
         this.zoneManager = zoneManager;
         this.api = api;
         
@@ -89,7 +91,7 @@ class ZoneEditor {
         document.getElementById('zoneToolbar').classList.remove('hidden');
         
         // 清空预览
-        this.canvas.clearPreview();
+        this.radarCanvas.clearPreview();
         
         // 提示
         console.log('[ZoneEditor] 进入绘制模式，点击画布添加顶点');
@@ -107,13 +109,13 @@ class ZoneEditor {
         const y = clientY - rect.top;
         
         // 转换为世界坐标
-        const worldPos = this.canvas.screenToWorld(x, y);
+        const worldPos = this.radarCanvas.screenToWorld(x, y);
         
         // 添加顶点
         this.drawingPoints.push([worldPos.x, worldPos.y]);
         
         // 更新预览
-        this.canvas.setPreviewPolygon(this.drawingPoints);
+        this.radarCanvas.setPreviewPolygon(this.drawingPoints);
         
         console.log(`[ZoneEditor] 添加顶点 ${this.drawingPoints.length}: (${worldPos.x.toFixed(2)}, ${worldPos.y.toFixed(2)})`);
     }
@@ -167,7 +169,7 @@ class ZoneEditor {
         document.getElementById('zoneToolbar').classList.add('hidden');
         
         // 清除预览
-        this.canvas.clearPreview();
+        this.radarCanvas.clearPreview();
         
         // 清除提示
         this._clearHint();

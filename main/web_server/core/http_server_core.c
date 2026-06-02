@@ -66,9 +66,9 @@ esp_err_t http_server_core_start(http_server_t *server)
     config.server_port = server->config.http_port;
     config.stack_size = server->config.http_stack_size > 0 ? server->config.http_stack_size : config.stack_size;
     config.max_uri_handlers = server->config.http_max_uri_handlers > 0 ? server->config.http_max_uri_handlers : config.max_uri_handlers;
-    config.max_open_sockets = server->config.http_max_open_sockets > 0 ? server->config.http_max_open_sockets : 12;
-    config.recv_wait_timeout = server->config.http_recv_timeout > 0 ? server->config.http_recv_timeout : 5;
-    config.send_wait_timeout = server->config.http_send_timeout > 0 ? server->config.http_send_timeout : 5;
+    config.max_open_sockets = 20;  // 增加 socket 数量，避免并发加载时耗尽
+    config.recv_wait_timeout = 3;   // 缩短接收超时，快速释放 socket
+    config.send_wait_timeout = 3;   // 缩短发送超时
     config.lru_purge_enable = true;
     config.uri_match_fn = httpd_uri_match_wildcard;  // Enable wildcard URI matching for /*
 
