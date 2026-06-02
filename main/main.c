@@ -16,6 +16,8 @@
 #include "esp_wifi.h"
 #include "esp_netif.h"
 
+#include "config/nvs_config.h"
+#include "mqtt/app_mqtt.h"
 #include "web_server/fatfs_init.h"
 #include "web_server/http_server.h"
 #include "web_server/file_manager.h"
@@ -24,11 +26,9 @@
 
 static const char *TAG = "MAIN";
 
-// WiFi 配置
-#define WIFI_SSID      "FUCK_cao"
-#define WIFI_PASS      "fuckyou001"
-#define WIFI_CHANNEL   1
-#define WIFI_MAX_CONN  4
+// WiFi 配置（从 NVS 读取，不再硬编码）
+static char s_wifi_ssid[32] = {0};
+static char s_wifi_password[64] = {0};
 
 static EventGroupHandle_t s_wifi_event_group;
 #define WIFI_CONNECTED_BIT BIT0
@@ -104,8 +104,6 @@ static void wifi_init_sta(void)
 
     wifi_config_t wifi_config = {
         .sta = {
-            .ssid = WIFI_SSID,
-            .password = WIFI_PASS,
             .threshold.authmode = WIFI_AUTH_WPA2_PSK,
             .pmf_cfg = {
                 .capable = true,
@@ -113,6 +111,10 @@ static void wifi_init_sta(void)
             },
         },
     };
+    
+    // 从 NVS 读取的 WiFi 配置
+    strncpy((char *)wifi_config.sta.ssid, s_wifi_ssid, sizeof(wifi_config.sta.ssid) - 1);
+    strncpy((char *)wifi_config.sta.password, s_wifi_password, sizeof(wifi_config.sta.password) - 1);
 
     ESP_ERROR_CHECK(esp_wifi_set_mode(WIFI_MODE_STA));
     ESP_ERROR_CHECK(esp_wifi_set_config(WIFI_IF_STA, &wifi_config));
@@ -144,9 +146,37 @@ void app_main(void)
     ESP_LOGI(TAG, "Version: 1.0.0");
     ESP_LOGI(TAG, "=================================");
 
-    // 初始化 NVS
-    ESP_ERROR_CHECK(nvs_init());
+    // 初始化 NVS（使用新的配置管理模块）
+    esp_err_t nvs_err = nvs_init_config();
+    if (nvs_err != ESP_OK) {
+        ESP_LOGE(TAG, "NVS init failed: %s, retrying after erase...", esp_err_to_name(nvs_err));
+        nvs_flash_erase();
+        nvs_err = nvs_flash_init();
+        if (nvs_err != ESP_OK) {
+            ESP_LOGE(TAG, "NVS init failed after erase, restarting in 2s...");
+            vTaskDelay(pdMS_TO_TICKS(2000));
+            esp_restart();
+        }
+    }
     ESP_LOGI(TAG, "NVS initialized");
+
+    // 加载应用配置（WiFi + MQTT）
+    app_config_t app_config;
+    nvs_load_all_config(&app_config);
+    
+    // 复制 WiFi 配置到全局变量
+    strncpy(s_wifi_ssid, app_config.wifi_ssid, sizeof(s_wifi_ssid) - 1);
+    strncpy(s_wifi_password, app_config.wifi_password, sizeof(s_wifi_password) - 1);
+    
+    // 如果 WiFi 未配置，使用默认值（后续可通过 SoftAP 配置）
+    if (strlen(s_wifi_ssid) == 0) {
+        ESP_LOGW(TAG, "WiFi not configured, using default values");
+        // TODO: 阶段4 实现 SoftAP 配置门户
+        strncpy(s_wifi_ssid, "FUCK_cao", sizeof(s_wifi_ssid) - 1);  // 临时默认值
+        strncpy(s_wifi_password, "fuckyou001", sizeof(s_wifi_password) - 1);
+    }
+    
+    ESP_LOGI(TAG, "WiFi config: SSID=%s", s_wifi_ssid);
 
     // 初始化 FATFS
     ESP_ERROR_CHECK(fatfs_init());
@@ -182,6 +212,34 @@ void app_main(void)
 
     if (bits & WIFI_CONNECTED_BIT) {
         ESP_LOGI(TAG, "WiFi connected successfully");
+        
+        // 初始化 MQTT（WiFi 连接成功后）
+        esp_err_t mqtt_err = app_mqtt_init();
+        if (mqtt_err == ESP_OK) {
+            mqtt_config_t mqtt_cfg = {0};
+            strncpy(mqtt_cfg.uri, app_config.mqtt_uri, sizeof(mqtt_cfg.uri) - 1);
+            mqtt_cfg.port = app_config.mqtt_port;
+            strncpy(mqtt_cfg.username, app_config.mqtt_username, sizeof(mqtt_cfg.username) - 1);
+            strncpy(mqtt_cfg.password, app_config.mqtt_password, sizeof(mqtt_cfg.password) - 1);
+            
+            mqtt_err = app_mqtt_connect(&mqtt_cfg);
+            if (mqtt_err == ESP_OK) {
+                ESP_LOGI(TAG, "MQTT connecting to %s:%d", mqtt_cfg.uri, mqtt_cfg.port);
+                // 等待 MQTT 连接（最多 5 秒）
+                vTaskDelay(pdMS_TO_TICKS(2000));
+                if (app_mqtt_is_connected()) {
+                    ESP_LOGI(TAG, "MQTT connected");
+                    // 发布 HA 发现配置
+                    app_mqtt_publish_ha_discovery();
+                } else {
+                    ESP_LOGW(TAG, "MQTT connection pending");
+                }
+            } else {
+                ESP_LOGW(TAG, "MQTT connect failed: %s", esp_err_to_name(mqtt_err));
+            }
+        } else {
+            ESP_LOGW(TAG, "MQTT init failed: %s", esp_err_to_name(mqtt_err));
+        }
     } else if (bits & WIFI_FAIL_BIT) {
         ESP_LOGW(TAG, "WiFi connection failed, starting HTTP server in AP-less mode");
     } else {

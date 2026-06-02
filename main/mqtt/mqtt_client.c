@@ -1,0 +1,403 @@
+#include <string.h>
+#include "app_mqtt.h"
+#include "esp_log.h"
+#include "mqtt_client.h"
+#include "freertos/FreeRTOS.h"
+#include "freertos/semphr.h"
+#include "esp_mac.h"
+#include "cJSON.h"
+
+static const char *TAG = "mqtt_client";
+
+static esp_mqtt_client_handle_t s_mqtt_client = NULL;
+static mqtt_state_t s_mqtt_state = MQTT_STATE_DISCONNECTED;
+static SemaphoreHandle_t s_mqtt_mutex = NULL;
+
+// Node ID (MAC-based)
+static char s_node_id[32] = {0};
+static char s_lwt_topic[64] = {0};
+
+// Helper macros for mutex
+#define MQTT_LOCK()   do { if (s_mqtt_mutex) xSemaphoreTake(s_mqtt_mutex, pdMS_TO_TICKS(100)); } while(0)
+#define MQTT_UNLOCK() do { if (s_mqtt_mutex) xSemaphoreGive(s_mqtt_mutex); } while(0)
+
+// Initialize node_id from MAC
+static void init_node_id(void)
+{
+    if (strlen(s_node_id) > 0) return;
+    
+    uint8_t mac[6] = {0};
+    esp_read_mac(mac, ESP_MAC_WIFI_STA);
+    
+    snprintf(s_node_id, sizeof(s_node_id), "ldradar_%02x%02x%02x%02x",
+             mac[2], mac[3], mac[4], mac[5]);
+    snprintf(s_lwt_topic, sizeof(s_lwt_topic), "%s/status", s_node_id);
+    
+    ESP_LOGI(TAG, "Node ID: %s, LWT topic: %s", s_node_id, s_lwt_topic);
+}
+
+// MQTT event handler
+static void mqtt_event_handler(void *handler_args, esp_event_base_t base, 
+                               int32_t event_id, void *event_data)
+{
+    esp_mqtt_event_handle_t event = (esp_mqtt_event_handle_t)event_data;
+    
+    switch (event->event_id) {
+        case MQTT_EVENT_CONNECTED:
+            ESP_LOGI(TAG, "MQTT connected");
+            MQTT_LOCK();
+            s_mqtt_state = MQTT_STATE_CONNECTED;
+            MQTT_UNLOCK();
+            
+            // Publish online status
+            app_mqtt_publish_status("online");
+            break;
+            
+        case MQTT_EVENT_DISCONNECTED:
+            ESP_LOGW(TAG, "MQTT disconnected");
+            MQTT_LOCK();
+            s_mqtt_state = MQTT_STATE_DISCONNECTED;
+            MQTT_UNLOCK();
+            break;
+            
+        case MQTT_EVENT_SUBSCRIBED:
+            ESP_LOGD(TAG, "MQTT subscribed, msg_id=%d", event->msg_id);
+            break;
+            
+        case MQTT_EVENT_PUBLISHED:
+            ESP_LOGD(TAG, "MQTT published, msg_id=%d", event->msg_id);
+            break;
+            
+        case MQTT_EVENT_ERROR:
+            ESP_LOGE(TAG, "MQTT error");
+            MQTT_LOCK();
+            s_mqtt_state = MQTT_STATE_ERROR;
+            MQTT_UNLOCK();
+            break;
+            
+        default:
+            break;
+    }
+}
+
+esp_err_t app_mqtt_init(void)
+{
+    if (s_mqtt_mutex == NULL) {
+        s_mqtt_mutex = xSemaphoreCreateMutex();
+        if (s_mqtt_mutex == NULL) {
+            ESP_LOGE(TAG, "Failed to create mutex");
+            return ESP_ERR_NO_MEM;
+        }
+    }
+    
+    init_node_id();
+    s_mqtt_state = MQTT_STATE_DISCONNECTED;
+    
+    ESP_LOGI(TAG, "MQTT module initialized");
+    return ESP_OK;
+}
+
+esp_err_t app_mqtt_connect(const mqtt_config_t *config)
+{
+    if (config == NULL) {
+        ESP_LOGE(TAG, "Invalid config");
+        return ESP_ERR_INVALID_ARG;
+    }
+    
+    if (s_mqtt_client != NULL) {
+        ESP_LOGW(TAG, "MQTT client already exists, disconnecting first");
+        app_mqtt_disconnect();
+    }
+    
+    ESP_LOGI(TAG, "Connecting to MQTT: %s:%d", config->uri, config->port);
+    
+    init_node_id();
+    
+    // Parse URI to extract hostname
+    char hostname[128] = {0};
+    const char *uri_start = config->uri;
+    
+    if (strncmp(config->uri, "mqtt://", 7) == 0) {
+        uri_start = config->uri + 7;
+    } else if (strncmp(config->uri, "mqtts://", 8) == 0) {
+        uri_start = config->uri + 8;
+    }
+    
+    strncpy(hostname, uri_start, sizeof(hostname) - 1);
+    char *colon = strchr(hostname, ':');
+    if (colon) *colon = '\0';
+    
+    // Configure MQTT client
+    esp_mqtt_client_config_t mqtt_cfg = {
+        .broker = {
+            .address.hostname = hostname,
+            .address.port = config->port,
+            .address.transport = MQTT_TRANSPORT_OVER_TCP,
+        },
+        .credentials = {
+            .username = config->username,
+            .authentication.password = config->password,
+        },
+        .session = {
+            .last_will = {
+                .topic = s_lwt_topic,
+                .msg = "offline",
+                .qos = 1,
+                .retain = true,
+            },
+            .keepalive = 30,
+        },
+        .network = {
+            .reconnect_timeout_ms = 1000,
+            .disable_auto_reconnect = false,
+        },
+    };
+    
+    s_mqtt_client = esp_mqtt_client_init(&mqtt_cfg);
+    if (s_mqtt_client == NULL) {
+        ESP_LOGE(TAG, "Failed to init MQTT client");
+        return ESP_ERR_NO_MEM;
+    }
+    
+    esp_err_t err = esp_mqtt_client_register_event(s_mqtt_client, 
+                                                    ESP_EVENT_ANY_ID,
+                                                    mqtt_event_handler,
+                                                    NULL);
+    if (err != ESP_OK) {
+        ESP_LOGE(TAG, "Failed to register event handler");
+        esp_mqtt_client_destroy(s_mqtt_client);
+        s_mqtt_client = NULL;
+        return err;
+    }
+    
+    err = esp_mqtt_client_start(s_mqtt_client);
+    if (err != ESP_OK) {
+        ESP_LOGE(TAG, "Failed to start MQTT client");
+        esp_mqtt_client_destroy(s_mqtt_client);
+        s_mqtt_client = NULL;
+        return err;
+    }
+    
+    MQTT_LOCK();
+    s_mqtt_state = MQTT_STATE_CONNECTING;
+    MQTT_UNLOCK();
+    
+    ESP_LOGI(TAG, "MQTT client started");
+    return ESP_OK;
+}
+
+esp_err_t app_mqtt_disconnect(void)
+{
+    if (s_mqtt_client == NULL) {
+        return ESP_OK;
+    }
+    
+    // Publish offline status before disconnect
+    app_mqtt_publish_status("offline");
+    
+    esp_mqtt_client_stop(s_mqtt_client);
+    esp_mqtt_client_destroy(s_mqtt_client);
+    s_mqtt_client = NULL;
+    
+    MQTT_LOCK();
+    s_mqtt_state = MQTT_STATE_DISCONNECTED;
+    MQTT_UNLOCK();
+    
+    ESP_LOGI(TAG, "MQTT disconnected");
+    return ESP_OK;
+}
+
+void app_mqtt_deinit(void)
+{
+    app_mqtt_disconnect();
+    
+    if (s_mqtt_mutex) {
+        vSemaphoreDelete(s_mqtt_mutex);
+        s_mqtt_mutex = NULL;
+    }
+}
+
+mqtt_state_t app_mqtt_get_state(void)
+{
+    MQTT_LOCK();
+    mqtt_state_t state = s_mqtt_state;
+    MQTT_UNLOCK();
+    return state;
+}
+
+bool app_mqtt_is_connected(void)
+{
+    return app_mqtt_get_state() == MQTT_STATE_CONNECTED;
+}
+
+esp_err_t app_mqtt_publish(const char *topic, const char *data, int len, 
+                           int qos, bool retain)
+{
+    if (s_mqtt_client == NULL || !app_mqtt_is_connected()) {
+        ESP_LOGW(TAG, "MQTT not connected, skip publish");
+        return ESP_ERR_INVALID_STATE;
+    }
+    
+    int msg_id = esp_mqtt_client_publish(s_mqtt_client, topic, data, len, qos, retain);
+    if (msg_id < 0) {
+        ESP_LOGW(TAG, "Publish failed: topic=%s", topic);
+        return ESP_FAIL;
+    }
+    
+    ESP_LOGD(TAG, "Published: topic=%s, msg_id=%d", topic, msg_id);
+    return ESP_OK;
+}
+
+esp_err_t app_mqtt_publish_radar_frame(const radar_frame_t *frame)
+{
+    if (frame == NULL || !app_mqtt_is_connected()) {
+        return ESP_ERR_INVALID_ARG;
+    }
+    
+    // Build JSON payload
+    cJSON *root = cJSON_CreateObject();
+    cJSON_AddStringToObject(root, "type", "radar_data");
+    cJSON_AddNumberToObject(root, "timestamp", frame->timestamp_ms);
+    cJSON_AddNumberToObject(root, "frame_id", frame->frame_id);
+    cJSON_AddNumberToObject(root, "target_count", frame->target_count);
+    
+    cJSON *targets = cJSON_CreateArray();
+    for (int i = 0; i < frame->target_count && i < RADAR_MAX_TARGETS; i++) {
+        cJSON *target = cJSON_CreateObject();
+        cJSON_AddNumberToObject(target, "id", frame->targets[i].id);
+        cJSON_AddNumberToObject(target, "x", frame->targets[i].x);
+        cJSON_AddNumberToObject(target, "y", frame->targets[i].y);
+        cJSON_AddNumberToObject(target, "z", frame->targets[i].z);
+        cJSON_AddNumberToObject(target, "speed", frame->targets[i].speed);
+        cJSON_AddNumberToObject(target, "snr", frame->targets[i].snr);
+        cJSON_AddNumberToObject(target, "confidence", frame->targets[i].confidence);
+        cJSON_AddItemToArray(targets, target);
+    }
+    cJSON_AddItemToObject(root, "targets", targets);
+    
+    char *json_str = cJSON_PrintUnformatted(root);
+    cJSON_Delete(root);
+    
+    if (json_str == NULL) {
+        ESP_LOGW(TAG, "Failed to create JSON");
+        return ESP_ERR_NO_MEM;
+    }
+    
+    // Build topic: {node_id}/radar/state
+    char topic[64];
+    snprintf(topic, sizeof(topic), "%s/radar/state", s_node_id);
+    
+    esp_err_t err = app_mqtt_publish(topic, json_str, 0, 0, false);
+    free(json_str);
+    
+    return err;
+}
+
+esp_err_t app_mqtt_publish_system_info(void)
+{
+    if (!app_mqtt_is_connected()) {
+        return ESP_ERR_INVALID_STATE;
+    }
+    
+    cJSON *root = cJSON_CreateObject();
+    cJSON_AddNumberToObject(root, "free_heap", esp_get_free_heap_size());
+    cJSON_AddNumberToObject(root, "min_free_heap", esp_get_minimum_free_heap_size());
+    cJSON_AddNumberToObject(root, "uptime", xTaskGetTickCount() / configTICK_RATE_HZ);
+    
+    char *json_str = cJSON_PrintUnformatted(root);
+    cJSON_Delete(root);
+    
+    if (json_str == NULL) {
+        return ESP_ERR_NO_MEM;
+    }
+    
+    char topic[64];
+    snprintf(topic, sizeof(topic), "%s/system/state", s_node_id);
+    
+    esp_err_t err = app_mqtt_publish(topic, json_str, 0, 0, false);
+    free(json_str);
+    
+    return err;
+}
+
+esp_err_t app_mqtt_publish_status(const char *status)
+{
+    if (!app_mqtt_is_connected() && strcmp(status, "offline") != 0) {
+        return ESP_ERR_INVALID_STATE;
+    }
+    
+    char topic[64];
+    snprintf(topic, sizeof(topic), "%s/status", s_node_id);
+    
+    // Use retain for status messages
+    return app_mqtt_publish(topic, status, 0, 1, true);
+}
+
+esp_err_t app_mqtt_publish_ha_discovery(void)
+{
+    if (!app_mqtt_is_connected()) {
+        ESP_LOGW(TAG, "MQTT not connected, skip HA discovery");
+        return ESP_ERR_INVALID_STATE;
+    }
+    
+    // HA discovery for radar sensor
+    char config_topic[128];
+    char state_topic[64];
+    
+    snprintf(state_topic, sizeof(state_topic), "%s/radar/state", s_node_id);
+    
+    // Sensor: target count
+    snprintf(config_topic, sizeof(config_topic), 
+             "homeassistant/sensor/%s/target_count/config", s_node_id);
+    
+    cJSON *config = cJSON_CreateObject();
+    cJSON_AddStringToObject(config, "name", "Radar Target Count");
+    cJSON_AddStringToObject(config, "state_topic", state_topic);
+    cJSON_AddStringToObject(config, "value_template", "{{ value_json.target_count }}");
+    cJSON_AddStringToObject(config, "unit_of_measurement", "targets");
+    cJSON_AddStringToObject(config, "unique_id", s_node_id);
+    
+    cJSON *device = cJSON_CreateObject();
+    cJSON_AddStringToObject(device, "identifiers", s_node_id);
+    cJSON_AddStringToObject(device, "name", "LD Radar Monitor");
+    cJSON_AddStringToObject(device, "manufacturer", "ESP32-C3");
+    cJSON_AddItemToObject(config, "device", device);
+    
+    char *json_str = cJSON_PrintUnformatted(config);
+    cJSON_Delete(config);
+    
+    if (json_str == NULL) {
+        return ESP_ERR_NO_MEM;
+    }
+    
+    esp_err_t err = app_mqtt_publish(config_topic, json_str, 0, 1, true);
+    free(json_str);
+    
+    // Binary sensor: presence detection
+    snprintf(config_topic, sizeof(config_topic),
+             "homeassistant/binary_sensor/%s/presence/config", s_node_id);
+    
+    config = cJSON_CreateObject();
+    cJSON_AddStringToObject(config, "name", "Radar Presence");
+    cJSON_AddStringToObject(config, "state_topic", state_topic);
+    cJSON_AddStringToObject(config, "value_template", "{{ 'ON' if value_json.target_count > 0 else 'OFF' }}");
+    cJSON_AddStringToObject(config, "unique_id", s_node_id);
+    
+    device = cJSON_CreateObject();
+    cJSON_AddStringToObject(device, "identifiers", s_node_id);
+    cJSON_AddStringToObject(device, "name", "LD Radar Monitor");
+    cJSON_AddItemToObject(config, "device", device);
+    
+    json_str = cJSON_PrintUnformatted(config);
+    cJSON_Delete(config);
+    
+    if (json_str == NULL) {
+        return ESP_ERR_NO_MEM;
+    }
+    
+    err = app_mqtt_publish(config_topic, json_str, 0, 1, true);
+    free(json_str);
+    
+    ESP_LOGI(TAG, "HA discovery published");
+    return err;
+}

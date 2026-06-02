@@ -5,6 +5,10 @@
 # 源文件列表（包含所有 web_server 模块）
 set(srcs
     "main.c"
+    # config 模块（NVS 配置管理）
+    "config/nvs_config.c"
+    # mqtt 模块
+    "mqtt/mqtt_client.c"
     "radar_adapter/radar_adapter.c"
     "radar_test/radar_test.c"
     # web_server 模块
@@ -29,6 +33,8 @@ set(srcs
 # 头文件目录
 set(includes
     "."
+    "config"
+    "mqtt"
     "radar_test"
     "web_server"
     "web_server/core"
@@ -54,6 +60,7 @@ idf_component_register(
         mbedtls
         app_update
         radar
+        mqtt
 )
 
 # 链接数学库

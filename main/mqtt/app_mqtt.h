@@ -1,0 +1,44 @@
+#ifndef APP_MQTT_H
+#define APP_MQTT_H
+
+#include "esp_err.h"
+#include "radar_adapter/radar_adapter.h"
+
+// MQTT 状态
+typedef enum {
+    MQTT_STATE_DISCONNECTED = 0,
+    MQTT_STATE_CONNECTING,
+    MQTT_STATE_CONNECTED,
+    MQTT_STATE_ERROR,
+} mqtt_state_t;
+
+// MQTT 配置
+typedef struct {
+    char uri[128];
+    uint16_t port;
+    char username[64];
+    char password[64];
+} mqtt_config_t;
+
+// ============ 初始化和连接 ============
+esp_err_t app_mqtt_init(void);
+esp_err_t app_mqtt_connect(const mqtt_config_t *config);
+esp_err_t app_mqtt_disconnect(void);
+void app_mqtt_deinit(void);
+
+// ============ 状态查询 ============
+mqtt_state_t app_mqtt_get_state(void);
+bool app_mqtt_is_connected(void);
+
+// ============ 发布接口 ============
+esp_err_t app_mqtt_publish(const char *topic, const char *data, int len, int qos, bool retain);
+
+// ============ 雷达数据发布 ============
+esp_err_t app_mqtt_publish_radar_frame(const radar_frame_t *frame);
+esp_err_t app_mqtt_publish_system_info(void);
+esp_err_t app_mqtt_publish_status(const char *status);
+
+// ============ Home Assistant 发现 ============
+esp_err_t app_mqtt_publish_ha_discovery(void);
+
+#endif

@@ -52,3 +52,4 @@ logs.txt
 read_*.py
 serial_*.py
 upload*.py
+main-bak/

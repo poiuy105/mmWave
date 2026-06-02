@@ -10,6 +10,7 @@
 #include "config/server_config.h"
 #include "radar_adapter/radar_adapter.h"
 #include "websocket/ws_server.h"
+#include "mqtt/app_mqtt.h"
 #include "esp_log.h"
 #include "esp_timer.h"
 #include "cJSON.h"
@@ -94,6 +95,12 @@ static void radar_broadcast_task(void *arg)
                                  (unsigned long)(frame_counter - 1), sent, frame.target_count);
                     }
                 }
+                
+                // 同时发布到 MQTT（如果已连接）
+                if (app_mqtt_is_connected()) {
+                    app_mqtt_publish_radar_frame(&frame);
+                }
+                
                 free(json);
             }
         }
