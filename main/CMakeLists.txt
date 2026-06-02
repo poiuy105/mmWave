@@ -76,13 +76,14 @@ idf_component_register(
 target_link_libraries(${COMPONENT_LIB} m)
 
 # 嵌入 HTML 配置页面为二进制 blob
-set(html_src "web_server/portal_html.html")
+set(html_src "${CMAKE_CURRENT_SOURCE_DIR}/web_server/portal_html.html")
 set(html_bin "${CMAKE_CURRENT_BINARY_DIR}/portal_html.bin")
 add_custom_command(
     OUTPUT ${html_bin}
-    COMMAND ${CMAKE_COMMAND} -E copy ${CMAKE_CURRENT_SOURCE_DIR}/${html_src} ${html_bin}
+    COMMAND ${CMAKE_COMMAND} -E copy ${html_src} ${html_bin}
     DEPENDS ${html_src}
     COMMENT "Copying portal HTML"
 )
 add_custom_target(portal_html DEPENDS ${html_bin})
-target_add_binary_data(${COMPONENT_LIB} ${html_bin} TEXT)
+target_add_binary_data(${COMPONENT_LIB} "${CMAKE_CURRENT_BINARY_DIR}/portal_html.bin" TEXT)
+add_dependencies(${COMPONENT_LIB} portal_html)
