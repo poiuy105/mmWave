@@ -19,6 +19,7 @@
 #include "handlers/health_handler.h"
 #include "handlers/upload_handler.h"
 #include "handlers/radar_handler.h"
+#include "zone_detector/zone_api_handler.h"
 #include "radar_broadcast.h"
 #include "esp_log.h"
 #include "esp_http_server.h"
@@ -367,6 +368,25 @@ esp_err_t http_server_start(void)
 
     // 7. Register file upload/management handlers
     upload_handler_register(handle);
+
+    // 7.5. Register zone API handlers
+    {
+        httpd_uri_t zone_uris[] = {
+            { .uri = "/api/zones",       .method = HTTP_GET,    .handler = zone_api_get_all_handler,   .user_ctx = NULL },
+            { .uri = "/api/zones",       .method = HTTP_POST,   .handler = zone_api_create_handler,    .user_ctx = NULL },
+            { .uri = "/api/zones/*",     .method = HTTP_PUT,    .handler = zone_api_update_handler,    .user_ctx = NULL },
+            { .uri = "/api/zones/*",     .method = HTTP_DELETE, .handler = zone_api_delete_handler,    .user_ctx = NULL },
+        };
+        for (size_t i = 0; i < sizeof(zone_uris) / sizeof(zone_uris[0]); i++) {
+            esp_err_t reg_ret = httpd_register_uri_handler(handle, &zone_uris[i]);
+            if (reg_ret == ESP_ERR_HTTPD_HANDLER_EXISTS) {
+                ESP_LOGW(TAG, "Zone handler %s already registered, skipping", zone_uris[i].uri);
+            } else if (reg_ret != ESP_OK) {
+                ESP_LOGE(TAG, "Failed to register zone handler %s: %s",
+                         zone_uris[i].uri, esp_err_to_name(reg_ret));
+            }
+        }
+    }
 
     // 8. Create WebSocket server
     if (config.ws_enabled) {
