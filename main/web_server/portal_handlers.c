@@ -43,22 +43,24 @@ esp_err_t portal_root_handler(httpd_req_t *req)
 
 // ============ WiFi 扫描 ============
 
+// 静态缓冲区避免httpd任务栈溢出
+static wifi_scan_results_t s_scan_results;
+
 esp_err_t portal_scan_handler(httpd_req_t *req)
 {
-    wifi_scan_results_t results;
-    esp_err_t err = wifi_manager_scan_wifi(&results);
+    esp_err_t err = wifi_manager_scan_wifi(&s_scan_results);
     if (err != ESP_OK) {
         return send_error(req, "WiFi scan failed");
     }
 
     cJSON *root = cJSON_CreateArray();
-    for (int i = 0; i < results.count; i++) {
+    for (int i = 0; i < s_scan_results.count; i++) {
         cJSON *ap = cJSON_CreateObject();
-        cJSON_AddStringToObject(ap, "ssid", results.aps[i].ssid);
-        cJSON_AddNumberToObject(ap, "rssi", results.aps[i].rssi);
-        cJSON_AddNumberToObject(ap, "channel", results.aps[i].channel);
+        cJSON_AddStringToObject(ap, "ssid", s_scan_results.aps[i].ssid);
+        cJSON_AddNumberToObject(ap, "rssi", s_scan_results.aps[i].rssi);
+        cJSON_AddNumberToObject(ap, "channel", s_scan_results.aps[i].channel);
         
-        const char *security = (results.aps[i].authmode != WIFI_AUTH_OPEN) ? "SECURED" : "OPEN";
+        const char *security = (s_scan_results.aps[i].authmode != WIFI_AUTH_OPEN) ? "SECURED" : "OPEN";
         cJSON_AddStringToObject(ap, "security", security);
         
         cJSON_AddItemToArray(root, ap);
