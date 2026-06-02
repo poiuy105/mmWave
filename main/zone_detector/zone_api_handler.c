@@ -3,10 +3,10 @@
  * @brief Zone REST API handlers for HTTP server
  *
  * Provides CRUD operations for zone configuration via REST API:
- * - GET    /api/zones     - Return all zones as JSON array
- * - POST   /api/zones     - Create a new zone
- * - PUT    /api/zones/*   - Update a zone (ID from URI)
- * - DELETE /api/zones/*   - Delete a zone (ID from URI)
+ * - GET    /api/zones      - Return all zones as JSON array
+ * - POST   /api/zones      - Create a new zone
+ * - PUT    /api/zones/ID   - Update a zone (ID from URI)
+ * - DELETE /api/zones/ID   - Delete a zone (ID from URI)
  */
 
 #include "esp_log.h"
