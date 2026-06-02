@@ -75,15 +75,16 @@ idf_component_register(
 # 链接数学库
 target_link_libraries(${COMPONENT_LIB} m)
 
-# 嵌入 HTML 配置页面为二进制 blob
+# 嵌入 HTML 配置页面为 C 字符串数组
 set(html_src "${CMAKE_CURRENT_SOURCE_DIR}/web_server/portal_html.html")
-set(html_bin "${CMAKE_CURRENT_BINARY_DIR}/portal_html.bin")
+set(html_c "${CMAKE_CURRENT_BINARY_DIR}/portal_html.c")
 add_custom_command(
-    OUTPUT ${html_bin}
-    COMMAND ${CMAKE_COMMAND} -E copy ${html_src} ${html_bin}
+    OUTPUT ${html_c}
+    COMMAND xxd -i ${html_src} | sed 's/^unsigned char/const unsigned char/;s/\[\]/_start[]/;$$a\\nconst unsigned char *_binary_portal_html_end = _binary_portal_html_start + sizeof(_binary_portal_html_start);' > ${html_c}
     DEPENDS ${html_src}
-    COMMENT "Copying portal HTML"
+    COMMENT "Generating portal HTML C source"
+    VERBATIM
 )
-add_custom_target(portal_html DEPENDS ${html_bin})
-target_add_binary_data(${COMPONENT_LIB} "${CMAKE_CURRENT_BINARY_DIR}/portal_html.bin" TEXT)
-add_dependencies(${COMPONENT_LIB} portal_html)
+add_custom_target(portal_html_gen DEPENDS ${html_c})
+add_dependencies(${COMPONENT_LIB} portal_html_gen)
+target_sources(${COMPONENT_LIB} PRIVATE ${html_c})
