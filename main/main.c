@@ -1,6 +1,6 @@
 /**
  * LD Radar Web Monitor - 主程序入口
- * ESP32-C3 嵌入式 Web 服务器监控系统
+ * 状态机驱动架构：SoftAP 配置门户 + STA 运行模式
  */
 
 #include <stdio.h>
@@ -12,254 +12,417 @@
 #include "esp_system.h"
 #include "esp_log.h"
 #include "esp_event.h"
+#include "esp_timer.h"
 #include "nvs_flash.h"
 #include "esp_wifi.h"
 #include "esp_netif.h"
+#include "esp_http_server.h"
 
 #include "config/nvs_config.h"
 #include "mqtt/app_mqtt.h"
 #include "wifi/wifi_manager.h"
 #include "wifi/softap.h"
+#include "core/state_machine.h"
 #include "web_server/fatfs_init.h"
 #include "web_server/http_server.h"
 #include "web_server/file_manager.h"
 #include "web_server/dns_server.h"
+#include "web_server/portal_handlers.h"
 #include "radar_adapter/radar_adapter.h"
 #include "radar_test/radar_test.h"
 
 static const char *TAG = "MAIN";
 
-// WiFi 配置（从 NVS 读取，不再硬编码）
-static char s_wifi_ssid[32] = {0};
-static char s_wifi_password[64] = {0};
+// ============ 常量定义 ============
+#define SOFTAP_TIMEOUT_MS     (5 * 60 * 1000)  // SoftAP 超时 5 分钟
+#define WIFI_CONNECT_TIMEOUT_MS  20000         // WiFi 单次连接超时 20s
+#define MQTT_CONNECT_TIMEOUT_MS  15000         // MQTT 连接超时 15s
+#define MAIN_LOOP_INTERVAL_MS     10000         // 主循环间隔 10s
+#define RADAR_TEST_DELAY_MS       5000          // 雷达测试延迟 5s
 
+// ============ 全局变量 ============
 static EventGroupHandle_t s_wifi_event_group;
 #define WIFI_CONNECTED_BIT BIT0
 #define WIFI_FAIL_BIT     BIT1
 
-#define WIFI_CONNECT_TIMEOUT_MS   15000  // WiFi 连接超时 15s
-#define RADAR_TEST_DELAY_MS       5000   // 雷达测试延迟 5s
-#define MAIN_LOOP_INTERVAL_MS     10000  // 主循环间隔 10s
+static app_config_t s_app_config = {0};
+static httpd_handle_t s_portal_server = NULL;
+static bool s_auto_connect = true;
 
-static int s_retry_num = 0;
-#define MAX_RETRY  5
+// ============ WiFi 事件处理 ============
 
-/**
- * WiFi event handler - STA mode only (Fix #26: removed unused AP events)
- */
-static void wifi_event_handler(void* arg, esp_event_base_t event_base,
-                               int32_t event_id, void* event_data)
+static void wifi_event_handler(void *arg, esp_event_base_t event_base,
+                               int32_t event_id, void *event_data)
 {
     if (event_base == WIFI_EVENT && event_id == WIFI_EVENT_STA_START) {
-        esp_err_t ret = esp_wifi_connect();
-        if (ret != ESP_OK) {
-            ESP_LOGE(TAG, "WiFi connect failed: %s", esp_err_to_name(ret));
-        }
-    } else if (event_base == WIFI_EVENT && event_id == WIFI_EVENT_STA_DISCONNECTED) {
-        if (s_retry_num < MAX_RETRY) {
+        if (s_auto_connect) {
             esp_err_t ret = esp_wifi_connect();
             if (ret != ESP_OK) {
-                ESP_LOGW(TAG, "WiFi reconnect failed: %s", esp_err_to_name(ret));
+                ESP_LOGE(TAG, "WiFi connect failed: %s", esp_err_to_name(ret));
             }
-            s_retry_num++;
-            ESP_LOGI(TAG, "Retry to connect to the AP (%d/%d)", s_retry_num, MAX_RETRY);
-        } else {
-            xEventGroupSetBits(s_wifi_event_group, WIFI_FAIL_BIT);
-            ESP_LOGE(TAG, "WiFi connection failed after %d retries", MAX_RETRY);
         }
+    } else if (event_base == WIFI_EVENT && event_id == WIFI_EVENT_STA_DISCONNECTED) {
+        ESP_LOGW(TAG, "WiFi disconnected");
+        xEventGroupSetBits(s_wifi_event_group, WIFI_FAIL_BIT);
     } else if (event_base == IP_EVENT && event_id == IP_EVENT_STA_GOT_IP) {
-        ip_event_got_ip_t* event = (ip_event_got_ip_t*) event_data;
+        ip_event_got_ip_t *event = (ip_event_got_ip_t *)event_data;
         ESP_LOGI(TAG, "Got IP: " IPSTR, IP2STR(&event->ip_info.ip));
-        s_retry_num = 0;
         xEventGroupSetBits(s_wifi_event_group, WIFI_CONNECTED_BIT);
     }
 }
 
-/**
- * 初始化 WiFi STA 模式（连接路由器）
- */
-static void wifi_init_sta(void)
-{
-    // 创建事件组
-    s_wifi_event_group = xEventGroupCreate();
-    if (s_wifi_event_group == NULL) {
-        ESP_LOGE(TAG, "Failed to create event group");
-        return;
-    }
+// ============ 网络初始化（仅一次） ============
 
+static void network_init(void)
+{
+    s_wifi_event_group = xEventGroupCreate();
     ESP_ERROR_CHECK(esp_netif_init());
     ESP_ERROR_CHECK(esp_event_loop_create_default());
-    esp_netif_create_default_wifi_sta();
 
     wifi_init_config_t cfg = WIFI_INIT_CONFIG_DEFAULT();
     ESP_ERROR_CHECK(esp_wifi_init(&cfg));
 
-    ESP_ERROR_CHECK(esp_event_handler_instance_register(WIFI_EVENT,
-                                                        ESP_EVENT_ANY_ID,
-                                                        &wifi_event_handler,
-                                                        NULL,
-                                                        NULL));
-    ESP_ERROR_CHECK(esp_event_handler_instance_register(IP_EVENT,
-                                                        IP_EVENT_STA_GOT_IP,
-                                                        &wifi_event_handler,
-                                                        NULL,
-                                                        NULL));
-
-    wifi_config_t wifi_config = {
-        .sta = {
-            .threshold.authmode = WIFI_AUTH_WPA2_PSK,
-            .pmf_cfg = {
-                .capable = true,
-                .required = false
-            },
-        },
-    };
-    
-    // 从 NVS 读取的 WiFi 配置
-    strncpy((char *)wifi_config.sta.ssid, s_wifi_ssid, sizeof(wifi_config.sta.ssid) - 1);
-    strncpy((char *)wifi_config.sta.password, s_wifi_password, sizeof(wifi_config.sta.password) - 1);
-
-    ESP_ERROR_CHECK(esp_wifi_set_mode(WIFI_MODE_STA));
-    ESP_ERROR_CHECK(esp_wifi_set_config(WIFI_IF_STA, &wifi_config));
-    ESP_ERROR_CHECK(esp_wifi_start());
-
-    ESP_LOGI(TAG, "WiFi STA initialized, connecting to SSID:%s", s_wifi_ssid);
+    ESP_ERROR_CHECK(esp_event_handler_instance_register(
+        WIFI_EVENT, ESP_EVENT_ANY_ID, &wifi_event_handler, NULL, NULL));
+    ESP_ERROR_CHECK(esp_event_handler_instance_register(
+        IP_EVENT, IP_EVENT_STA_GOT_IP, &wifi_event_handler, NULL, NULL));
 }
 
-/**
- * 主程序入口
- */
-void app_main(void)
-{
-    ESP_LOGI(TAG, "=================================");
-    ESP_LOGI(TAG, "LD Radar Web Monitor Starting...");
-    ESP_LOGI(TAG, "Version: 1.0.0");
-    ESP_LOGI(TAG, "=================================");
+// ============ SoftAP 配置门户 ============
 
-    // 初始化 NVS（使用新的配置管理模块）
-    esp_err_t nvs_err = nvs_init_config();
-    if (nvs_err != ESP_OK) {
-        ESP_LOGE(TAG, "NVS init failed: %s, retrying after erase...", esp_err_to_name(nvs_err));
-        nvs_flash_erase();
-        nvs_err = nvs_flash_init();
-        if (nvs_err != ESP_OK) {
-            ESP_LOGE(TAG, "NVS init failed after erase, restarting in 2s...");
-            vTaskDelay(pdMS_TO_TICKS(2000));
+static void start_portal_server(void)
+{
+    if (s_portal_server != NULL) return;
+
+    httpd_config_t config = HTTPD_DEFAULT_CONFIG();
+    config.lru_purge_enable = true;
+    config.max_uri_handlers = 16;
+
+    if (httpd_start(&s_portal_server, &config) == ESP_OK) {
+        portal_handlers_register(s_portal_server);
+        ESP_LOGI(TAG, "Portal HTTP server started on port %d", config.server_port);
+    } else {
+        ESP_LOGE(TAG, "Failed to start portal HTTP server");
+    }
+}
+
+static void stop_portal_server(void)
+{
+    if (s_portal_server != NULL) {
+        httpd_stop(s_portal_server);
+        s_portal_server = NULL;
+        ESP_LOGI(TAG, "Portal HTTP server stopped");
+    }
+}
+
+static void run_state_softap(void)
+{
+    ESP_LOGI(TAG, ">>> Entering SOFTAP configuration mode");
+
+    // 生成 SSID
+    char softap_ssid[32];
+    softap_generate_ssid_with_mac(softap_ssid, sizeof(softap_ssid));
+
+    // 禁止 STA 自动连接
+    s_auto_connect = false;
+
+    // 启动 SoftAP
+    esp_err_t err = wifi_manager_start_softap(softap_ssid, "");
+    if (err != ESP_OK) {
+        ESP_LOGE(TAG, "Failed to start SoftAP: %s", esp_err_to_name(err));
+        state_machine_trigger_event(EVENT_TIMEOUT);
+        return;
+    }
+
+    // 启动 DNS 劫持 + HTTP 配置服务器
+    dns_server_start(53, "192.168.4.1");
+    start_portal_server();
+
+    ESP_LOGI(TAG, "SoftAP '%s' started, waiting for configuration...", softap_ssid);
+    ESP_LOGI(TAG, "Connect to '%s' and open http://192.168.4.1", softap_ssid);
+
+    // 超时循环：5 分钟
+    uint32_t start_ms = xTaskGetTickCount() * portTICK_PERIOD_MS;
+    while (state_machine_get_state() == STATE_SOFTAP) {
+        uint32_t elapsed = (xTaskGetTickCount() * portTICK_PERIOD_MS) - start_ms;
+        if (elapsed > SOFTAP_TIMEOUT_MS) {
+            ESP_LOGW(TAG, "SoftAP timeout (%d min), restarting...", SOFTAP_TIMEOUT_MS / 60000);
             esp_restart();
         }
+        vTaskDelay(pdMS_TO_TICKS(1000));
     }
-    ESP_LOGI(TAG, "NVS initialized");
 
-    // 加载应用配置（WiFi + MQTT）
-    app_config_t app_config;
-    nvs_load_all_config(&app_config);
-    
-    // 复制 WiFi 配置到全局变量
-    strncpy(s_wifi_ssid, app_config.wifi_ssid, sizeof(s_wifi_ssid) - 1);
-    strncpy(s_wifi_password, app_config.wifi_password, sizeof(s_wifi_password) - 1);
-    
-    // 检查是否需要进入 SoftAP 配置模式
-    bool use_softap = false;
-    if (strlen(s_wifi_ssid) == 0 || !app_config.is_configured) {
-        ESP_LOGW(TAG, "WiFi not configured, entering SoftAP configuration mode");
-        use_softap = true;
-    }
-    
-    ESP_LOGI(TAG, "WiFi config: SSID=%s, SoftAP=%s", s_wifi_ssid, use_softap ? "yes" : "no");
+    // 状态已转换（用户提交了配置），清理 SoftAP 资源
+    ESP_LOGI(TAG, "Leaving SOFTAP mode, cleaning up...");
+    stop_portal_server();
+    dns_server_stop();
+    wifi_manager_stop_softap();
+    vTaskDelay(pdMS_TO_TICKS(1000));
+}
 
-    // 初始化 FATFS
-    ESP_ERROR_CHECK(fatfs_init());
-    ESP_LOGI(TAG, "FATFS initialized");
+// ============ WiFi 连接（指数退避） ============
 
-    // 初始化文件管理器
-    ESP_ERROR_CHECK(file_manager_init());
-    ESP_LOGI(TAG, "File manager initialized");
+static bool connect_wifi_with_retry(void)
+{
+    int retry_delay_ms = 5000;
+    const int max_retry_delay_ms = 60000;
+    int max_attempts = 5;
 
-    // 初始化雷达适配层
-    esp_err_t radar_err = radar_adapter_init();
-    if (radar_err == ESP_OK) {
-        radar_info_t radar_info;
-        esp_err_t info_err = radar_adapter_get_info(&radar_info);
-        if (info_err == ESP_OK) {
-            ESP_LOGI(TAG, "Radar initialized: %s", radar_info.name);
-        } else {
-            ESP_LOGW(TAG, "Failed to get radar info: %s", esp_err_to_name(info_err));
+    for (int attempt = 0; attempt < max_attempts; attempt++) {
+        ESP_LOGI(TAG, "WiFi connect attempt %d/%d (SSID: %s)", 
+                 attempt + 1, max_attempts, s_app_config.wifi_ssid);
+
+        // 清除事件位
+        xEventGroupClearBits(s_wifi_event_group, WIFI_CONNECTED_BIT | WIFI_FAIL_BIT);
+
+        esp_err_t err = wifi_manager_connect_sta(s_app_config.wifi_ssid, s_app_config.wifi_password);
+        if (err != ESP_OK) {
+            ESP_LOGE(TAG, "WiFi connect failed: %s", esp_err_to_name(err));
+            vTaskDelay(pdMS_TO_TICKS(retry_delay_ms));
+            retry_delay_ms = (retry_delay_ms * 2 < max_retry_delay_ms) ? retry_delay_ms * 2 : max_retry_delay_ms;
+            continue;
         }
-    } else {
-        ESP_LOGW(TAG, "Radar initialization failed: %s (continuing without radar)", esp_err_to_name(radar_err));
-    }
 
-    // Initialize WiFi STA mode
-    wifi_init_sta();
+        // 等待连接结果
+        EventBits_t bits = xEventGroupWaitBits(s_wifi_event_group,
+                                                WIFI_CONNECTED_BIT | WIFI_FAIL_BIT,
+                                                pdTRUE, pdFALSE,
+                                                pdMS_TO_TICKS(WIFI_CONNECT_TIMEOUT_MS));
 
-    // Wait for WiFi connection with timeout (Fix #27)
-    ESP_LOGI(TAG, "Waiting for WiFi connection...");
-    EventBits_t bits = xEventGroupWaitBits(s_wifi_event_group,
-                                            WIFI_CONNECTED_BIT | WIFI_FAIL_BIT,
-                                            pdFALSE, pdFALSE,
-                                            pdMS_TO_TICKS(WIFI_CONNECT_TIMEOUT_MS));
-
-    if (bits & WIFI_CONNECTED_BIT) {
-        ESP_LOGI(TAG, "WiFi connected successfully");
-        
-        // 初始化 MQTT（WiFi 连接成功后）
-        esp_err_t mqtt_err = app_mqtt_init();
-        if (mqtt_err == ESP_OK) {
-            mqtt_config_t mqtt_cfg = {0};
-            strncpy(mqtt_cfg.uri, app_config.mqtt_uri, sizeof(mqtt_cfg.uri) - 1);
-            mqtt_cfg.port = app_config.mqtt_port;
-            strncpy(mqtt_cfg.username, app_config.mqtt_username, sizeof(mqtt_cfg.username) - 1);
-            strncpy(mqtt_cfg.password, app_config.mqtt_password, sizeof(mqtt_cfg.password) - 1);
-            
-            mqtt_err = app_mqtt_connect(&mqtt_cfg);
-            if (mqtt_err == ESP_OK) {
-                ESP_LOGI(TAG, "MQTT connecting to %s:%d", mqtt_cfg.uri, mqtt_cfg.port);
-                // 等待 MQTT 连接（最多 5 秒）
-                vTaskDelay(pdMS_TO_TICKS(2000));
-                if (app_mqtt_is_connected()) {
-                    ESP_LOGI(TAG, "MQTT connected");
-                    // 发布 HA 发现配置
-                    app_mqtt_publish_ha_discovery();
-                } else {
-                    ESP_LOGW(TAG, "MQTT connection pending");
-                }
-            } else {
-                ESP_LOGW(TAG, "MQTT connect failed: %s", esp_err_to_name(mqtt_err));
-            }
-        } else {
-            ESP_LOGW(TAG, "MQTT init failed: %s", esp_err_to_name(mqtt_err));
+        if (bits & WIFI_CONNECTED_BIT) {
+            ESP_LOGI(TAG, "WiFi connected successfully");
+            state_machine_trigger_event(EVENT_WIFI_CONNECTED);
+            return true;
         }
-    } else if (bits & WIFI_FAIL_BIT) {
-        ESP_LOGW(TAG, "WiFi connection failed, starting HTTP server in AP-less mode");
-    } else {
-        ESP_LOGW(TAG, "WiFi connection timeout, starting HTTP server anyway");
+
+        // 连接失败，停止 STA 再重试
+        ESP_LOGW(TAG, "WiFi connect timeout/fail, retrying in %dms", retry_delay_ms);
+        wifi_manager_stop_sta();
+        vTaskDelay(pdMS_TO_TICKS(1000));
+        vTaskDelay(pdMS_TO_TICKS(retry_delay_ms));
+        retry_delay_ms = (retry_delay_ms * 2 < max_retry_delay_ms) ? retry_delay_ms * 2 : max_retry_delay_ms;
     }
 
-    // Start HTTP server (Fix #27: start after WiFi attempt)
+    ESP_LOGE(TAG, "WiFi connection failed after %d attempts", max_attempts);
+    return false;
+}
+
+static void run_state_config(void)
+{
+    ESP_LOGI(TAG, ">>> Entering CONFIG state (connecting WiFi)");
+
+    // 允许 STA 自动连接
+    s_auto_connect = true;
+
+    // 重新加载配置（可能刚被用户更新）
+    nvs_load_all_config(&s_app_config);
+
+    if (!connect_wifi_with_retry()) {
+        ESP_LOGW(TAG, "WiFi connection failed, returning to SOFTAP");
+        state_machine_trigger_event(EVENT_TIMEOUT);
+    }
+    // 如果连接成功，状态机已转到 STATE_CONNECTING
+}
+
+// ============ MQTT 连接 ============
+
+static void run_state_connecting(void)
+{
+    ESP_LOGI(TAG, ">>> Entering CONNECTING state (connecting MQTT)");
+
+    esp_err_t err = app_mqtt_init();
+    if (err != ESP_OK) {
+        ESP_LOGE(TAG, "MQTT init failed, skipping MQTT");
+        // 即使 MQTT 失败也进入 RUNNING（雷达功能仍可用）
+        state_machine_trigger_event(EVENT_MQTT_CONNECTED);
+        return;
+    }
+
+    mqtt_config_t mqtt_cfg = {0};
+    strncpy(mqtt_cfg.uri, s_app_config.mqtt_uri, sizeof(mqtt_cfg.uri) - 1);
+    mqtt_cfg.port = s_app_config.mqtt_port;
+    strncpy(mqtt_cfg.username, s_app_config.mqtt_username, sizeof(mqtt_cfg.username) - 1);
+    strncpy(mqtt_cfg.password, s_app_config.mqtt_password, sizeof(mqtt_cfg.password) - 1);
+
+    err = app_mqtt_connect(&mqtt_cfg);
+    if (err != ESP_OK) {
+        ESP_LOGE(TAG, "MQTT connect failed: %s", esp_err_to_name(err));
+        // 即使 MQTT 失败也进入 RUNNING
+        state_machine_trigger_event(EVENT_MQTT_CONNECTED);
+        return;
+    }
+
+    // 等待 MQTT 连接（最多 15 秒）
+    uint32_t start = xTaskGetTickCount() * portTICK_PERIOD_MS;
+    while (!app_mqtt_is_connected()) {
+        uint32_t elapsed = (xTaskGetTickCount() * portTICK_PERIOD_MS) - start;
+        if (elapsed > MQTT_CONNECT_TIMEOUT_MS) {
+            ESP_LOGW(TAG, "MQTT connect timeout, entering RUNNING anyway");
+            break;
+        }
+        vTaskDelay(pdMS_TO_TICKS(500));
+    }
+
+    if (app_mqtt_is_connected()) {
+        ESP_LOGI(TAG, "MQTT connected to %s:%d", mqtt_cfg.uri, mqtt_cfg.port);
+        app_mqtt_publish_ha_discovery();
+    }
+
+    state_machine_trigger_event(EVENT_MQTT_CONNECTED);
+}
+
+// ============ 正常运行 ============
+
+static void run_state_running(void)
+{
+    ESP_LOGI(TAG, ">>> Entering RUNNING state");
+
+    // 启动主 HTTP 服务器（雷达 WebSocket + REST API）
     ESP_ERROR_CHECK(http_server_start());
-    ESP_LOGI(TAG, "HTTP server started");
+    ESP_LOGI(TAG, "Main HTTP server started");
+
+    // 雷达控制命令验证测试
+    vTaskDelay(pdMS_TO_TICKS(RADAR_TEST_DELAY_MS));
+    esp_err_t test_err = radar_test_run_all();
+    if (test_err == ESP_OK) {
+        ESP_LOGI(TAG, "Radar control test passed");
+    } else {
+        ESP_LOGW(TAG, "Radar control test: %s", esp_err_to_name(test_err));
+    }
 
     ESP_LOGI(TAG, "=================================");
     ESP_LOGI(TAG, "System Ready!");
     ESP_LOGI(TAG, "=================================");
 
-    // 运行雷达控制命令验证测试（仅 LD2460）
-    // 测试会在启动后 5 秒执行，验证底层驱动写命令
-    vTaskDelay(pdMS_TO_TICKS(RADAR_TEST_DELAY_MS));
-    ESP_LOGI(TAG, "Running radar control command verification test...");
-    esp_err_t test_err = radar_test_run_all();
-    if (test_err == ESP_OK) {
-        ESP_LOGI(TAG, "Radar control test completed successfully");
-    } else {
-        ESP_LOGW(TAG, "Radar control test failed or skipped: %s", esp_err_to_name(test_err));
+    // 主循环
+    uint32_t report_count = 0;
+    while (state_machine_get_state() == STATE_RUNNING) {
+        vTaskDelay(pdMS_TO_TICKS(1000));
+        report_count++;
+
+        // 每 30 秒上报系统信息
+        if (report_count >= 30) {
+            report_count = 0;
+            ESP_LOGI(TAG, "Free heap: %lu bytes, min: %lu bytes",
+                     (unsigned long)esp_get_free_heap_size(),
+                     (unsigned long)esp_get_minimum_free_heap_size());
+            if (app_mqtt_is_connected()) {
+                app_mqtt_publish_system_info();
+            }
+        }
+
+        // 检测 WiFi 断开
+        EventBits_t bits = xEventGroupGetBits(s_wifi_event_group);
+        if (bits & WIFI_FAIL_BIT) {
+            ESP_LOGW(TAG, "WiFi disconnected in running state");
+            state_machine_trigger_event(EVENT_WIFI_DISCONNECTED);
+        }
     }
 
-    // 主循环 - 打印系统状态
+    // 退出 RUNNING 状态，停止 HTTP 服务器
+    http_server_stop();
+    ESP_LOGI(TAG, "Main HTTP server stopped");
+}
+
+// ============ 主任务（状态机驱动） ============
+
+static void app_task(void *pvParameters)
+{
+    ESP_LOGI(TAG, "App task started");
+
     while (1) {
-        vTaskDelay(pdMS_TO_TICKS(MAIN_LOOP_INTERVAL_MS));
+        app_state_t state = state_machine_get_state();
 
-        // 打印内存状态
-        ESP_LOGI(TAG, "Free heap: %lu bytes", esp_get_free_heap_size());
-        ESP_LOGI(TAG, "Min free heap: %lu bytes", esp_get_minimum_free_heap_size());
+        switch (state) {
+            case STATE_INIT:
+                // 根据配置状态决定初始路径
+                if (s_app_config.is_configured && !s_app_config.first_boot) {
+                    ESP_LOGI(TAG, "Already configured, skipping SoftAP");
+                    state_machine_trigger_event(EVENT_CONFIG_RECEIVED);
+                } else {
+                    state_machine_trigger_event(EVENT_INIT_COMPLETE);
+                }
+                break;
+
+            case STATE_SOFTAP:
+                run_state_softap();
+                break;
+
+            case STATE_CONFIG:
+                run_state_config();
+                break;
+
+            case STATE_CONNECTING:
+                run_state_connecting();
+                break;
+
+            case STATE_RUNNING:
+                run_state_running();
+                break;
+
+            case STATE_ERROR:
+                ESP_LOGE(TAG, "Error state, retrying...");
+                vTaskDelay(pdMS_TO_TICKS(5000));
+                state_machine_trigger_event(EVENT_TIMEOUT);
+                break;
+
+            default:
+                ESP_LOGE(TAG, "Unknown state: %d", state);
+                vTaskDelay(pdMS_TO_TICKS(1000));
+                break;
+        }
     }
+}
+
+// ============ 入口 ============
+
+void app_main(void)
+{
+    ESP_LOGI(TAG, "=================================");
+    ESP_LOGI(TAG, "LD Radar Web Monitor v2.0");
+    ESP_LOGI(TAG, "State Machine Architecture");
+    ESP_LOGI(TAG, "=================================");
+
+    // 1. NVS 初始化
+    esp_err_t nvs_err = nvs_init_config();
+    if (nvs_err != ESP_OK) {
+        ESP_LOGE(TAG, "NVS init failed: %s", esp_err_to_name(nvs_err));
+        nvs_flash_erase();
+        nvs_err = nvs_flash_init();
+        if (nvs_err != ESP_OK) {
+            ESP_LOGE(TAG, "NVS fatal error, restarting...");
+            vTaskDelay(pdMS_TO_TICKS(2000));
+            esp_restart();
+        }
+    }
+
+    // 2. 加载配置
+    nvs_load_all_config(&s_app_config);
+    ESP_LOGI(TAG, "Config: SSID=%s, MQTT=%s:%d, configured=%d",
+             s_app_config.wifi_ssid, s_app_config.mqtt_uri, 
+             s_app_config.mqtt_port, s_app_config.is_configured);
+
+    // 3. FATFS 初始化
+    ESP_ERROR_CHECK(fatfs_init());
+    ESP_ERROR_CHECK(file_manager_init());
+
+    // 4. 雷达初始化
+    esp_err_t radar_err = radar_adapter_init();
+    if (radar_err == ESP_OK) {
+        radar_info_t info;
+        if (radar_adapter_get_info(&info) == ESP_OK) {
+            ESP_LOGI(TAG, "Radar: %s", info.name);
+        }
+    } else {
+        ESP_LOGW(TAG, "Radar init failed: %s", esp_err_to_name(radar_err));
+    }
+
+    // 5. 网络初始化
+    network_init();
+
+    // 6. 状态机初始化
+    state_machine_init();
+
+    // 7. 创建主任务（状态机驱动循环）
+    xTaskCreate(app_task, "app_task", 4096, NULL, 5, NULL);
 }

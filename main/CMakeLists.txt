@@ -31,6 +31,7 @@ set(srcs
     "web_server/handlers/upload_handler.c"
     "web_server/handlers/radar_handler.c"
     "web_server/http_server.c"
+    "web_server/portal_handlers.c"
     "web_server/fatfs_init.c"
     "web_server/file_manager.c"
     "web_server/radar_broadcast.c"
@@ -73,3 +74,15 @@ idf_component_register(
 
 # 链接数学库
 target_link_libraries(${COMPONENT_LIB} m)
+
+# 嵌入 HTML 配置页面为二进制 blob
+set(html_src "web_server/portal_html.html")
+set(html_bin "${CMAKE_CURRENT_BINARY_DIR}/portal_html.bin")
+add_custom_command(
+    OUTPUT ${html_bin}
+    COMMAND ${CMAKE_COMMAND} -E copy ${CMAKE_CURRENT_SOURCE_DIR}/${html_src} ${html_bin}
+    DEPENDS ${html_src}
+    COMMENT "Copying portal HTML"
+)
+add_custom_target(portal_html DEPENDS ${html_bin})
+target_add_binary_data(${COMPONENT_LIB} ${html_bin} TEXT)
