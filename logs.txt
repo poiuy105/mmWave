@@ -1,15 +1,298 @@
-[13:53:45]I (72851) MAIN: Free heap: 97020 bytes, min: 91172 bytesI (442391) HTTP_SERVER: Static file request: uri=/index.html, mount=, root=�8@, filepath=/storage/www/index.html
-[13:53:45]I (442441) HTTP_SERVER: Static file request: uri=/style.css, mount=, root=�8@, filepath=/storage/www/style.css
-[13:53:45]I (442491) HTTP_SERVER: Static file request: uri=/radar.js, mount=, root=�8@, filepath=/storage/www/radar.js
-[13:53:45]I (442511) HTTP_SERVER: Static file request: uri=/main.js, mount=, root=�8@, filepath=/storage/www/main.js
-[13:53:45]I (442541) HTTP_SERVER: Static file request: uri=/canvas.js, mount=, root=�8@, filepath=/storage/www/canvas.js
-[13:53:45]I (442591) HTTP_SERVER: Static file request: uri=/api.js, mount=, root=�8@, filepath=/storage/www/api.js
-[13:53:45]I (442621) HTTP_SERVER: Static file request: uri=/websocket.js, mount=, root=�8@, filepath=/storage/www/websocket.js
-[13:53:45]E (442681) httpd: httpd_accept_conn: error in accept (23)
-[13:53:45]W (442691) httpd: httpd_server: error accepting new connection
-[13:53:46]E (443721) httpd: httpd_accept_conn: error in accept (23)
-[13:53:46]W (443721) httpd: httpd_server: error accepting new connection
-[13:53:49]E (446741) httpd: httpd_accept_conn: error in accept (23)
-[13:53:49]W (446741) httpd: httpd_server: error accepting new connection
-[13:53:54]E (451791) httpd: httpd_accept_conn: error in accept (23)
-[13:53:54]W (451791) httpd: httpd_server: error accepting new connection
+[17:01:07]I (103502) MAIN: Free heap: 85884 bytes, min: 41860 bytes
+[17:01:15]W (111222) httpd_ws: httpd_ws_recv_frame: WS frame is not properly masked.
+[17:01:15]W (111422) WS_CLIENT_MGR: Broadcast failed to fd=50: ESP_ERR_INVALID_ARG
+[17:01:17]I (113232) WS_CLIENT_MGR: Client added: fd=50, slot=0, ip=unknown, conn_id=16
+[17:01:17]I (113232) WS_SERVER: WebSocket connected: fd=50, slot=0
+[17:01:17]I (113232) HTTP_SERVER: WebSocket client connected: fd=50, ip=unknown
+[17:01:20]W (116262) httpd_txrx: httpd_sock_err: error in recv : 11
+[17:01:20]W (116262) httpd_ws: httpd_ws_recv_frame: Failed to receive payload
+[17:01:20]W (116422) WS_CLIENT_MGR: Broadcast failed to fd=50: ESP_ERR_INVALID_ARG
+[17:01:22]I (118232) WS_CLIENT_MGR: Client added: fd=50, slot=0, ip=unknown, conn_id=17
+[17:01:22]I (118232) WS_SERVER: WebSocket connected: fd=50, slot=0
+[17:01:22]I (118242) HTTP_SERVER: WebSocket client connected: fd=50, ip=unknown
+[17:01:22]W (118262) httpd_ws: httpd_ws_recv_frame: WS frame is not properly masked.
+[17:01:22]W (118422) WS_CLIENT_MGR: Broadcast failed to fd=50: ESP_ERR_INVALID_ARG
+[17:01:24]I (120232) WS_CLIENT_MGR: Client added: fd=50, slot=0, ip=unknown, conn_id=18
+[17:01:24]I (120232) WS_SERVER: WebSocket connected: fd=50, slot=0
+[17:01:24]I (120232) HTTP_SERVER: WebSocket client connected: fd=50, ip=unknown
+[17:01:24]W (120262) httpd_ws: httpd_ws_recv_frame: WS frame is not properly masked.
+[17:01:24]W (120422) WS_CLIENT_MGR: Broadcast failed to fd=50: ESP_ERR_INVALID_ARG
+[17:01:26]I (122232) WS_CLIENT_MGR: Client added: fd=50, slot=0, ip=unknown, conn_id=19
+[17:01:26]I (122232) WS_SERVER: WebSocket connected: fd=50, slot=0
+[17:01:26]I (122232) HTTP_SERVER: WebSocket client connected: fd=50, ip=unknown
+[17:01:26]W (122252) httpd_ws: httpd_ws_recv_frame: WS frame is not properly masked.
+[17:01:26]W (122422) WS_CLIENT_MGR: Broadcast failed to fd=50: ESP_ERR_INVALID_ARG
+[17:01:28]I (124232) WS_CLIENT_MGR: Client added: fd=50, slot=0, ip=unknown, conn_id=20
+[17:01:28]I (124232) WS_SERVER: WebSocket connected: fd=50, slot=0
+[17:01:28]I (124232) HTTP_SERVER: WebSocket client connected: fd=50, ip=unknown
+[17:01:37]I (133502) MAIN: Free heap: 84408 bytes, min: 41860 bytes
+[17:01:59]W (155192) httpd_ws: httpd_ws_recv_frame: WS frame is not properly masked.
+[17:01:59]W (155222) WS_CLIENT_MGR: Broadcast failed to fd=50: ESP_ERR_INVALID_ARG
+[17:02:01]I (157242) WS_CLIENT_MGR: Client added: fd=50, slot=0, ip=unknown, conn_id=21
+[17:02:01]I (157242) WS_SERVER: WebSocket connected: fd=50, slot=0
+[17:02:01]I (157242) HTTP_SERVER: WebSocket client connected: fd=50, ip=unknown
+[17:02:04]W (160272) httpd_txrx: httpd_sock_err: error in recv : 11
+[17:02:04]W (160272) httpd_ws: httpd_ws_recv_frame: Failed to receive payload
+[17:02:04]W (160422) WS_CLIENT_MGR: Broadcast failed to fd=50: ESP_ERR_INVALID_ARG
+[17:02:06]I (162212) WS_CLIENT_MGR: Client added: fd=50, slot=0, ip=unknown, conn_id=22
+[17:02:06]I (162212) WS_SERVER: WebSocket connected: fd=50, slot=0
+[17:02:06]I (162222) HTTP_SERVER: WebSocket client connected: fd=50, ip=unknown
+[17:02:07]I (163502) MAIN: Free heap: 86968 bytes, min: 41860 bytes
+[17:02:09]W (165242) httpd_txrx: httpd_sock_err: error in recv : 11
+[17:02:09]W (165242) httpd_ws: httpd_ws_recv_frame: Failed to receive payload
+[17:02:09]W (165432) WS_CLIENT_MGR: Broadcast failed to fd=50: ESP_ERR_INVALID_ARG
+[17:02:12]I (167742) WS_CLIENT_MGR: Client added: fd=50, slot=0, ip=unknown, conn_id=23
+[17:02:12]I (167752) WS_SERVER: WebSocket connected: fd=50, slot=0
+[17:02:12]I (167752) HTTP_SERVER: WebSocket client connected: fd=50, ip=unknown
+[17:02:37]I (193502) MAIN: Free heap: 85244 bytes, min: 41860 bytes
+[17:02:42]W (198182) httpd_ws: httpd_ws_recv_frame: WS frame is not properly masked.
+[17:02:42]W (198232) WS_CLIENT_MGR: Broadcast failed to fd=50: ESP_ERR_INVALID_ARG
+[17:02:44]I (200242) WS_CLIENT_MGR: Client added: fd=50, slot=0, ip=unknown, conn_id=24
+[17:02:44]I (200242) WS_SERVER: WebSocket connected: fd=50, slot=0
+[17:02:44]I (200252) HTTP_SERVER: WebSocket client connected: fd=50, ip=unknown
+[17:02:47]W (203292) httpd_txrx: httpd_sock_err: error in recv : 11
+[17:02:47]W (203292) httpd_ws: httpd_ws_recv_frame: Failed to receive payload
+[17:02:47]W (203432) WS_CLIENT_MGR: Broadcast failed to fd=50: ESP_ERR_INVALID_ARG
+[17:02:49]I (205222) WS_CLIENT_MGR: Client added: fd=50, slot=0, ip=unknown, conn_id=25
+[17:02:49]I (205222) WS_SERVER: WebSocket connected: fd=50, slot=0
+[17:02:49]I (205222) HTTP_SERVER: WebSocket client connected: fd=50, ip=unknown
+[17:02:52]W (208252) httpd_txrx: httpd_sock_err: error in recv : 11
+[17:02:52]W (208252) httpd_ws: httpd_ws_recv_frame: Failed to receive payload
+[17:02:52]W (208442) WS_CLIENT_MGR: Broadcast failed to fd=50: ESP_ERR_INVALID_ARG
+[17:02:54]I (210242) WS_CLIENT_MGR: Client added: fd=50, slot=0, ip=unknown, conn_id=26
+[17:02:54]I (210252) WS_SERVER: WebSocket connected: fd=50, slot=0
+[17:02:54]I (210252) HTTP_SERVER: WebSocket client connected: fd=50, ip=unknown
+[17:02:54]W (210272) httpd_ws: httpd_ws_recv_frame: WS frame is not properly masked.
+[17:02:54]W (210442) WS_CLIENT_MGR: Broadcast failed to fd=50: ESP_ERR_INVALID_ARG
+[17:02:56]I (212252) WS_CLIENT_MGR: Client added: fd=50, slot=0, ip=unknown, conn_id=27
+[17:02:56]I (212252) WS_SERVER: WebSocket connected: fd=50, slot=0
+[17:02:56]I (212262) HTTP_SERVER: WebSocket client connected: fd=50, ip=unknown
+[17:02:56]W (212282) httpd_ws: httpd_ws_recv_frame: WS frame is not properly masked.
+[17:02:56]W (212442) WS_CLIENT_MGR: Broadcast failed to fd=50: ESP_ERR_INVALID_ARG
+[17:02:58]I (214232) WS_CLIENT_MGR: Client added: fd=50, slot=0, ip=unknown, conn_id=28
+[17:02:58]I (214232) WS_SERVER: WebSocket connected: fd=50, slot=0
+[17:02:58]I (214232) HTTP_SERVER: WebSocket client connected: fd=50, ip=unknown
+[17:03:01]W (217262) httpd_txrx: httpd_sock_err: error in recv : 11
+[17:03:01]W (217262) httpd_ws: httpd_ws_recv_frame: Failed to receive payload
+[17:03:01]W (217452) WS_CLIENT_MGR: Broadcast failed to fd=50: ESP_ERR_INVALID_ARG
+[17:03:03]I (219252) WS_CLIENT_MGR: Client added: fd=50, slot=0, ip=unknown, conn_id=29
+[17:03:03]I (219262) WS_SERVER: WebSocket connected: fd=50, slot=0
+[17:03:03]I (219262) HTTP_SERVER: WebSocket client connected: fd=50, ip=unknown
+[17:03:03]W (219282) httpd_ws: httpd_ws_recv_frame: WS frame is not properly masked.
+[17:03:03]W (219452) WS_CLIENT_MGR: Broadcast failed to fd=50: ESP_ERR_INVALID_ARG
+[17:03:05]I (221262) WS_CLIENT_MGR: Client added: fd=50, slot=0, ip=unknown, conn_id=30
+[17:03:05]I (221262) WS_SERVER: WebSocket connected: fd=50, slot=0
+[17:03:05]I (221262) HTTP_SERVER: WebSocket client connected: fd=50, ip=unknown
+[17:03:05]W (221282) httpd_ws: httpd_ws_recv_frame: WS frame is not properly masked.
+[17:03:05]W (221452) WS_CLIENT_MGR: Broadcast failed to fd=50: ESP_ERR_INVALID_ARG
+[17:03:07]I (223252) WS_CLIENT_MGR: Client added: fd=50, slot=0, ip=unknown, conn_id=31
+[17:03:07]I (223252) WS_SERVER: WebSocket connected: fd=50, slot=0
+[17:03:07]I (223252) HTTP_SERVER: WebSocket client connected: fd=50, ip=unknown
+[17:03:07]W (223282) httpd_ws: httpd_ws_recv_frame: WS frame is not properly masked.
+[17:03:07]W (223462) WS_CLIENT_MGR: Broadcast failed to fd=50: ESP_ERR_INVALID_ARG
+[17:03:07]I (223502) MAIN: Free heap: 88292 bytes, min: 41860 bytes
+[17:03:09]I (225272) WS_CLIENT_MGR: Client added: fd=50, slot=0, ip=unknown, conn_id=32
+[17:03:09]I (225272) WS_SERVER: WebSocket connected: fd=50, slot=0
+[17:03:09]I (225272) HTTP_SERVER: WebSocket client connected: fd=50, ip=unknown
+[17:03:09]W (225302) httpd_ws: httpd_ws_recv_frame: WS frame is not properly masked.
+[17:03:09]W (225462) WS_CLIENT_MGR: Broadcast failed to fd=50: ESP_ERR_INVALID_ARG
+[17:03:11]I (227242) WS_CLIENT_MGR: Client added: fd=50, slot=0, ip=unknown, conn_id=33
+[17:03:11]I (227242) WS_SERVER: WebSocket connected: fd=50, slot=0
+[17:03:11]I (227242) HTTP_SERVER: WebSocket client connected: fd=50, ip=unknown
+[17:03:11]W (227272) httpd_ws: httpd_ws_recv_frame: WS frame is not properly masked.
+[17:03:11]W (227462) WS_CLIENT_MGR: Broadcast failed to fd=50: ESP_ERR_INVALID_ARG
+[17:03:13]I (229272) WS_CLIENT_MGR: Client added: fd=50, slot=0, ip=unknown, conn_id=34
+[17:03:13]I (229272) WS_SERVER: WebSocket connected: fd=50, slot=0
+[17:03:13]I (229272) HTTP_SERVER: WebSocket client connected: fd=50, ip=unknown
+[17:03:16]W (232292) httpd_txrx: httpd_sock_err: error in recv : 11
+[17:03:16]W (232292) httpd_ws: httpd_ws_recv_frame: Failed to receive payload
+[17:03:16]W (232462) WS_CLIENT_MGR: Broadcast failed to fd=50: ESP_ERR_INVALID_ARG
+[17:03:18]I (234282) WS_CLIENT_MGR: Client added: fd=50, slot=0, ip=unknown, conn_id=35
+[17:03:18]I (234282) WS_SERVER: WebSocket connected: fd=50, slot=0
+[17:03:18]I (234282) HTTP_SERVER: WebSocket client connected: fd=50, ip=unknown
+[17:03:21]W (237302) httpd_txrx: httpd_sock_err: error in recv : 11
+[17:03:21]W (237302) httpd_ws: httpd_ws_recv_frame: Failed to receive payload
+[17:03:21]W (237462) WS_CLIENT_MGR: Broadcast failed to fd=50: ESP_ERR_INVALID_ARG
+[17:03:23]I (239222) WS_CLIENT_MGR: Client added: fd=50, slot=0, ip=unknown, conn_id=36
+[17:03:23]I (239222) WS_SERVER: WebSocket connected: fd=50, slot=0
+[17:03:23]I (239222) HTTP_SERVER: WebSocket client connected: fd=50, ip=unknown
+[17:03:23]W (239252) httpd_ws: httpd_ws_recv_frame: WS frame is not properly masked.
+[17:03:23]W (239262) WS_CLIENT_MGR: Broadcast failed to fd=50: ESP_ERR_INVALID_ARG
+[17:03:25]I (241272) WS_CLIENT_MGR: Client added: fd=50, slot=0, ip=unknown, conn_id=37
+[17:03:25]I (241272) WS_SERVER: WebSocket connected: fd=50, slot=0
+[17:03:25]I (241272) HTTP_SERVER: WebSocket client connected: fd=50, ip=unknown
+[17:03:25]W (241302) httpd_ws: httpd_ws_recv_frame: WS frame is not properly masked.
+[17:03:25]W (241462) WS_CLIENT_MGR: Broadcast failed to fd=50: ESP_ERR_INVALID_ARG
+[17:03:27]I (243212) WS_CLIENT_MGR: Client added: fd=50, slot=0, ip=unknown, conn_id=38
+[17:03:27]I (243212) WS_SERVER: WebSocket connected: fd=50, slot=0
+[17:03:27]I (243212) HTTP_SERVER: WebSocket client connected: fd=50, ip=unknown
+[17:03:27]W (243232) httpd_ws: httpd_ws_recv_frame: WS frame is not properly masked.
+[17:03:27]W (243262) WS_CLIENT_MGR: Broadcast failed to fd=50: ESP_ERR_INVALID_ARG
+[17:03:29]I (245262) WS_CLIENT_MGR: Client added: fd=50, slot=0, ip=unknown, conn_id=39
+[17:03:29]I (245262) WS_SERVER: WebSocket connected: fd=50, slot=0
+[17:03:29]I (245272) HTTP_SERVER: WebSocket client connected: fd=50, ip=unknown
+[17:03:29]W (245292) httpd_ws: httpd_ws_recv_frame: WS frame is not properly masked.
+[17:03:29]W (245462) WS_CLIENT_MGR: Broadcast failed to fd=50: ESP_ERR_INVALID_ARG
+[17:03:31]I (247312) WS_CLIENT_MGR: Client added: fd=50, slot=0, ip=unknown, conn_id=40
+[17:03:31]I (247312) WS_SERVER: WebSocket connected: fd=50, slot=0
+[17:03:31]I (247322) HTTP_SERVER: WebSocket client connected: fd=50, ip=unknown
+[17:03:34]W (250342) httpd_txrx: httpd_sock_err: error in recv : 11
+[17:03:34]W (250342) httpd_ws: httpd_ws_recv_frame: Failed to receive payload
+[17:03:34]W (250462) WS_CLIENT_MGR: Broadcast failed to fd=50: ESP_ERR_INVALID_ARG
+[17:03:36]I (252222) WS_CLIENT_MGR: Client added: fd=50, slot=0, ip=unknown, conn_id=41
+[17:03:36]I (252222) WS_SERVER: WebSocket connected: fd=50, slot=0
+[17:03:36]I (252232) HTTP_SERVER: WebSocket client connected: fd=50, ip=unknown
+[17:03:37]I (253502) MAIN: Free heap: 84556 bytes, min: 41860 bytes
+[17:03:39]W (255252) httpd_txrx: httpd_sock_err: error in recv : 11
+[17:03:39]W (255252) httpd_ws: httpd_ws_recv_frame: Failed to receive payload
+[17:03:39]W (255262) WS_CLIENT_MGR: Broadcast failed to fd=50: ESP_ERR_INVALID_ARG
+[17:03:41]I (257242) WS_CLIENT_MGR: Client added: fd=50, slot=0, ip=unknown, conn_id=42
+[17:03:41]I (257242) WS_SERVER: WebSocket connected: fd=50, slot=0
+[17:03:41]I (257242) HTTP_SERVER: WebSocket client connected: fd=50, ip=unknown
+[17:04:07]I (283502) MAIN: Free heap: 84360 bytes, min: 41860 bytes
+[17:04:15]W (291272) httpd_txrx: httpd_sock_err: error in recv : 11
+[17:04:18]W (294272) httpd_txrx: httpd_sock_err: error in recv : 11
+[17:04:18]W (294272) httpd_ws: httpd_ws_recv_frame: Failed to receive payload
+[17:04:18]W (294462) WS_CLIENT_MGR: Broadcast failed to fd=50: ESP_ERR_INVALID_ARG
+[17:04:20]I (296262) WS_CLIENT_MGR: Client added: fd=50, slot=0, ip=unknown, conn_id=43
+[17:04:20]I (296262) WS_SERVER: WebSocket connected: fd=50, slot=0
+[17:04:20]I (296262) HTTP_SERVER: WebSocket client connected: fd=50, ip=unknown
+[17:04:23]W (299282) httpd_txrx: httpd_sock_err: error in recv : 11
+[17:04:23]W (299282) httpd_ws: httpd_ws_recv_frame: Failed to receive payload
+[17:04:23]W (299472) WS_CLIENT_MGR: Broadcast failed to fd=50: ESP_ERR_INVALID_ARG
+[17:04:25]I (301282) WS_CLIENT_MGR: Client added: fd=50, slot=0, ip=unknown, conn_id=44
+[17:04:25]I (301282) WS_SERVER: WebSocket connected: fd=50, slot=0
+[17:04:25]I (301282) HTTP_SERVER: WebSocket client connected: fd=50, ip=unknown
+[17:04:28]W (304292) httpd_txrx: httpd_sock_err: error in recv : 11
+[17:04:28]W (304292) httpd_ws: httpd_ws_recv_frame: Failed to receive payload
+[17:04:28]W (304472) WS_CLIENT_MGR: Broadcast failed to fd=50: ESP_ERR_INVALID_ARG
+[17:04:30]I (306292) WS_CLIENT_MGR: Client added: fd=50, slot=0, ip=unknown, conn_id=45
+[17:04:30]I (306292) WS_SERVER: WebSocket connected: fd=50, slot=0
+[17:04:30]I (306292) HTTP_SERVER: WebSocket client connected: fd=50, ip=unknown
+[17:04:30]W (306322) httpd_ws: httpd_ws_recv_frame: WS frame is not properly masked.
+[17:04:30]W (306472) WS_CLIENT_MGR: Broadcast failed to fd=50: ESP_ERR_INVALID_ARG
+[17:04:32]I (308242) WS_CLIENT_MGR: Client added: fd=50, slot=0, ip=unknown, conn_id=46
+[17:04:32]I (308242) WS_SERVER: WebSocket connected: fd=50, slot=0
+[17:04:32]I (308242) HTTP_SERVER: WebSocket client connected: fd=50, ip=unknown
+[17:04:35]W (311262) httpd_txrx: httpd_sock_err: error in recv : 11
+[17:04:35]W (311262) httpd_ws: httpd_ws_recv_frame: Failed to receive payload
+[17:04:35]W (311272) WS_CLIENT_MGR: Broadcast failed to fd=50: ESP_ERR_INVALID_ARG
+[17:04:37]I (313252) WS_CLIENT_MGR: Client added: fd=50, slot=0, ip=unknown, conn_id=47
+[17:04:37]I (313252) WS_SERVER: WebSocket connected: fd=50, slot=0
+[17:04:37]I (313262) HTTP_SERVER: WebSocket client connected: fd=50, ip=unknown
+[17:04:37]I (313502) MAIN: Free heap: 84552 bytes, min: 41860 bytes
+[17:04:40]W (316282) httpd_txrx: httpd_sock_err: error in recv : 11
+[17:04:40]W (316282) httpd_ws: httpd_ws_recv_frame: Failed to receive payload
+[17:04:40]W (316472) WS_CLIENT_MGR: Broadcast failed to fd=50: ESP_ERR_INVALID_ARG
+[17:04:42]I (318282) WS_CLIENT_MGR: Client added: fd=50, slot=0, ip=unknown, conn_id=48
+[17:04:42]I (318282) WS_SERVER: WebSocket connected: fd=50, slot=0
+[17:04:42]I (318282) HTTP_SERVER: WebSocket client connected: fd=50, ip=unknown
+[17:04:42]W (318302) httpd_ws: httpd_ws_recv_frame: WS frame is not properly masked.
+[17:04:42]W (318472) WS_CLIENT_MGR: Broadcast failed to fd=50: ESP_ERR_INVALID_ARG
+[17:04:44]I (320222) WS_CLIENT_MGR: Client added: fd=50, slot=0, ip=unknown, conn_id=49
+[17:04:44]I (320222) WS_SERVER: WebSocket connected: fd=50, slot=0
+[17:04:44]I (320232) HTTP_SERVER: WebSocket client connected: fd=50, ip=unknown
+[17:04:47]W (323252) httpd_txrx: httpd_sock_err: error in recv : 11
+[17:04:47]W (323252) httpd_ws: httpd_ws_recv_frame: Failed to receive payload
+[17:04:47]W (323272) WS_CLIENT_MGR: Broadcast failed to fd=50: ESP_ERR_INVALID_ARG
+[17:04:49]I (325242) WS_CLIENT_MGR: Client added: fd=50, slot=0, ip=unknown, conn_id=50
+[17:04:49]I (325242) WS_SERVER: WebSocket connected: fd=50, slot=0
+[17:04:49]I (325242) HTTP_SERVER: WebSocket client connected: fd=50, ip=unknown
+[17:04:49]W (325262) httpd_ws: httpd_ws_recv_frame: WS frame is not properly masked.
+[17:04:49]W (325272) WS_CLIENT_MGR: Broadcast failed to fd=50: ESP_ERR_INVALID_ARG
+[17:04:51]I (327282) WS_CLIENT_MGR: Client added: fd=50, slot=0, ip=unknown, conn_id=51
+[17:04:51]I (327292) WS_SERVER: WebSocket connected: fd=50, slot=0
+[17:04:51]I (327292) HTTP_SERVER: WebSocket client connected: fd=50, ip=unknown
+[17:04:54]W (330312) httpd_txrx: httpd_sock_err: error in recv : 11
+[17:04:54]W (330312) httpd_ws: httpd_ws_recv_frame: Failed to receive payload
+[17:04:54]W (330472) WS_CLIENT_MGR: Broadcast failed to fd=50: ESP_ERR_INVALID_ARG
+[17:04:56]I (332282) WS_CLIENT_MGR: Client added: fd=50, slot=0, ip=unknown, conn_id=52
+[17:04:56]I (332282) WS_SERVER: WebSocket connected: fd=50, slot=0
+[17:04:56]I (332292) HTTP_SERVER: WebSocket client connected: fd=50, ip=unknown
+[17:04:56]W (332312) httpd_ws: httpd_ws_recv_frame: WS frame is not properly masked.
+[17:04:56]W (332472) WS_CLIENT_MGR: Broadcast failed to fd=50: ESP_ERR_INVALID_ARG
+[17:04:58]I (334252) WS_CLIENT_MGR: Client added: fd=50, slot=0, ip=unknown, conn_id=53
+[17:04:58]I (334252) WS_SERVER: WebSocket connected: fd=50, slot=0
+[17:04:58]I (334252) HTTP_SERVER: WebSocket client connected: fd=50, ip=unknown
+[17:05:01]W (337292) httpd_txrx: httpd_sock_err: error in recv : 11
+[17:05:01]W (337292) httpd_ws: httpd_ws_recv_frame: Failed to receive payload
+[17:05:01]W (337472) WS_CLIENT_MGR: Broadcast failed to fd=50: ESP_ERR_INVALID_ARG
+[17:05:03]I (339272) WS_CLIENT_MGR: Client added: fd=50, slot=0, ip=unknown, conn_id=54
+[17:05:03]I (339272) WS_SERVER: WebSocket connected: fd=50, slot=0
+[17:05:03]I (339282) HTTP_SERVER: WebSocket client connected: fd=50, ip=unknown
+[17:05:03]W (339302) httpd_ws: httpd_ws_recv_frame: WS frame is not properly masked.
+[17:05:03]W (339472) WS_CLIENT_MGR: Broadcast failed to fd=50: ESP_ERR_INVALID_ARG
+[17:05:05]I (341282) WS_CLIENT_MGR: Client added: fd=50, slot=0, ip=unknown, conn_id=55
+[17:05:05]I (341292) WS_SERVER: WebSocket connected: fd=50, slot=0
+[17:05:05]I (341292) HTTP_SERVER: WebSocket client connected: fd=50, ip=unknown
+[17:05:05]W (341312) httpd_ws: httpd_ws_recv_frame: WS frame is not properly masked.
+[17:05:05]W (341472) WS_CLIENT_MGR: Broadcast failed to fd=50: ESP_ERR_INVALID_ARG
+[17:05:07]I (343262) WS_CLIENT_MGR: Client added: fd=50, slot=0, ip=unknown, conn_id=56
+[17:05:07]I (343262) WS_SERVER: WebSocket connected: fd=50, slot=0
+[17:05:07]I (343262) HTTP_SERVER: WebSocket client connected: fd=50, ip=unknown
+[17:05:07]I (343502) MAIN: Free heap: 84540 bytes, min: 41860 bytes
+[17:05:10]W (346292) httpd_txrx: httpd_sock_err: error in recv : 11
+[17:05:10]W (346292) httpd_ws: httpd_ws_recv_frame: Failed to receive payload
+[17:05:10]W (346482) WS_CLIENT_MGR: Broadcast failed to fd=50: ESP_ERR_INVALID_ARG
+[17:05:12]I (348272) WS_CLIENT_MGR: Client added: fd=50, slot=0, ip=unknown, conn_id=57
+[17:05:12]I (348282) WS_SERVER: WebSocket connected: fd=50, slot=0
+[17:05:12]I (348282) HTTP_SERVER: WebSocket client connected: fd=50, ip=unknown
+[17:05:12]W (348312) httpd_ws: httpd_ws_recv_frame: WS frame is not properly masked.
+[17:05:12]W (348492) WS_CLIENT_MGR: Broadcast failed to fd=50: ESP_ERR_INVALID_ARG
+[17:05:14]I (350222) WS_CLIENT_MGR: Client added: fd=50, slot=0, ip=unknown, conn_id=58
+[17:05:14]I (350222) WS_SERVER: WebSocket connected: fd=50, slot=0
+[17:05:14]I (350222) HTTP_SERVER: WebSocket client connected: fd=50, ip=unknown
+[17:05:17]W (353252) httpd_txrx: httpd_sock_err: error in recv : 11
+[17:05:17]W (353252) httpd_ws: httpd_ws_recv_frame: Failed to receive payload
+[17:05:17]W (353292) WS_CLIENT_MGR: Broadcast failed to fd=50: ESP_ERR_INVALID_ARG
+[17:05:19]I (355242) WS_CLIENT_MGR: Client added: fd=50, slot=0, ip=unknown, conn_id=59
+[17:05:19]I (355242) WS_SERVER: WebSocket connected: fd=50, slot=0
+[17:05:19]I (355242) HTTP_SERVER: WebSocket client connected: fd=50, ip=unknown
+[17:05:37]I (373502) MAIN: Free heap: 82800 bytes, min: 41860 bytes
+[17:05:50]W (386262) httpd_ws: httpd_ws_recv_frame: WS frame is not properly masked.
+[17:05:51]W (387092) WS_CLIENT_MGR: Broadcast failed to fd=50: ESP_ERR_INVALID_ARG
+[17:05:52]I (388212) WS_CLIENT_MGR: Client added: fd=50, slot=0, ip=unknown, conn_id=60
+[17:05:52]I (388212) WS_SERVER: WebSocket connected: fd=50, slot=0
+[17:05:52]I (388212) HTTP_SERVER: WebSocket client connected: fd=50, ip=unknown
+[17:05:52]W (388242) httpd_ws: httpd_ws_recv_frame: WS frame is not properly masked.
+[17:05:53]W (389092) WS_CLIENT_MGR: Broadcast failed to fd=50: ESP_ERR_INVALID_ARG
+[17:05:54]I (390262) WS_CLIENT_MGR: Client added: fd=45, slot=0, ip=unknown, conn_id=61
+[17:05:54]I (390262) WS_SERVER: WebSocket connected: fd=45, slot=0
+[17:05:54]I (390262) HTTP_SERVER: WebSocket client connected: fd=45, ip=unknown
+[17:05:54]W (390292) httpd_ws: httpd_ws_recv_frame: WS frame is not properly masked.
+[17:05:55]W (391092) WS_CLIENT_MGR: Broadcast failed to fd=45: ESP_ERR_INVALID_ARG
+[17:05:56]I (392312) WS_CLIENT_MGR: Client added: fd=45, slot=0, ip=unknown, conn_id=62
+[17:05:56]I (392312) WS_SERVER: WebSocket connected: fd=45, slot=0
+[17:05:56]I (392312) HTTP_SERVER: WebSocket client connected: fd=45, ip=unknown
+[17:05:56]W (392332) httpd_ws: httpd_ws_recv_frame: WS frame is not properly masked.
+[17:05:56]W (392492) WS_CLIENT_MGR: Broadcast failed to fd=45: ESP_ERR_INVALID_ARG
+[17:05:58]I (394262) WS_CLIENT_MGR: Client added: fd=45, slot=0, ip=unknown, conn_id=63
+[17:05:58]I (394262) WS_SERVER: WebSocket connected: fd=45, slot=0
+[17:05:58]I (394262) HTTP_SERVER: WebSocket client connected: fd=45, ip=unknown
+[17:05:58]W (394292) httpd_ws: httpd_ws_recv_frame: WS frame is not properly masked.
+[17:05:58]W (394492) WS_CLIENT_MGR: Broadcast failed to fd=45: ESP_ERR_INVALID_ARG
+[17:06:00]I (396302) WS_CLIENT_MGR: Client added: fd=45, slot=0, ip=unknown, conn_id=64
+[17:06:00]I (396302) WS_SERVER: WebSocket connected: fd=45, slot=0
+[17:06:00]I (396302) HTTP_SERVER: WebSocket client connected: fd=45, ip=unknown
+[17:06:07]I (403502) MAIN: Free heap: 85544 bytes, min: 41860 bytes
+[17:06:34]W (430192) httpd_txrx: httpd_sock_err: error in recv : 11
+[17:06:34]W (430192) httpd_ws: httpd_ws_recv_frame: Failed to receive payload
+[17:06:34]W (430292) WS_CLIENT_MGR: Broadcast failed to fd=45: ESP_ERR_INVALID_ARG
+[17:06:36]I (432262) WS_CLIENT_MGR: Client added: fd=45, slot=0, ip=unknown, conn_id=65
+[17:06:36]I (432262) WS_SERVER: WebSocket connected: fd=45, slot=0
+[17:06:36]I (432262) HTTP_SERVER: WebSocket client connected: fd=45, ip=unknown
+[17:06:37]I (433502) MAIN: Free heap: 85764 bytes, min: 41860 bytes
+[17:07:07]I (463502) MAIN: Free heap: 86816 bytes, min: 41860 bytes
+[17:07:10]W (466202) httpd_txrx: httpd_sock_err: error in recv : 11
+[17:07:13]W (469202) httpd_txrx: httpd_sock_err: error in recv : 11
+[17:07:13]W (469202) httpd_ws: httpd_ws_recv_frame: Failed to receive payload
+[17:07:13]W (469292) WS_CLIENT_MGR: Broadcast failed to fd=45: ESP_ERR_INVALID_ARG
+[17:07:15]I (471262) WS_CLIENT_MGR: Client added: fd=45, slot=0, ip=unknown, conn_id=66
+[17:07:15]I (471262) WS_SERVER: WebSocket connected: fd=45, slot=0
+[17:07:15]I (471262) HTTP_SERVER: WebSocket client connected: fd=45, ip=unknown
+[17:07:18]W (474272) httpd_txrx: httpd_sock_err: error in recv : 11
+[17:07:18]W (474272) httpd_ws: httpd_ws_recv_frame: Failed to receive payload
+[17:07:18]W (474292) WS_CLIENT_MGR: Broadcast failed to fd=45: ESP_ERR_INVALID_ARG
+[17:07:20]I (476532) WS_CLIENT_MGR: Client added: fd=45, slot=0, ip=unknown, conn_id=67
+[17:07:20]I (476532) WS_SERVER: WebSocket connected: fd=45, slot=0
+[17:07:20]I (476542) HTTP_SERVER: WebSocket client connected: fd=45, ip=unknown

@@ -292,6 +292,7 @@ int ws_client_mgr_remove_timeout(ws_client_mgr_t *mgr, httpd_handle_t server, Ti
             .type = HTTPD_WS_TYPE_CLOSE,
             .payload = NULL,
             .len = 0,
+            .masked = false,
         };
         httpd_ws_send_frame_async(server, close_actions[i].fd, &close_pkt);
     }
@@ -319,8 +320,13 @@ int ws_client_mgr_broadcast(ws_client_mgr_t *mgr, httpd_handle_t server,
     // Phase 2: Send without holding lock
     int success_count = 0;
     for (int i = 0; i < fd_count; i++) {
-        esp_err_t ret = httpd_ws_send_frame_async(server, fds[i],
-            &(httpd_ws_frame_t){ .type = type, .payload = (uint8_t *)data, .len = len });
+        httpd_ws_frame_t ws_frame = {
+            .type = type,
+            .payload = (uint8_t *)data,
+            .len = len,
+            .masked = false,
+        };
+        esp_err_t ret = httpd_ws_send_frame_async(server, fds[i], &ws_frame);
         if (ret == ESP_OK) {
             success_count++;
         } else {

@@ -44,6 +44,7 @@ esp_err_t ws_uri_handler(httpd_req_t *req)
                 .type = HTTPD_WS_TYPE_CLOSE,
                 .payload = NULL,
                 .len = 0,
+                .masked = false,
             };
             httpd_ws_send_frame(req, &close_pkt);
             return ESP_FAIL;
@@ -119,6 +120,7 @@ esp_err_t ws_uri_handler(httpd_req_t *req)
                 .type = HTTPD_WS_TYPE_CLOSE,
                 .payload = NULL,
                 .len = 0,
+                .masked = false,
             };
             httpd_ws_send_frame(req, &close_pkt);
             break;
@@ -129,6 +131,7 @@ esp_err_t ws_uri_handler(httpd_req_t *req)
                 .type = HTTPD_WS_TYPE_PONG,
                 .payload = ws_pkt.payload,
                 .len = ws_pkt.len,
+                .masked = false,
             };
             httpd_ws_send_frame(req, &pong_pkt);
             break;
@@ -268,6 +271,7 @@ esp_err_t ws_server_send_text(ws_server_t *server, int fd, const char *text)
         .type = HTTPD_WS_TYPE_TEXT,
         .payload = (uint8_t *)text,
         .len = strlen(text),
+        .masked = false,
     };
 
     esp_err_t ret = httpd_ws_send_frame_async(server->http_server, fd, &ws_pkt);
@@ -295,6 +299,7 @@ esp_err_t ws_server_send_binary(ws_server_t *server, int fd, const uint8_t *data
         .type = HTTPD_WS_TYPE_BINARY,
         .payload = (uint8_t *)data,
         .len = len,
+        .masked = false,
     };
 
     esp_err_t ret = httpd_ws_send_frame_async(server->http_server, fd, &ws_pkt);
@@ -357,6 +362,7 @@ esp_err_t ws_server_close_client(ws_server_t *server, int fd)
         .type = HTTPD_WS_TYPE_CLOSE,
         .payload = NULL,
         .len = 0,
+        .masked = false,
     };
 
     esp_err_t ret = httpd_ws_send_frame_async(server->http_server, fd, &close_pkt);

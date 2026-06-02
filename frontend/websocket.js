@@ -71,8 +71,9 @@ class WebSocketClient {
         this.stats.connectTime = Date.now();
         this.stats.reconnectCount++;
 
-        // 发送订阅请求
-        this.send({ type: 'subscribe' });
+        // 发送订阅请求（临时禁用，用于调试连接稳定性）
+        // this.send({ type: 'subscribe' });
+        console.log('[WS] 自动订阅已禁用（调试模式）');
 
         // 启动心跳
         this._startHeartbeat();

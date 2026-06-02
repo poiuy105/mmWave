@@ -64,10 +64,20 @@ static void ws_heartbeat_task(void *arg)
         for (int i = 0; i < action_count; i++) {
             if (actions[i].timeout) {
                 ESP_LOGW(TAG, "Client timeout: fd=%d", actions[i].fd);
-                httpd_ws_frame_t close_pkt = { .type = HTTPD_WS_TYPE_CLOSE, .payload = NULL, .len = 0 };
+                httpd_ws_frame_t close_pkt = {
+                    .type = HTTPD_WS_TYPE_CLOSE,
+                    .payload = NULL,
+                    .len = 0,
+                    .masked = false,
+                };
                 httpd_ws_send_frame_async(ctx->http_server, actions[i].fd, &close_pkt);
             } else {
-                httpd_ws_frame_t ping_pkt = { .type = HTTPD_WS_TYPE_PING, .payload = NULL, .len = 0 };
+                httpd_ws_frame_t ping_pkt = {
+                    .type = HTTPD_WS_TYPE_PING,
+                    .payload = NULL,
+                    .len = 0,
+                    .masked = false,
+                };
                 esp_err_t ret = httpd_ws_send_frame_async(ctx->http_server, actions[i].fd, &ping_pkt);
                 if (ret == ESP_OK) ctx->total_pings_sent++;
             }
@@ -174,6 +184,7 @@ esp_err_t ws_heartbeat_send_ping(httpd_handle_t http_server, int fd)
         .type = HTTPD_WS_TYPE_PING,
         .payload = NULL,
         .len = 0,
+        .masked = false,
     };
 
     return httpd_ws_send_frame_async(http_server, fd, &ping_pkt);
