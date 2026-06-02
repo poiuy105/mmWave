@@ -44,4 +44,7 @@ esp_err_t app_mqtt_publish_ha_discovery(void);
 // ============ LED 控制 ============
 esp_err_t app_mqtt_publish_led_state(bool on);
 
+// ============ 区域状态上报 ============
+esp_err_t app_mqtt_publish_zone_status(void);
+
 #endif

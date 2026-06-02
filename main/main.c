@@ -32,6 +32,7 @@
 #include "web_server/portal_handlers.h"
 #include "radar_adapter/radar_adapter.h"
 #include "radar_test/radar_test.h"
+#include "zone_detector/zone_config.h"
 
 static const char *TAG = "MAIN";
 
@@ -309,6 +310,14 @@ static void run_state_running(void)
         ESP_LOGW(TAG, "GPIO control init failed: %s", esp_err_to_name(gpio_err));
     }
 
+    // 初始化区域配置
+    esp_err_t zone_err = zone_config_init();
+    if (zone_err == ESP_OK) {
+        ESP_LOGI(TAG, "Zone config initialized");
+    } else {
+        ESP_LOGW(TAG, "Zone config init failed: %s", esp_err_to_name(zone_err));
+    }
+
     // 初始化系统信息监控
     system_info_init();
 
@@ -412,6 +421,7 @@ static void app_task(void *pvParameters)
                     if (s_system_info_report_tick >= 30) {
                         s_system_info_report_tick = 0;
                         app_mqtt_publish_system_info();
+                        app_mqtt_publish_zone_status();
                     }
                 }
                 vTaskDelay(pdMS_TO_TICKS(1000));
