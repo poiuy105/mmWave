@@ -120,20 +120,7 @@ static void wifi_init_sta(void)
     ESP_ERROR_CHECK(esp_wifi_set_config(WIFI_IF_STA, &wifi_config));
     ESP_ERROR_CHECK(esp_wifi_start());
 
-    ESP_LOGI(TAG, "WiFi STA initialized, connecting to SSID:%s", WIFI_SSID);
-}
-
-/**
- * 初始化 NVS
- */
-static esp_err_t nvs_init(void)
-{
-    esp_err_t ret = nvs_flash_init();
-    if (ret == ESP_ERR_NVS_NO_FREE_PAGES || ret == ESP_ERR_NVS_NEW_VERSION_FOUND) {
-        ESP_ERROR_CHECK(nvs_flash_erase());
-        ret = nvs_flash_init();
-    }
-    return ret;
+    ESP_LOGI(TAG, "WiFi STA initialized, connecting to SSID:%s", s_wifi_ssid);
 }
 
 /**
