@@ -39,6 +39,11 @@ class RadarCanvas {
 
         // 当前目标数据（由外部更新）
         this.targets = [];
+        
+        // 当前区域数据（由外部更新）
+        this.zones = [];
+        this.previewPolygon = null; // 编辑中的预览多边形
+        this.editingZoneId = null;  // 正在编辑的区域 ID
 
         // 动画
         this.animFrameId = null;
@@ -269,6 +274,28 @@ class RadarCanvas {
     }
 
     /**
+     * 设置区域数据
+     */
+    setZones(zones) {
+        this.zones = zones || [];
+    }
+
+    /**
+     * 设置预览多边形（编辑中）
+     */
+    setPreviewPolygon(points) {
+        this.previewPolygon = points;
+    }
+
+    /**
+     * 清除预览
+     */
+    clearPreview() {
+        this.previewPolygon = null;
+        this.editingZoneId = null;
+    }
+
+    /**
      * 设置安装模式
      */
     setMountMode(mode) {
@@ -353,6 +380,9 @@ class RadarCanvas {
 
             // 绘制坐标轴
             this._drawAxes(ctx);
+
+            // 绘制检测区域
+            this._drawZones(ctx);
 
             // 绘制轨迹
             if (this.showTrail) {
@@ -713,6 +743,134 @@ class RadarCanvas {
         ctx.lineTo(x, y + r);
         ctx.quadraticCurveTo(x, y, x + r, y);
         ctx.closePath();
+    }
+
+    /**
+     * 绘制所有检测区域
+     */
+    _drawZones(ctx) {
+        // 绘制已保存的区域
+        for (const zone of this.zones) {
+            if (!zone.enabled || !zone.points || zone.points.length < 3) continue;
+            this._drawZone(ctx, zone);
+        }
+        
+        // 绘制编辑中的预览
+        if (this.previewPolygon && this.previewPolygon.length >= 2) {
+            this._drawPreviewPolygon(ctx, this.previewPolygon);
+        }
+    }
+
+    /**
+     * 绘制单个区域
+     */
+    _drawZone(ctx, zone) {
+        const points = zone.points;
+        if (points.length < 3) return;
+        
+        // 转换坐标
+        const screenPoints = points.map(([x, y]) => this.worldToScreen(x, y));
+        
+        // 根据触发状态选择样式
+        const style = zone.triggered ? 
+            { fill: 'rgba(248, 81, 73, 0.25)', stroke: '#f85149', width: 3 } :
+            { fill: zone.color + '20', stroke: zone.color, width: 2 }; // 20 = ~12% 透明度
+        
+        // 填充
+        ctx.fillStyle = style.fill;
+        ctx.beginPath();
+        ctx.moveTo(screenPoints[0].x, screenPoints[0].y);
+        for (let i = 1; i < screenPoints.length; i++) {
+            ctx.lineTo(screenPoints[i].x, screenPoints[i].y);
+        }
+        ctx.closePath();
+        ctx.fill();
+        
+        // 边框
+        ctx.strokeStyle = style.stroke;
+        ctx.lineWidth = style.width;
+        ctx.stroke();
+        
+        // 标签背景
+        const label = zone.name || `区域${zone.id}`;
+        ctx.font = 'bold 11px sans-serif';
+        const textWidth = ctx.measureText(label).width;
+        const labelX = screenPoints[0].x;
+        const labelY = screenPoints[0].y - 20;
+        
+        ctx.fillStyle = 'rgba(13, 17, 23, 0.8)';
+        ctx.fillRect(labelX - 4, labelY - 12, textWidth + 8, 16);
+        
+        // 标签文字
+        ctx.fillStyle = zone.triggered ? '#f85149' : zone.color;
+        ctx.fillText(label, labelX, labelY);
+        
+        // 触发状态指示器
+        if (zone.triggered) {
+            ctx.fillStyle = '#f85149';
+            ctx.beginPath();
+            ctx.arc(labelX + textWidth + 12, labelY - 6, 3, 0, Math.PI * 2);
+            ctx.fill();
+        }
+    }
+
+    /**
+     * 绘制预览多边形（编辑中）
+     */
+    _drawPreviewPolygon(ctx, points) {
+        if (points.length < 2) return;
+        
+        // 转换坐标
+        const screenPoints = points.map(([x, y]) => this.worldToScreen(x, y));
+        
+        // 绘制连线
+        ctx.strokeStyle = '#fcc419';
+        ctx.lineWidth = 2;
+        ctx.setLineDash([5, 5]);
+        
+        ctx.beginPath();
+        ctx.moveTo(screenPoints[0].x, screenPoints[0].y);
+        for (let i = 1; i < screenPoints.length; i++) {
+            ctx.lineTo(screenPoints[i].x, screenPoints[i].y);
+        }
+        
+        // 如果点数 >= 3，闭合预览
+        if (points.length >= 3) {
+            ctx.closePath();
+            ctx.fillStyle = 'rgba(255, 196, 25, 0.1)';
+            ctx.fill();
+        }
+        
+        ctx.stroke();
+        ctx.setLineDash([]);
+        
+        // 绘制顶点
+        for (let i = 0; i < screenPoints.length; i++) {
+            const p = screenPoints[i];
+            
+            // 顶点圆圈
+            ctx.fillStyle = '#fcc419';
+            ctx.beginPath();
+            ctx.arc(p.x, p.y, 5, 0, Math.PI * 2);
+            ctx.fill();
+            
+            // 顶点序号
+            ctx.fillStyle = '#0d1117';
+            ctx.font = 'bold 9px sans-serif';
+            ctx.textAlign = 'center';
+            ctx.textBaseline = 'middle';
+            ctx.fillText(i + 1, p.x, p.y);
+        }
+        
+        // 提示文字
+        if (points.length < 3) {
+            const lastPoint = screenPoints[screenPoints.length - 1];
+            ctx.fillStyle = 'rgba(255, 196, 25, 0.9)';
+            ctx.font = '12px sans-serif';
+            ctx.textAlign = 'left';
+            ctx.textBaseline = 'bottom';
+            ctx.fillText(`点击添加顶点 (${points.length}/3+)`, lastPoint.x + 15, lastPoint.y - 10);
+        }
     }
 
     /**

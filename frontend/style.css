@@ -407,6 +407,76 @@ body {
     font-size: 11px;
 }
 
+/* ===== 区域列表 ===== */
+.zone-list {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    max-height: 200px;
+    overflow-y: auto;
+}
+
+.zone-item {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 8px;
+    background: var(--bg-tertiary);
+    border-radius: var(--radius);
+    font-size: 12px;
+    cursor: pointer;
+    transition: var(--transition);
+}
+
+.zone-item:hover {
+    background: var(--bg-hover);
+}
+
+.zone-item.empty {
+    justify-content: center;
+    color: var(--text-muted);
+    font-style: italic;
+    font-size: 12px;
+    cursor: default;
+}
+
+.zone-item.triggered {
+    border: 1px solid var(--danger);
+    animation: pulse-zone 1s infinite;
+}
+
+.zone-color {
+    width: 12px;
+    height: 12px;
+    border-radius: 2px;
+    flex-shrink: 0;
+}
+
+.zone-name {
+    flex: 1;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.zone-status {
+    font-size: 10px;
+    padding: 2px 6px;
+    border-radius: 8px;
+    background: var(--bg-hover);
+    color: var(--text-secondary);
+}
+
+.zone-status.triggered {
+    background: rgba(248, 81, 73, 0.2);
+    color: var(--danger);
+}
+
+@keyframes pulse-zone {
+    0%, 100% { opacity: 1; }
+    50% { opacity: 0.6; }
+}
+
 /* ===== 信息列表 ===== */
 .info-list {
     display: flex;
@@ -679,6 +749,59 @@ body {
 @keyframes toast-out {
     from { opacity: 1; transform: translateX(0); }
     to { opacity: 0; transform: translateX(40px); }
+}
+
+/* ===== 区域编辑工具栏 ===== */
+.zone-toolbar {
+    position: fixed;
+    bottom: 60px;
+    left: 50%;
+    transform: translateX(-50%);
+    display: flex;
+    gap: 8px;
+    background: rgba(22, 27, 34, 0.95);
+    padding: 8px 12px;
+    border-radius: 8px;
+    border: 1px solid var(--border);
+    z-index: 100;
+    box-shadow: var(--shadow-lg);
+}
+
+.tool-btn {
+    padding: 10px 16px;
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    background: var(--bg-tertiary);
+    color: var(--text-primary);
+    font-size: 14px;
+    cursor: pointer;
+    min-width: 60px;
+    touch-action: manipulation;
+    transition: var(--transition);
+}
+
+.tool-btn:hover {
+    background: var(--bg-hover);
+}
+
+.tool-btn:active {
+    transform: scale(0.95);
+}
+
+/* ===== 区域绘制提示 ===== */
+.zone-hint {
+    position: absolute;
+    top: 16px;
+    left: 50%;
+    transform: translateX(-50%);
+    background: rgba(22, 27, 34, 0.9);
+    color: var(--text-primary);
+    padding: 8px 16px;
+    border-radius: var(--radius);
+    font-size: 13px;
+    border: 1px solid var(--border);
+    z-index: 50;
+    pointer-events: none;
 }
 
 /* ===== 工具类 ===== */

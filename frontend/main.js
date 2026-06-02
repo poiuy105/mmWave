@@ -9,6 +9,8 @@ const App = {
     ws: null,
     radarData: null,
     canvas: null,
+    zoneManager: null,
+    zoneEditor: null,
 
     // 状态
     startTime: Date.now(),
@@ -71,7 +73,10 @@ const App = {
             settingTrailLength: $('settingTrailLength'),
             settingShowGrid: $('settingShowGrid'),
             settingShowTrail: $('settingShowTrail'),
-            toastContainer: $('toastContainer')
+            toastContainer: $('toastContainer'),
+            // 区域管理
+            zoneList: $('zoneList'),
+            btnAddZone: $('btnAddZone')
         };
     },
 
@@ -81,6 +86,18 @@ const App = {
     _initModules() {
         // API 客户端
         this.api = new ApiClient();
+
+        // 区域管理器
+        this.zoneManager = new ZoneManager({
+            maxZones: 8,
+            maxPoints: 10
+        });
+        
+        // 区域更新回调
+        this.zoneManager.onZonesUpdate = (zones) => {
+            this.canvas.setZones(zones);
+            this._updateZoneList();
+        };
 
         // 雷达数据管理
         this.radarData = new RadarDataManager({
@@ -115,6 +132,9 @@ const App = {
 
         // 启动渲染循环
         this.canvas.start();
+        
+        // 区域编辑器
+        this.zoneEditor = new ZoneEditor(this.canvas, this.zoneManager, this.api);
     },
 
     /**
@@ -149,6 +169,11 @@ const App = {
                 document.getElementById('tab-' + btn.dataset.tab).classList.add('active');
             });
         });
+        
+        // 区域管理
+        this.els.btnAddZone.addEventListener('click', () => {
+            this.zoneEditor.startDrawing();
+        });
     },
 
     /**
@@ -160,6 +185,28 @@ const App = {
         // 注册消息处理器
         this.ws.onMessage('radar_data', (data) => {
             this.radarData.processRadarData(data);
+        });
+        
+        // 区域配置消息
+        this.ws.onMessage('config', (data) => {
+            if (data.zones) {
+                console.log('[App] 接收区域配置:', data.zones.length, '个');
+                this.zoneManager.setZones(data.zones);
+            }
+        });
+        
+        // 实时数据消息（精简格式）
+        this.ws.onMessage('data', (data) => {
+            // 处理目标数据
+            if (data.t && Array.isArray(data.t)) {
+                const targets = this._parseCompactTargets(data.t);
+                this.radarData.processRadarData({ targets });
+            }
+            
+            // 处理区域触发状态
+            if (data.z && Array.isArray(data.z)) {
+                this.zoneManager.updateTriggerStates(data.z);
+            }
         });
 
         // 连接状态事件
@@ -184,6 +231,23 @@ const App = {
 
         // 尝试连接
         this.ws.connect();
+    },
+
+    /**
+     * 解析精简格式的目标数据
+     * @param {array} compactTargets - [[id, x, y, speed], ...]
+     * @returns {array} 标准格式目标数组
+     */
+    _parseCompactTargets(compactTargets) {
+        return compactTargets.map(t => ({
+            id: t[0],
+            x: t[1],
+            y: t[2],
+            speed: t[3] || 0,
+            z: 0,
+            snr: 0,
+            confidence: 0
+        }));
     },
 
     /**
@@ -277,6 +341,35 @@ const App = {
     },
 
     /**
+     * 更新区域列表
+     */
+    _updateZoneList() {
+        const container = this.els.zoneList;
+        const zones = this.zoneManager.getZonesArray();
+        
+        if (zones.length === 0) {
+            container.innerHTML = '<div class="zone-item empty">暂无区域</div>';
+            return;
+        }
+        
+        let html = '';
+        for (const zone of zones) {
+            const triggeredClass = zone.triggered ? ' triggered' : '';
+            const statusText = zone.triggered ? '触发中' : '正常';
+            const statusClass = zone.triggered ? ' triggered' : '';
+            
+            html += `
+                <div class="zone-item${triggeredClass}">
+                    <span class="zone-color" style="background:${zone.color}"></span>
+                    <span class="zone-name">${zone.name}</span>
+                    <span class="zone-status${statusClass}">${statusText}</span>
+                </div>
+            `;
+        }
+        container.innerHTML = html;
+    },
+
+    /**
      * 更新统计数据
      */
     _updateStats(stats) {
@@ -358,6 +451,32 @@ const App = {
         }
 
         this._closeSettings();
+    }
+
+    /**
+     * 保存区域配置
+     */
+    async _saveZones() {
+        const zones = this.zoneManager.exportConfig();
+        
+        if (zones.length === 0) {
+            this._showToast('至少需要一个区域', 'warning');
+            return;
+        }
+        
+        try {
+            const result = await this.api.saveZones(zones);
+            
+            if (result.success) {
+                this._showToast('区域配置已保存', 'success');
+                console.log('[App] 区域配置保存成功');
+            } else {
+                this._showToast('保存失败: ' + (result.error || '未知错误'), 'error');
+            }
+        } catch (e) {
+            console.error('[App] 保存区域异常:', e);
+            this._showToast('网络错误，请检查连接', 'error');
+        }
     },
 
     /**
@@ -426,6 +545,12 @@ const App = {
             this.ws = null;
         }
 
+        // 销毁区域编辑器
+        if (this.zoneEditor) {
+            this.zoneEditor.destroy();
+            this.zoneEditor = null;
+        }
+
         // 销毁画布
         if (this.canvas) {
             this.canvas.destroy();
@@ -436,6 +561,12 @@ const App = {
         if (this.radarData) {
             this.radarData.clear && this.radarData.clear();
             this.radarData = null;
+        }
+        
+        // 清理区域管理器
+        if (this.zoneManager) {
+            this.zoneManager.clear();
+            this.zoneManager = null;
         }
 
         console.log('[App] 销毁完成');

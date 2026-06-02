@@ -55,6 +55,17 @@
                     </div>
                 </div>
 
+                <!-- 检测区域 -->
+                <div class="panel">
+                    <h3 class="panel-title">检测区域</h3>
+                    <div id="zoneList" class="zone-list">
+                        <div class="zone-item empty">暂无区域</div>
+                    </div>
+                    <button id="btnAddZone" class="btn btn-primary" style="width:100%;margin-top:8px">
+                        + 新建区域
+                    </button>
+                </div>
+
                 <!-- 系统信息 -->
                 <div class="panel">
                     <h3 class="panel-title">系统信息</h3>
@@ -171,8 +182,10 @@
     <!-- JS 加载顺序：底层工具 → 通信层 → 数据层 → 渲染层 → 应用层 -->
     <script src="./websocket.js"></script>
     <script src="./api.js"></script>
+    <script src="./zone.js"></script>
     <script src="./radar.js"></script>
     <script src="./canvas.js"></script>
+    <script src="./zone-editor.js"></script>
     <script src="./main.js"></script>
 </body>
 </html>

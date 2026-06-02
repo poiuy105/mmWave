@@ -196,6 +196,37 @@ class ApiClient {
         return this.request('PUT', '/api/config', config);
     }
 
+    // ===== 检测区域管理 =====
+
+    /**
+     * 获取检测区域配置
+     * @returns {Promise} 区域数组
+     */
+    async getZones() {
+        try {
+            const data = await this.request('GET', '/api/zones');
+            return data.zones || [];
+        } catch (e) {
+            console.warn('[API] 获取区域配置失败:', e.message);
+            return [];
+        }
+    }
+
+    /**
+     * 保存检测区域配置
+     * @param {array} zones - 区域数组
+     * @returns {Promise} 保存结果
+     */
+    async saveZones(zones) {
+        try {
+            const result = await this.request('PUT', '/api/zones', { zones });
+            return { success: true, data: result };
+        } catch (e) {
+            console.error('[API] 保存区域配置失败:', e.message);
+            return { success: false, error: e.message };
+        }
+    }
+
     // ===== 日志 =====
 
     async getLogs(options = {}) {

@@ -22,6 +22,7 @@ set(srcs
     "radar_test/radar_test.c"
     # zone_detector 模块（区域检测配置）
     "zone_detector/zone_config.c"
+    "zone_detector/zone_detector.c"
     # web_server 模块
     "web_server/core/server_context.c"
     "web_server/dns_server.c"

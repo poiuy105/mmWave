@@ -1,0 +1,262 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>区域功能测试</title>
+    <style>
+        body {
+            font-family: sans-serif;
+            padding: 20px;
+            background: #0d1117;
+            color: #e6edf3;
+        }
+        .test-section {
+            margin: 20px 0;
+            padding: 15px;
+            background: #161b22;
+            border-radius: 6px;
+            border: 1px solid #30363d;
+        }
+        h2 {
+            color: #58a6ff;
+            margin-top: 0;
+        }
+        button {
+            padding: 8px 16px;
+            margin: 5px;
+            border: 1px solid #30363d;
+            border-radius: 4px;
+            background: #21262d;
+            color: #e6edf3;
+            cursor: pointer;
+        }
+        button:hover {
+            background: #30363d;
+        }
+        .result {
+            margin-top: 10px;
+            padding: 10px;
+            background: #0d1117;
+            border-radius: 4px;
+            font-family: monospace;
+            font-size: 12px;
+            min-height: 40px;
+        }
+        .success { color: #3fb950; }
+        .error { color: #f85149; }
+        .info { color: #58a6ff; }
+    </style>
+</head>
+<body>
+    <h1>🧪 区域功能测试</h1>
+    
+    <div class="test-section">
+        <h2>1. ZoneManager 基础测试</h2>
+        <button onclick="testZoneManager()">运行测试</button>
+        <div id="result1" class="result">等待测试...</div>
+    </div>
+    
+    <div class="test-section">
+        <h2>2. 点在多边形内算法测试</h2>
+        <button onclick="testPointInPolygon()">运行测试</button>
+        <div id="result2" class="result">等待测试...</div>
+    </div>
+    
+    <div class="test-section">
+        <h2>3. 数据验证测试</h2>
+        <button onclick="testValidation()">运行测试</button>
+        <div id="result3" class="result">等待测试...</div>
+    </div>
+    
+    <div class="test-section">
+        <h2>4. 触发状态测试</h2>
+        <button onclick="testTriggerStates()">运行测试</button>
+        <div id="result4" class="result">等待测试...</div>
+    </div>
+
+    <!-- 加载 zone.js -->
+    <script src="./zone.js"></script>
+    
+    <script>
+        let zoneManager;
+        
+        // 初始化
+        function init() {
+            zoneManager = new ZoneManager({
+                maxZones: 8,
+                maxPoints: 10
+            });
+            console.log('ZoneManager 初始化完成');
+        }
+        
+        // 测试 1: ZoneManager 基础功能
+        function testZoneManager() {
+            const result = document.getElementById('result1');
+            let output = '';
+            
+            try {
+                // 测试添加区域
+                const zone1 = zoneManager.addZone({
+                    name: '测试区域1',
+                    points: [[0, 0], [2, 0], [2, 2], [0, 2]],
+                    color: '#ff6b6b'
+                });
+                
+                output += `<div class="success">✓ 添加区域成功: ${zone1.name} (ID: ${zone1.id})</div>`;
+                
+                // 测试获取区域
+                const zones = zoneManager.getZonesArray();
+                output += `<div class="info">ℹ 当前区域数量: ${zones.length}</div>`;
+                
+                // 测试导出配置
+                const config = zoneManager.exportConfig();
+                output += `<div class="info">ℹ 导出配置: ${JSON.stringify(config).substring(0, 100)}...</div>`;
+                
+                // 测试删除区域
+                zoneManager.deleteZone(zone1.id);
+                output += `<div class="success">✓ 删除区域成功</div>`;
+                
+                // 测试最大数量限制
+                for (let i = 0; i < 9; i++) {
+                    zoneManager.addZone({
+                        name: `区域${i+1}`,
+                        points: [[0, 0], [1, 0], [1, 1]]
+                    });
+                }
+                output += `<div class="info">ℹ 最终区域数量: ${zoneManager.getZoneCount()} (应为 8)</div>`;
+                
+                result.innerHTML = output;
+            } catch (e) {
+                result.innerHTML = `<div class="error">✗ 错误: ${e.message}</div>`;
+                console.error(e);
+            }
+        }
+        
+        // 测试 2: 点在多边形内算法
+        function testPointInPolygon() {
+            const result = document.getElementById('result2');
+            let output = '';
+            
+            try {
+                const polygon = [[0, 0], [4, 0], [4, 4], [0, 4]];
+                
+                // 测试内部点
+                const inside = zoneManager.isPointInPolygon(2, 2, polygon);
+                output += `<div class="${inside ? 'success' : 'error'}">${inside ? '✓' : '✗'} 点(2,2)在正方形内: ${inside}</div>`;
+                
+                // 测试外部点
+                const outside = zoneManager.isPointInPolygon(5, 5, polygon);
+                output += `<div class="${!outside ? 'success' : 'error'}">${!outside ? '✓' : '✗'} 点(5,5)在正方形外: ${outside}</div>`;
+                
+                // 测试边界点
+                const onEdge = zoneManager.isPointInPolygon(0, 2, polygon);
+                output += `<div class="info">ℹ 点(0,2)在边上: ${onEdge}</div>`;
+                
+                // 测试顶点
+                const onVertex = zoneManager.isPointInPolygon(0, 0, polygon);
+                output += `<div class="info">ℹ 点(0,0)在顶点: ${onVertex}</div>`;
+                
+                result.innerHTML = output;
+            } catch (e) {
+                result.innerHTML = `<div class="error">✗ 错误: ${e.message}</div>`;
+                console.error(e);
+            }
+        }
+        
+        // 测试 3: 数据验证
+        function testValidation() {
+            const result = document.getElementById('result3');
+            let output = '';
+            
+            try {
+                // 测试有效数据
+                const validZone = zoneManager.addZone({
+                    name: '有效区域',
+                    points: [[0, 0], [1, 0], [1, 1]]
+                });
+                output += `<div class="success">✓ 有效数据通过验证</div>`;
+                
+                // 测试无效数据（顶点太少）
+                const invalidZone1 = zoneManager.addZone({
+                    name: '无效区域1',
+                    points: [[0, 0], [1, 0]]
+                });
+                output += `<div class="${!invalidZone1 ? 'success' : 'error'}">${!invalidZone1 ? '✓' : '✗'} 拒绝少于3个顶点的区域</div>`;
+                
+                // 测试无效数据（坐标超限）
+                const invalidZone2 = zoneManager.addZone({
+                    name: '无效区域2',
+                    points: [[0, 0], [25, 0], [25, 25]]
+                });
+                output += `<div class="${!invalidZone2 ? 'success' : 'error'}">${!invalidZone2 ? '✓' : '✗'} 拒绝坐标超限的区域</div>`;
+                
+                result.innerHTML = output;
+            } catch (e) {
+                result.innerHTML = `<div class="error">✗ 错误: ${e.message}</div>`;
+                console.error(e);
+            }
+        }
+        
+        // 测试 4: 触发状态
+        function testTriggerStates() {
+            const result = document.getElementById('result4');
+            let output = '';
+            
+            try {
+                // 清空并添加测试区域
+                zoneManager.clear();
+                const testZone = zoneManager.addZone({
+                    name: '触发测试区',
+                    points: [[0, 0], [2, 0], [2, 2], [0, 2]]
+                });
+                
+                if (!testZone) {
+                    output += '<div class="error">✗ 创建测试区域失败</div>';
+                    result.innerHTML = output;
+                    return;
+                }
+                
+                const zoneId = testZone.id;
+                output += `<div class="info">ℹ 创建区域 ID: ${zoneId}</div>`;
+                
+                // 测试触发状态更新
+                zoneManager.updateTriggerStates([[zoneId, 1]]);
+                const zone = zoneManager.getZone(zoneId);
+                
+                if (!zone) {
+                    output += `<div class="error">✗ 无法获取区域 ${zoneId}</div>`;
+                    result.innerHTML = output;
+                    return;
+                }
+                
+                output += `<div class="${zone.triggered ? 'success' : 'error'}">${zone.triggered ? '✓' : '✗'} 区域触发状态: ${zone.triggered}</div>`;
+                
+                // 测试取消触发
+                zoneManager.updateTriggerStates([[zoneId, 0]]);
+                const zone2 = zoneManager.getZone(zoneId);
+                
+                if (!zone2) {
+                    output += `<div class="error">✗ 无法获取区域 ${zoneId}</div>`;
+                    result.innerHTML = output;
+                    return;
+                }
+                
+                output += `<div class="${!zone2.triggered ? 'success' : 'error'}">${!zone2.triggered ? '✓' : '✗'} 区域取消触发: ${zone2.triggered}</div>`;
+                
+                // 测试统计
+                const stats = zoneManager.getStats();
+                output += `<div class="info">ℹ 统计信息: ${JSON.stringify(stats)}</div>`;
+                
+                result.innerHTML = output;
+            } catch (e) {
+                result.innerHTML = `<div class="error">✗ 错误: ${e.message}</div>`;
+                console.error(e);
+            }
+        }
+        
+        // 页面加载完成后初始化
+        window.addEventListener('DOMContentLoaded', init);
+    </script>
+</body>
+</html>
