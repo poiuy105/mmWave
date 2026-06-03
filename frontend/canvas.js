@@ -46,6 +46,10 @@ class RadarCanvas {
         this.previewPolygon = null; // 编辑中的预览多边形
         this.editingZoneId = null;  // 正在编辑的区域 ID
 
+        // 背景图片
+        this.backgroundImage = null; // Image 对象
+        this.bgImageLoaded = false;  // 是否已加载
+
         // 动画
         this.animFrameId = null;
         this._dpr = window.devicePixelRatio || 1;
@@ -386,6 +390,11 @@ class RadarCanvas {
             ctx.fillStyle = '#0d1117';
             ctx.fillRect(0, 0, w, h);
 
+            // 绘制背景图片
+            if (this.bgImageLoaded && this.backgroundImage) {
+                this._drawBackgroundImage(ctx);
+            }
+
             // 绘制网格
             if (this.showGrid) {
                 this._drawGrid(ctx);
@@ -423,6 +432,67 @@ class RadarCanvas {
                 // 二次失败，无法恢复
             }
         }
+    }
+
+    /**
+     * 加载背景图片
+     */
+    loadBackgroundImage(url) {
+        return new Promise((resolve, reject) => {
+            const img = new Image();
+            img.onload = () => {
+                this.backgroundImage = img;
+                this.bgImageLoaded = true;
+                console.log('[Canvas] Background image loaded:', url);
+                resolve();
+            };
+            img.onerror = () => {
+                console.warn('[Canvas] Failed to load background image:', url);
+                this.backgroundImage = null;
+                this.bgImageLoaded = false;
+                reject(new Error('加载背景图片失败'));
+            };
+            img.src = url + '?t=' + Date.now(); // 避免缓存
+        });
+    }
+
+    /**
+     * 清除背景图片
+     */
+    clearBackgroundImage() {
+        this.backgroundImage = null;
+        this.bgImageLoaded = false;
+    }
+
+    /**
+     * 绘制背景图片
+     * 背景图片需要跟随视图变换（旋转/缩放/平移）
+     */
+    _drawBackgroundImage(ctx) {
+        if (!this.backgroundImage || !this.bgImageLoaded) return;
+
+        const img = this.backgroundImage;
+        const w = this._displayWidth;
+        const h = this._displayHeight;
+
+        // 保存当前状态
+        ctx.save();
+
+        // 应用与雷达数据相同的变换
+        // 以雷达原点为中心进行变换
+        const radarScreen = this.worldToScreen(0, 0);
+
+        ctx.translate(radarScreen.x, radarScreen.y);
+        ctx.rotate(-this.rotation * Math.PI / 180); // Canvas 旋转方向与我们的坐标系相反
+        ctx.scale(this.scale, this.scale);
+
+        // 绘制图片，以雷达原点为中心
+        // 假设图片中心对应雷达位置
+        const imgW = img.width / this.scale;
+        const imgH = img.height / this.scale;
+        ctx.drawImage(img, -imgW / 2, -imgH / 2, imgW, imgH);
+
+        ctx.restore();
     }
 
     /**

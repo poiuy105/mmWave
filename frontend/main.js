@@ -77,6 +77,9 @@ const App = {
             rotationValue: $('rotationValue'),
             btnSaveView: $('btnSaveView'),
             btnResetView: $('btnResetView'),
+            bgImageInput: $('bgImageInput'),
+            btnUploadBg: $('btnUploadBg'),
+            btnClearBg: $('btnClearBg'),
             toastContainer: $('toastContainer'),
             // 区域管理
             zoneList: $('zoneList'),
@@ -167,6 +170,11 @@ const App = {
         });
         this.els.btnSaveView.addEventListener('click', () => this._saveViewConfig());
         this.els.btnResetView.addEventListener('click', () => this._resetViewConfig());
+
+        // 背景图片上传
+        this.els.btnUploadBg.addEventListener('click', () => this.els.bgImageInput.click());
+        this.els.bgImageInput.addEventListener('change', (e) => this._handleBgImageUpload(e));
+        this.els.btnClearBg.addEventListener('click', () => this._clearBgImage());
 
         // 点击模态框背景关闭
         this.els.settingsPanel.addEventListener('click', (e) => {
@@ -559,6 +567,95 @@ const App = {
         } catch (e) {
             this._showToast('重置视图失败: ' + e.message, 'error');
         }
+    },
+
+    /**
+     * 处理背景图片上传
+     */
+    async _handleBgImageUpload(e) {
+        const file = e.target.files[0];
+        if (!file) return;
+
+        try {
+            // 压缩图片
+            const compressed = await this._compressImage(file, 800, 600, 0.6);
+            console.log('[App] 图片压缩后大小:', Math.round(compressed.size / 1024), 'KB');
+
+            // 上传
+            const formData = new FormData();
+            formData.append('file', compressed, 'bg.jpg');
+
+            // 使用 fetch 直接上传 raw binary
+            const response = await fetch('/api/files/upload?path=' + encodeURIComponent('/storage/www/bg.jpg'), {
+                method: 'POST',
+                body: compressed
+            });
+
+            if (!response.ok) {
+                throw new Error('上传失败: ' + response.status);
+            }
+
+            // 加载背景
+            await this.canvas.loadBackgroundImage('/bg.jpg');
+            this._showToast('背景图片已上传', 'success');
+        } catch (err) {
+            console.error('[App] 上传背景失败:', err);
+            this._showToast('上传背景失败: ' + err.message, 'error');
+        } finally {
+            // 清空 input，允许重复选择同一文件
+            e.target.value = '';
+        }
+    },
+
+    /**
+     * 清除背景图片
+     */
+    async _clearBgImage() {
+        try {
+            await fetch('/api/files/delete?path=' + encodeURIComponent('/storage/www/bg.jpg'), {
+                method: 'DELETE'
+            });
+            this.canvas.clearBackgroundImage();
+            this._showToast('背景已清除', 'success');
+        } catch (err) {
+            console.error('[App] 清除背景失败:', err);
+            this._showToast('清除背景失败', 'error');
+        }
+    },
+
+    /**
+     * 压缩图片
+     */
+    _compressImage(file, maxWidth, maxHeight, quality) {
+        return new Promise((resolve, reject) => {
+            const img = new Image();
+            img.onload = () => {
+                // 计算缩放比例
+                let w = img.width;
+                let h = img.height;
+                const scale = Math.min(maxWidth / w, maxHeight / h, 1);
+                w = Math.round(w * scale);
+                h = Math.round(h * scale);
+
+                // 绘制到 canvas
+                const canvas = document.createElement('canvas');
+                canvas.width = w;
+                canvas.height = h;
+                const ctx = canvas.getContext('2d');
+                ctx.drawImage(img, 0, 0, w, h);
+
+                // 导出为 JPEG blob
+                canvas.toBlob((blob) => {
+                    if (blob) {
+                        resolve(new File([blob], 'bg.jpg', { type: 'image/jpeg' }));
+                    } else {
+                        reject(new Error('压缩失败'));
+                    }
+                }, 'image/jpeg', quality);
+            };
+            img.onerror = () => reject(new Error('图片加载失败'));
+            img.src = URL.createObjectURL(file);
+        });
     },
 
     /**
