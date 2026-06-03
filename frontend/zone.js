@@ -409,6 +409,7 @@ class ZoneManager {
         return this.getZonesArray().map(zone => ({
             id: zone.id,
             name: zone.name,
+            point_count: zone.points.length,
             points: zone.points,
             color: zone.color,
             enabled: zone.enabled

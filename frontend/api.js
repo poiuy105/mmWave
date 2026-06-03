@@ -213,16 +213,29 @@ class ApiClient {
     }
 
     /**
-     * 保存检测区域配置
-     * @param {array} zones - 区域数组
-     * @returns {Promise} 保存结果
+     * Save detection zone config (sync with backend)
+     * Sends each zone individually: POST for new, PUT for existing
+     * @param {array} zones - zone array from ZoneManager.exportConfig()
+     * @returns {Promise} save result
      */
     async saveZones(zones) {
         try {
-            const result = await this.request('PUT', '/api/zones', { zones });
-            return { success: true, data: result };
+            const results = [];
+            for (const zone of zones) {
+                let result;
+                if (zone.id) {
+                    // Update existing zone: PUT /api/zones/<id>
+                    const { id, ...data } = zone;
+                    result = await this.request('PUT', `/api/zones/${id}`, data);
+                } else {
+                    // Create new zone: POST /api/zones
+                    result = await this.request('POST', '/api/zones', zone);
+                }
+                results.push(result);
+            }
+            return { success: true, data: results };
         } catch (e) {
-            console.error('[API] 保存区域配置失败:', e.message);
+            console.error('[API] save zone config failed:', e.message);
             return { success: false, error: e.message };
         }
     }
