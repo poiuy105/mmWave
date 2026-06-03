@@ -91,8 +91,8 @@ esp_err_t ws_uri_handler(httpd_req_t *req)
         return ret;
     }
     
-    ESP_LOGD(TAG, "Received frame: fd=%d, type=%d, len=%d, final=%d, masked=%d", 
-             fd, ws_pkt.type, ws_pkt.len, ws_pkt.final, ws_pkt.masked);
+    ESP_LOGD(TAG, "Received frame: fd=%d, type=%d, len=%d, final=%d", 
+             fd, ws_pkt.type, ws_pkt.len, ws_pkt.final);
 
     if (ws_pkt.len == 0) {
         free(buf);
