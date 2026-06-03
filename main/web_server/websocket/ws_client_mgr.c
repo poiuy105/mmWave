@@ -329,6 +329,13 @@ int ws_client_mgr_broadcast(ws_client_mgr_t *mgr, httpd_handle_t server,
             success_count++;
         } else {
             ESP_LOGW(TAG, "Broadcast failed to fd=%d: %s", fds[i], esp_err_to_name(ret));
+            // Send close frame to client before removing
+            httpd_ws_frame_t close_pkt = {
+                .type = HTTPD_WS_TYPE_CLOSE,
+                .payload = NULL,
+                .len = 0,
+            };
+            httpd_ws_send_frame_async(server, fds[i], &close_pkt);
             // Mark failed client as inactive
             xSemaphoreTake(mgr->mutex, portMAX_DELAY);
             int idx = ws_client_mgr_find_by_fd(mgr, fds[i]);
