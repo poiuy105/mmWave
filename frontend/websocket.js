@@ -11,7 +11,7 @@ class WebSocketClient {
             reconnectBaseDelay: 1000,   // 初始重连延迟 1s
             reconnectMaxDelay: 30000,   // 最大重连延迟 30s
             heartbeatInterval: 30000,   // 心跳间隔 30s
-            heartbeatTimeout: 30000,    // 心跳超时 30s（延长以避免误断）
+            heartbeatTimeout: 90000,    // 心跳超时 90s（应为后端超时的1.5倍以上，避免误断）
             maxReconnectAttempts: 10,   // 最大重连次数
             ...options
         };
@@ -100,6 +100,7 @@ class WebSocketClient {
 
         // 心跳响应
         if (type === 'pong') {
+            console.log('[WS] 收到心跳 pong');
             this.lastPongTime = Date.now();
             // 清除心跳超时定时器
             if (this.heartbeatTimeoutTimer) {
@@ -208,6 +209,7 @@ class WebSocketClient {
         // 心跳发送定时器
         this.heartbeatTimer = setInterval(() => {
             if (this.ws && this.ws.readyState === WebSocket.OPEN) {
+                console.log('[WS] 发送心跳 ping');
                 this.send({ type: 'ping' });
 
                 // 设置心跳超时检测

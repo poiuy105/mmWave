@@ -318,6 +318,9 @@ int ws_client_mgr_broadcast(ws_client_mgr_t *mgr, httpd_handle_t server,
 
     // Phase 2: Send without holding lock
     int success_count = 0;
+    int successful_fds[16];
+    int successful_count = 0;
+
     for (int i = 0; i < fd_count; i++) {
         httpd_ws_frame_t ws_frame = {
             .type = type,
@@ -327,9 +330,25 @@ int ws_client_mgr_broadcast(ws_client_mgr_t *mgr, httpd_handle_t server,
         esp_err_t ret = httpd_ws_send_frame_async(server, fds[i], &ws_frame);
         if (ret == ESP_OK) {
             success_count++;
+            // Track successful sends for activity update
+            if (successful_count < 16) {
+                successful_fds[successful_count++] = fds[i];
+            }
         }
-        // Don't remove failed clients - let heartbeat timeout handle dead connections
-        // This prevents disconnecting due to temporary send failures
+    }
+
+    // Phase 3: Update activity time for successful sends
+    // This prevents heartbeat timeout for clients that only receive data
+    if (successful_count > 0) {
+        xSemaphoreTake(mgr->mutex, portMAX_DELAY);
+        TickType_t now = xTaskGetTickCount();
+        for (int i = 0; i < successful_count; i++) {
+            int idx = ws_client_mgr_find_by_fd(mgr, successful_fds[i]);
+            if (idx >= 0) {
+                mgr->clients[idx].last_activity = now;
+            }
+        }
+        xSemaphoreGive(mgr->mutex);
     }
 
     return success_count;

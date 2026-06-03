@@ -104,6 +104,7 @@ static void ws_on_message(int fd, const uint8_t *data, size_t len, httpd_ws_type
                     ws_server_send_text(server_context_get()->ws_server, fd,
                                         "{\"type\":\"subscribed\"}");
                 } else if (strcmp(msg_type->valuestring, "ping") == 0) {
+                    ESP_LOGI(TAG, "Received ping from fd=%d, sending pong", fd);
                     ws_server_send_text(server_context_get()->ws_server, fd,
                                         "{\"type\":\"pong\"}");
                 }

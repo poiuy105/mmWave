@@ -1,27 +1,19 @@
-[08:04:58]I (13330) MAIN: =================================
-[08:04:58]I (13330) MAIN: System Ready!
-[08:04:58]I (13340) MAIN: =================================
-[08:05:00]I (14910) HTTP_SERVER: Static file request: uri=/index.html, mount=y8@, root=, filepath=/storage/www/index.html
-[08:05:00]W (14920) httpd_txrx: httpd_sock_err: error in send : 104
-[08:05:00]W (14920) httpd_txrx: httpd_sock_err: error in send : 128
-[08:05:00]W (14920) httpd_uri: httpd_uri: uri handler execution failed
-[08:05:28]I (43340) MAIN: Free heap: 89516 bytes, min: 68716 bytes
-[08:05:30]W (44650) httpd_txrx: httpd_sock_err: error in recv : 11
-[08:05:30]W (44650) httpd_ws: httpd_ws_recv_frame: WS frame is not properly masked.
-[08:05:30]W (44790) WS_CLIENT_MGR: Broadcast failed to fd=50: ESP_ERR_INVALID_ARG
-[08:05:31]I (45700) WS_CLIENT_MGR: Client added: fd=50, slot=0, ip=unknown, conn_id=2
-[08:05:31]I (45710) WS_SERVER: WebSocket connected: fd=50, slot=0
-[08:05:31]I (45710) HTTP_SERVER: WebSocket client connected: fd=50, ip=unknown
-[08:05:58]I (73340) MAIN: Free heap: 87424 bytes, min: 68716 bytes
-[08:06:01]W (76070) httpd_ws: httpd_ws_recv_frame: WS frame is not properly masked.
-[08:06:01]W (76190) WS_CLIENT_MGR: Broadcast failed to fd=50: ESP_ERR_INVALID_ARG
-[08:06:03]I (78160) WS_CLIENT_MGR: Client added: fd=50, slot=0, ip=unknown, conn_id=3
-[08:06:03]I (78160) WS_SERVER: WebSocket connected: fd=50, slot=0
-[08:06:03]I (78170) HTTP_SERVER: WebSocket client connected: fd=50, ip=unknown
-[08:06:28]I (103340) MAIN: Free heap: 89116 bytes, min: 68716 bytes
-[08:06:33]W (108180) httpd_ws: httpd_ws_recv_frame: WS frame is not properly masked.
-[08:06:33]W (108190) WS_CLIENT_MGR: Broadcast failed to fd=50: ESP_ERR_INVALID_ARG
-[08:06:34]I (109200) WS_CLIENT_MGR: Client added: fd=50, slot=0, ip=unknown, conn_id=4
-[08:06:34]I (109210) WS_SERVER: WebSocket connected: fd=50, slot=0
-[08:06:34]I (109210) HTTP_SERVER: WebSocket client connected: fd=50, ip=unknown
-[08:06:58]I (133340) MAIN: Free heap: 86040 bytes, min: 68716 bytes
+[11:06:47]I (41910) WS_CLIENT_MGR: Client added: fd=50, slot=0, ip=unknown, conn_id=1
+[11:06:47]I (41910) WS_SERVER: WebSocket connected: fd=50, slot=0
+[11:06:47]I (41910) HTTP_SERVER: WebSocket client connected: fd=50, ip=unknown
+[11:06:48]I (43310) MAIN: Free heap: 89192 bytes, min: 27660 bytes
+[11:07:18]I (73310) MAIN: Free heap: 89396 bytes, min: 27660 bytes
+[11:07:20]W (75000) httpd_txrx: httpd_sock_err: error in recv : 11
+[11:07:20]W (75000) httpd_ws: httpd_ws_recv_frame: WS frame is not properly masked.
+[11:07:20]W (75370) WS_CLIENT_MGR: Removing failed broadcast client: fd=50, slot=0
+[11:07:21]I (76090) WS_CLIENT_MGR: Client added: fd=50, slot=0, ip=unknown, conn_id=2
+[11:07:21]I (76100) WS_SERVER: WebSocket connected: fd=50, slot=0
+[11:07:21]I (76100) HTTP_SERVER: WebSocket client connected: fd=50, ip=unknown
+[11:07:48]I (103310) MAIN: Free heap: 88976 bytes, min: 27660 bytes
+[11:07:54]W (109200) httpd_txrx: httpd_sock_err: error in recv : 11
+[11:07:57]W (112200) httpd_txrx: httpd_sock_err: error in recv : 11
+[11:07:57]W (112200) httpd_ws: httpd_ws_recv_frame: Failed to receive payload
+[11:07:57]W (112370) WS_CLIENT_MGR: Removing failed broadcast client: fd=50, slot=0
+[11:07:59]I (113980) WS_CLIENT_MGR: Client added: fd=50, slot=0, ip=unknown, conn_id=3
+[11:07:59]I (113980) WS_SERVER: WebSocket connected: fd=50, slot=0
+[11:07:59]I (113980) HTTP_SERVER: WebSocket client connected: fd=50, ip=unknown

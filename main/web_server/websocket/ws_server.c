@@ -133,6 +133,8 @@ esp_err_t ws_uri_handler(httpd_req_t *req)
         }
 
         case HTTPD_WS_TYPE_PING: {
+            // Update activity time on ping - this is the client's heartbeat
+            ws_client_mgr_update_activity(&server->client_mgr, fd);
             httpd_ws_frame_t pong_pkt = {
                 .type = HTTPD_WS_TYPE_PONG,
                 .payload = ws_pkt.payload,
