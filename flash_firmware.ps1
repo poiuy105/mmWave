@@ -1,17 +1,18 @@
 #requires -Version 5.1
 [Console]::OutputEncoding = [System.Text.Encoding]::UTF8
 $PSDefaultParameterValues['Out-File:Encoding'] = 'utf8'
+
 <#
 .SYNOPSIS
-    一键编译烧录 ESP32 固件脚本
+    One-click build and flash ESP32 firmware
 .DESCRIPTION
-    1. Push 代码到 GitHub
-    2. 等待 GitHub Actions 编译完成
-    3. 下载 merged.bin
-    4. 烧录到 ESP32
+    1. Push code to GitHub
+    2. Wait for GitHub Actions build
+    3. Download merged.bin
+    4. Flash to ESP32
 .NOTES
-    需要提前安装: git, gh CLI, esptool
-    需要 gh 已登录: gh auth login
+    Requires: git, gh CLI, esptool
+    Need gh login: gh auth login
 #>
 
 param(
@@ -40,38 +41,38 @@ function Write-Warn {
     Write-Host "[$(Get-Date -Format 'HH:mm:ss')] $Message" -ForegroundColor Yellow
 }
 
-function Write-Error {
+function Write-Err {
     param([string]$Message)
     Write-Host "[$(Get-Date -Format 'HH:mm:ss')] ERROR: $Message" -ForegroundColor Red
 }
 
-# ==================== 1. Push 到 GitHub ====================
-Write-Step "Step 1: Push 代码到 GitHub"
+# ==================== Step 1: Push to GitHub ====================
+Write-Step "Step 1: Push to GitHub"
 
 try {
     $gitStatus = git status --short 2>$null
     if ([string]::IsNullOrWhiteSpace($gitStatus)) {
-        Write-Info "没有未提交的更改，跳过 commit"
+        Write-Info "No uncommitted changes, skip commit"
     } else {
-        Write-Info "发现未提交的更改，自动 add + commit..."
+        Write-Info "Found uncommitted changes, auto add + commit..."
         git add -A
-        $commitMsg = Read-Host "请输入 commit 消息 (直接回车使用默认)"
+        $commitMsg = Read-Host "Enter commit message (press Enter for default)"
         if ([string]::IsNullOrWhiteSpace($commitMsg)) {
             $commitMsg = "update: $(Get-Date -Format 'yyyy-MM-dd HH:mm:ss')"
         }
         git commit -m "$commitMsg"
     }
 
-    Write-Info "推送到 GitHub..."
+    Write-Info "Pushing to GitHub..."
     git push origin main
-    Write-Info "Push 成功!"
+    Write-Info "Push success!"
 } catch {
-    Write-Error "Push 失败: $_"
+    Write-Err "Push failed: $_"
     exit 1
 }
 
-# ==================== 2. 等待 CI 编译 ====================
-Write-Step "Step 2: 等待 GitHub Actions 编译完成 (最多 ${MaxWaitMinutes} 分钟)"
+# ==================== Step 2: Wait for CI ====================
+Write-Step "Step 2: Wait for GitHub Actions build (max ${MaxWaitMinutes} min)"
 
 $startTime = Get-Date
 $runId = $null
@@ -80,11 +81,10 @@ $status = ""
 while ($true) {
     $elapsed = (Get-Date) - $startTime
     if ($elapsed.TotalMinutes -gt $MaxWaitMinutes) {
-        Write-Error "等待超时 (${MaxWaitMinutes} 分钟)，请手动检查: https://github.com/$Repo/actions"
+        Write-Err "Timeout (${MaxWaitMinutes} min), check manually: https://github.com/$Repo/actions"
         exit 1
     }
 
-    # 获取最新 run
     $runs = gh run list --repo $Repo --limit 1 --json databaseId,status,conclusion,headSha,createdAt 2>$null | ConvertFrom-Json
     if ($runs -and $runs.Count -gt 0) {
         $latest = $runs[0]
@@ -92,17 +92,17 @@ while ($true) {
         $status = $latest.status
         $conclusion = $latest.conclusion
 
-        Write-Host "  状态: $status$(if($conclusion){" ($conclusion)"}) | 已等待: $($elapsed.ToString('mm\:ss'))" -NoNewline
+        Write-Host "  Status: $status$(if($conclusion){" ($conclusion)"}) | Elapsed: $($elapsed.ToString('mm\:ss'))" -NoNewline
         Write-Host "`r" -NoNewline
 
         if ($status -eq "completed") {
-            Write-Host "" # 换行
+            Write-Host ""
             if ($conclusion -eq "success") {
-                Write-Info "编译成功! Run ID: $runId"
+                Write-Info "Build success! Run ID: $runId"
                 break
             } else {
-                Write-Error "编译失败! 结论: $conclusion"
-                Write-Info "查看日志: gh run view $runId --repo $Repo --log-failed"
+                Write-Err "Build failed! Conclusion: $conclusion"
+                Write-Info "View log: gh run view $runId --repo $Repo --log-failed"
                 exit 1
             }
         }
@@ -111,36 +111,34 @@ while ($true) {
     Start-Sleep -Seconds 10
 }
 
-# ==================== 3. 下载固件 ====================
-Write-Step "Step 3: 下载编译好的固件"
+# ==================== Step 3: Download Firmware ====================
+Write-Step "Step 3: Download firmware"
 
-# 清理旧文件
 if (Test-Path $DownloadDir) {
     Remove-Item -Path $DownloadDir -Recurse -Force
 }
 New-Item -ItemType Directory -Path $DownloadDir -Force | Out-Null
 
 try {
-    Write-Info "下载 artifact '$ArtifactName' from run $runId..."
+    Write-Info "Downloading artifact '$ArtifactName' from run $runId..."
     gh run download $runId --repo $Repo --name $ArtifactName --dir $DownloadDir
 
     $binFile = Get-ChildItem -Path $DownloadDir -Filter "*.bin" | Select-Object -First 1
     if (-not $binFile) {
-        Write-Error "下载成功但未找到 .bin 文件"
+        Write-Err "Download success but no .bin file found"
         exit 1
     }
 
-    Write-Info "固件下载成功: $($binFile.FullName)"
-    Write-Info "文件大小: $([math]::Round($binFile.Length / 1024, 1)) KB"
+    Write-Info "Firmware downloaded: $($binFile.FullName)"
+    Write-Info "File size: $([math]::Round($binFile.Length / 1024, 1)) KB"
 } catch {
-    Write-Error "下载失败: $_"
+    Write-Err "Download failed: $_"
     exit 1
 }
 
-# ==================== 4. 烧录固件 ====================
-Write-Step "Step 4: 烧录固件到 ESP32 ($Port)"
+# ==================== Step 4: Flash Firmware ====================
+Write-Step "Step 4: Flash firmware to ESP32 ($Port)"
 
-# 查找 esptool
 $esptoolPaths = @(
     "$env:LOCALAPPDATA\Arduino15\packages\esp32\tools\esptool_py\5.1.0-cn\esptool.exe",
     "$env:LOCALAPPDATA\Arduino15\packages\esp32\tools\esptool_py\*\esptool.exe",
@@ -166,39 +164,37 @@ foreach ($path in $esptoolPaths) {
 }
 
 if (-not $esptool) {
-    Write-Error "找不到 esptool，请确保已安装 Arduino ESP32 支持包或 esptool"
+    Write-Err "esptool not found, please install Arduino ESP32 package or esptool"
     exit 1
 }
 
-Write-Info "使用 esptool: $esptool"
+Write-Info "Using esptool: $esptool"
 
-# 检查串口是否可用
 $portAvailable = [System.IO.Ports.SerialPort]::GetPortNames() | Where-Object { $_ -eq $Port }
 if (-not $portAvailable) {
-    Write-Error "串口 $Port 不可用，可用端口: $([System.IO.Ports.SerialPort]::GetPortNames() -join ', ')"
+    Write-Err "Port $Port not available, available ports: $([System.IO.Ports.SerialPort]::GetPortNames() -join ', ')"
     exit 1
 }
 
-# 执行烧录
 try {
-    Write-Info "开始烧录..."
+    Write-Info "Starting flash..."
     & $esptool --chip esp32c3 --port $Port --baud $Baud `
         --before default_reset --after hard_reset `
         write_flash -z --flash_mode dio --flash_freq 80m --flash_size 4MB `
         0x0 "$($binFile.FullName)"
 
     if ($LASTEXITCODE -eq 0) {
-        Write-Info "烧录成功!"
+        Write-Info "Flash success!"
     } else {
-        Write-Error "烧录失败，退出码: $LASTEXITCODE"
+        Write-Err "Flash failed, exit code: $LASTEXITCODE"
         exit 1
     }
 } catch {
-    Write-Error "烧录异常: $_"
+    Write-Err "Flash exception: $_"
     exit 1
 }
 
-# ==================== 完成 ====================
-Write-Step "全部完成!"
-Write-Info "固件已烧录到 $Port"
-Write-Info "可以打开串口监视器查看日志"
+# ==================== Done ====================
+Write-Step "All done!"
+Write-Info "Firmware flashed to $Port"
+Write-Info "Open serial monitor to view logs"
