@@ -16,6 +16,8 @@ class ZoneEditor {
         this.drawingPoints = []; // 正在绘制的顶点 [[x,y], ...]
         this.editingZoneId = null; // 正在编辑的区域 ID
         this.draggingVertexIndex = -1; // 正在拖拽的顶点索引
+        this.draggingZone = false; // 是否正在整体拖动区域
+        this.dragStartPos = null; // 整体拖动的起始位置
         
         // 创建工具栏
         this._createToolbar();
@@ -74,18 +76,27 @@ class ZoneEditor {
             }
         });
         
-        // 鼠标移动（用于拖拽顶点）
+        // 鼠标移动（用于拖拽顶点或整体拖动区域）
         this.canvas.addEventListener('pointermove', (e) => {
-            if (this.mode === 'edit' && this.draggingVertexIndex >= 0) {
+            if (this.mode !== 'edit') return;
+            if (this.draggingVertexIndex >= 0) {
                 e.preventDefault();
                 this._handleVertexDrag(e);
+            } else if (this.draggingZone) {
+                e.preventDefault();
+                this._handleZoneDrag(e);
             }
         });
         
         // 鼠标释放（结束拖拽）
         this.canvas.addEventListener('pointerup', () => {
-            if (this.mode === 'edit' && this.draggingVertexIndex >= 0) {
+            if (this.mode !== 'edit') return;
+            if (this.draggingVertexIndex >= 0) {
                 this.draggingVertexIndex = -1;
+                this._saveEditedZone();
+            } else if (this.draggingZone) {
+                this.draggingZone = false;
+                this.dragStartPos = null;
                 this._saveEditedZone();
             }
         });
@@ -206,6 +217,11 @@ class ZoneEditor {
             // 开始拖拽顶点
             this.draggingVertexIndex = vertexIndex;
             this._showHint(`拖拽顶点 ${vertexIndex + 1}，右键取消`);
+        } else if (this._isPointInPolygon(worldPos.x, worldPos.y, zone.points)) {
+            // 点击区域内部，开始整体拖动
+            this.draggingZone = true;
+            this.dragStartPos = worldPos;
+            this._showHint('拖动区域移动位置，释放后保存');
         }
     }
     
@@ -226,6 +242,51 @@ class ZoneEditor {
         
         // 实时更新显示
         this.radarCanvas.setZones(this.zoneManager.getZonesArray());
+    }
+    
+    /**
+     * 处理区域整体拖动
+     */
+    _handleZoneDrag(e) {
+        const rect = this.canvas.getBoundingClientRect();
+        const x = e.clientX - rect.left;
+        const y = e.clientY - rect.top;
+        const worldPos = this.radarCanvas.screenToWorld(x, y);
+        
+        const zone = this.zoneManager.getZone(this.editingZoneId);
+        if (!zone || !this.draggingZone || !this.dragStartPos) return;
+        
+        // 计算偏移量
+        const dx = worldPos.x - this.dragStartPos.x;
+        const dy = worldPos.y - this.dragStartPos.y;
+        
+        // 更新所有顶点位置
+        for (let i = 0; i < zone.points.length; i++) {
+            zone.points[i][0] += dx;
+            zone.points[i][1] += dy;
+        }
+        
+        // 更新拖动起始位置为当前位置
+        this.dragStartPos = worldPos;
+        
+        // 实时更新显示
+        this.radarCanvas.setZones(this.zoneManager.getZonesArray());
+    }
+    
+    /**
+     * 判断点是否在多边形内（射线投射法）
+     */
+    _isPointInPolygon(px, py, points) {
+        if (points.length < 3) return false;
+        let inside = false;
+        for (let i = 0, j = points.length - 1; i < points.length; j = i++) {
+            const xi = points[i][0], yi = points[i][1];
+            const xj = points[j][0], yj = points[j][1];
+            if (((yi > py) !== (yj > py)) && (px < (xj - xi) * (py - yi) / (yj - yi) + xi)) {
+                inside = !inside;
+            }
+        }
+        return inside;
     }
     
     /**
