@@ -1,6 +1,8 @@
 /**
  * @file view_config.c
  * @brief 视图配置管理 - NVS 存储实现
+ *
+ * 使用 nvs_set_blob/nvs_get_blob 存储浮点数（ESP-IDF 没有 nvs_set_float）
  */
 
 #include "view_config.h"
@@ -23,6 +25,19 @@ static const view_config_t DEFAULT_CONFIG = {
 // 当前配置（内存缓存）
 static view_config_t s_current_config;
 static bool s_initialized = false;
+
+// 辅助函数：保存 float 到 NVS（使用 blob）
+static esp_err_t nvs_save_float(nvs_handle_t handle, const char *key, float value)
+{
+    return nvs_set_blob(handle, key, &value, sizeof(float));
+}
+
+// 辅助函数：从 NVS 读取 float（使用 blob）
+static esp_err_t nvs_load_float(nvs_handle_t handle, const char *key, float *value)
+{
+    size_t len = sizeof(float);
+    return nvs_get_blob(handle, key, value, &len);
+}
 
 esp_err_t view_config_init(void)
 {
@@ -49,10 +64,10 @@ esp_err_t view_config_init(void)
     float offset_y = 0.0f;
     uint8_t valid = 0;
 
-    nvs_get_float(handle, "rotation", &rotation);
-    nvs_get_float(handle, "scale", &scale);
-    nvs_get_float(handle, "offset_x", &offset_x);
-    nvs_get_float(handle, "offset_y", &offset_y);
+    nvs_load_float(handle, "rotation", &rotation);
+    nvs_load_float(handle, "scale", &scale);
+    nvs_load_float(handle, "offset_x", &offset_x);
+    nvs_load_float(handle, "offset_y", &offset_y);
     nvs_get_u8(handle, "valid", &valid);
 
     nvs_close(handle);
@@ -97,10 +112,10 @@ esp_err_t view_config_save(const view_config_t *config)
     }
 
     // 保存各字段
-    nvs_set_float(handle, "rotation", config->rotation);
-    nvs_set_float(handle, "scale", config->scale);
-    nvs_set_float(handle, "offset_x", config->offset_x);
-    nvs_set_float(handle, "offset_y", config->offset_y);
+    nvs_save_float(handle, "rotation", config->rotation);
+    nvs_save_float(handle, "scale", config->scale);
+    nvs_save_float(handle, "offset_x", config->offset_x);
+    nvs_save_float(handle, "offset_y", config->offset_y);
     nvs_set_u8(handle, "valid", 1);
 
     nvs_commit(handle);
