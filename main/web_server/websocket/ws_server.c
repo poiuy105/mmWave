@@ -87,6 +87,11 @@ esp_err_t ws_uri_handler(httpd_req_t *req)
     if (ret != ESP_OK) {
         ESP_LOGW(TAG, "Failed to receive frame from fd=%d: %s (type=%d, len=%d)", 
                  fd, esp_err_to_name(ret), ws_pkt.type, ws_pkt.len);
+        // Clean up client on recv error to prevent broadcast to stale fd
+        ws_client_mgr_remove(&server->client_mgr, fd);
+        if (server->on_disconnect) {
+            server->on_disconnect(fd);
+        }
         free(buf);
         return ret;
     }
