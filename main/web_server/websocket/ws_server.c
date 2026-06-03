@@ -85,10 +85,14 @@ esp_err_t ws_uri_handler(httpd_req_t *req)
 
     esp_err_t ret = httpd_ws_recv_frame(req, &ws_pkt, 0);
     if (ret != ESP_OK) {
-        ESP_LOGW(TAG, "Failed to receive frame from fd=%d: %s", fd, esp_err_to_name(ret));
+        ESP_LOGW(TAG, "Failed to receive frame from fd=%d: %s (type=%d, len=%d)", 
+                 fd, esp_err_to_name(ret), ws_pkt.type, ws_pkt.len);
         free(buf);
         return ret;
     }
+    
+    ESP_LOGD(TAG, "Received frame: fd=%d, type=%d, len=%d, final=%d, masked=%d", 
+             fd, ws_pkt.type, ws_pkt.len, ws_pkt.final, ws_pkt.masked);
 
     if (ws_pkt.len == 0) {
         free(buf);
