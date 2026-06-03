@@ -342,7 +342,30 @@ esp_err_t app_mqtt_publish_radar_frame(const radar_frame_t *frame)
     
     esp_err_t err = app_mqtt_publish(topic, json_str, 0, 0, false);
     free(json_str);
-    
+
+    // Publish individual target coordinates for HA sensors (target_1 to target_5)
+    char coord_topic[64];
+    char payload[32];
+    for (int i = 0; i < 5; i++) {
+        int target_idx = i + 1; // 1-based
+        if (i < frame->target_count && i < RADAR_MAX_TARGETS) {
+            // Publish X
+            snprintf(coord_topic, sizeof(coord_topic), "%s/target/%d/x", s_node_id, target_idx);
+            snprintf(payload, sizeof(payload), "%.2f", frame->targets[i].x);
+            app_mqtt_publish(coord_topic, payload, 0, 0, false);
+            // Publish Y
+            snprintf(coord_topic, sizeof(coord_topic), "%s/target/%d/y", s_node_id, target_idx);
+            snprintf(payload, sizeof(payload), "%.2f", frame->targets[i].y);
+            app_mqtt_publish(coord_topic, payload, 0, 0, false);
+        } else {
+            // No target at this slot, publish empty
+            snprintf(coord_topic, sizeof(coord_topic), "%s/target/%d/x", s_node_id, target_idx);
+            app_mqtt_publish(coord_topic, "", 0, 0, false);
+            snprintf(coord_topic, sizeof(coord_topic), "%s/target/%d/y", s_node_id, target_idx);
+            app_mqtt_publish(coord_topic, "", 0, 0, false);
+        }
+    }
+
     return err;
 }
 
@@ -628,7 +651,58 @@ esp_err_t app_mqtt_publish_ha_discovery(void)
         }
     }
 
-    ESP_LOGI(TAG, "HA discovery published with availability (7 entities + zones)");
+    // ---- Target Coordinate HA Discovery (5 targets x 2 axes = 10 sensors) ----
+    for (int i = 1; i <= 5; i++) {
+        char coord_topic[64];
+        char unique_id[64];
+        char sensor_name[64];
+
+        // Target X coordinate
+        snprintf(config_topic, sizeof(config_topic),
+                 "homeassistant/sensor/%s/target_%d_x/config", s_node_id, i);
+        snprintf(coord_topic, sizeof(coord_topic), "%s/target/%d/x", s_node_id, i);
+        snprintf(unique_id, sizeof(unique_id), "target_%d_x", i);
+        snprintf(sensor_name, sizeof(sensor_name), "Target %d X", i);
+        config = cJSON_CreateObject();
+        cJSON_AddStringToObject(config, "name", sensor_name);
+        cJSON_AddStringToObject(config, "state_topic", coord_topic);
+        cJSON_AddStringToObject(config, "unit_of_measurement", "m");
+        cJSON_AddStringToObject(config, "unique_id", unique_id);
+        cJSON_AddStringToObject(config, "availability_topic", avail_topic);
+        cJSON_AddStringToObject(config, "payload_available", "online");
+        cJSON_AddStringToObject(config, "payload_not_available", "offline");
+        device = cJSON_CreateObject();
+        cJSON_AddStringToObject(device, "identifiers", s_node_id);
+        cJSON_AddStringToObject(device, "name", "LD Radar Monitor");
+        cJSON_AddItemToObject(config, "device", device);
+        json_str = cJSON_PrintUnformatted(config);
+        cJSON_Delete(config);
+        if (json_str) { app_mqtt_publish(config_topic, json_str, 0, 1, true); free(json_str); }
+
+        // Target Y coordinate
+        snprintf(config_topic, sizeof(config_topic),
+                 "homeassistant/sensor/%s/target_%d_y/config", s_node_id, i);
+        snprintf(coord_topic, sizeof(coord_topic), "%s/target/%d/y", s_node_id, i);
+        snprintf(unique_id, sizeof(unique_id), "target_%d_y", i);
+        snprintf(sensor_name, sizeof(sensor_name), "Target %d Y", i);
+        config = cJSON_CreateObject();
+        cJSON_AddStringToObject(config, "name", sensor_name);
+        cJSON_AddStringToObject(config, "state_topic", coord_topic);
+        cJSON_AddStringToObject(config, "unit_of_measurement", "m");
+        cJSON_AddStringToObject(config, "unique_id", unique_id);
+        cJSON_AddStringToObject(config, "availability_topic", avail_topic);
+        cJSON_AddStringToObject(config, "payload_available", "online");
+        cJSON_AddStringToObject(config, "payload_not_available", "offline");
+        device = cJSON_CreateObject();
+        cJSON_AddStringToObject(device, "identifiers", s_node_id);
+        cJSON_AddStringToObject(device, "name", "LD Radar Monitor");
+        cJSON_AddItemToObject(config, "device", device);
+        json_str = cJSON_PrintUnformatted(config);
+        cJSON_Delete(config);
+        if (json_str) { app_mqtt_publish(config_topic, json_str, 0, 1, true); free(json_str); }
+    }
+
+    ESP_LOGI(TAG, "HA discovery published (7 entities + zones + 10 target coords)");
     return ESP_OK;
 }
 
