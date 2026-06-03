@@ -85,33 +85,14 @@ esp_err_t ws_uri_handler(httpd_req_t *req)
 
     esp_err_t ret = httpd_ws_recv_frame(req, &ws_pkt, 0);
     if (ret != ESP_OK) {
-        // ESP_ERR_INVALID_ARG often indicates ESP-IDF internal masked frame check issue
-        // Assume client may have sent a ping/pong, update activity to keep connection alive
-        if (ret == ESP_ERR_INVALID_ARG) {
-            ESP_LOGD(TAG, "Recv frame error (ESP_ERR_INVALID_ARG) from fd=%d - assuming client heartbeat, updating activity", fd);
-            ws_client_mgr_update_activity(&server->client_mgr, fd);
-            free(buf);
-            return ESP_OK;
-        }
-
-        ESP_LOGW(TAG, "Failed to receive frame from fd=%d: %s (type=%d, len=%d)",
-                 fd, esp_err_to_name(ret), ws_pkt.type, ws_pkt.len);
-
-        // Try to send CLOSE frame before removing client
-        httpd_ws_frame_t close_pkt = {
-            .type = HTTPD_WS_TYPE_CLOSE,
-            .payload = NULL,
-            .len = 0,
-        };
-        httpd_ws_send_frame(req, &close_pkt);
-
-        // Clean up client on recv error to prevent broadcast to stale fd
-        ws_client_mgr_remove(&server->client_mgr, fd);
-        if (server->on_disconnect) {
-            server->on_disconnect(fd);
-        }
+        // For recv errors, just log and update activity time (in case it was a heartbeat)
+        // Don't immediately remove client - let heartbeat mechanism handle dead connections
+        // This prevents disconnecting due to temporary network glitches or ESP-IDF bugs
+        ESP_LOGW(TAG, "Recv frame error from fd=%d: %s (assuming heartbeat, keeping connection)",
+                 fd, esp_err_to_name(ret));
+        ws_client_mgr_update_activity(&server->client_mgr, fd);
         free(buf);
-        return ESP_OK;  // Return OK to avoid httpd logging additional errors
+        return ESP_OK;
     }
     
     ESP_LOGD(TAG, "Received frame: fd=%d, type=%d, len=%d, final=%d", 
