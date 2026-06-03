@@ -204,7 +204,7 @@ ws_server_t* ws_server_create(httpd_handle_t http_server, const ws_server_config
         ws_heartbeat_config_t hb_config = {
             .check_interval_sec = config->heartbeat_interval,
             .client_timeout_sec = config->heartbeat_timeout,
-            .auto_ping = true,
+            .auto_ping = false,  // 禁用协议级 ping，使用前端自定义心跳
         };
 
         if (ws_heartbeat_init(&server->heartbeat_ctx, &server->client_mgr,
