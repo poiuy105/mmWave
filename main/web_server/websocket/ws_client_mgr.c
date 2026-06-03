@@ -306,6 +306,8 @@ int ws_client_mgr_broadcast(ws_client_mgr_t *mgr, httpd_handle_t server,
 
     int fds[16];  // max clients to broadcast
     int fd_count = 0;
+    struct { int fd; int slot; } failed_clients[16];
+    int failed_count = 0;
 
     // Phase 1: Collect active fds while holding lock
     xSemaphoreTake(mgr->mutex, portMAX_DELAY);
@@ -328,25 +330,38 @@ int ws_client_mgr_broadcast(ws_client_mgr_t *mgr, httpd_handle_t server,
         if (ret == ESP_OK) {
             success_count++;
         } else {
-            ESP_LOGW(TAG, "Broadcast failed to fd=%d: %s", fds[i], esp_err_to_name(ret));
-            // Send close frame to client before removing
-            httpd_ws_frame_t close_pkt = {
-                .type = HTTPD_WS_TYPE_CLOSE,
-                .payload = NULL,
-                .len = 0,
-            };
-            httpd_ws_send_frame_async(server, fds[i], &close_pkt);
-            // Mark failed client as inactive
-            xSemaphoreTake(mgr->mutex, portMAX_DELAY);
-            int idx = ws_client_mgr_find_by_fd(mgr, fds[i]);
-            if (idx >= 0) {
-                mgr->clients[idx].active = false;
-                mgr->clients[idx].fd = -1;
-                mgr->clients[idx].error_count++;
-                mgr->total_disconnections++;
+            // Log warning but don't remove immediately - let heartbeat handle cleanup
+            ESP_LOGD(TAG, "Broadcast failed to fd=%d: %s", fds[i], esp_err_to_name(ret));
+            // Track failed clients for later cleanup
+            if (failed_count < 16) {
+                failed_clients[failed_count].fd = fds[i];
+                failed_count++;
             }
-            xSemaphoreGive(mgr->mutex);
         }
+    }
+
+    // Phase 3: Clean up failed clients (send close frame and remove)
+    for (int i = 0; i < failed_count; i++) {
+        // Send close frame
+        httpd_ws_frame_t close_pkt = {
+            .type = HTTPD_WS_TYPE_CLOSE,
+            .payload = NULL,
+            .len = 0,
+        };
+        httpd_ws_send_frame_async(server, failed_clients[i].fd, &close_pkt);
+
+        // Remove from manager
+        xSemaphoreTake(mgr->mutex, portMAX_DELAY);
+        int idx = ws_client_mgr_find_by_fd(mgr, failed_clients[i].fd);
+        if (idx >= 0) {
+            ESP_LOGW(TAG, "Removing failed broadcast client: fd=%d, slot=%d",
+                     failed_clients[i].fd, idx);
+            mgr->clients[idx].active = false;
+            mgr->clients[idx].fd = -1;
+            mgr->clients[idx].error_count++;
+            mgr->total_disconnections++;
+        }
+        xSemaphoreGive(mgr->mutex);
     }
 
     return success_count;

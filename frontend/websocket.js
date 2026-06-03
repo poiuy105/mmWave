@@ -249,7 +249,6 @@ class WebSocketClient {
     send(data) {
         if (this.ws && this.ws.readyState === WebSocket.OPEN) {
             const msg = typeof data === 'string' ? data : JSON.stringify(data);
-            console.log('[WS] 发送消息:', msg.substring(0, 100));
             this.ws.send(msg);
             this.stats.messagesSent++;
         } else {
