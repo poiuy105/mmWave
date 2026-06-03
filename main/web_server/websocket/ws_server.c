@@ -111,7 +111,27 @@ esp_err_t ws_uri_handler(httpd_req_t *req)
             if (ws_pkt.type == HTTPD_WS_TYPE_TEXT && ws_pkt.len < buf_size) {
                 buf[ws_pkt.len] = '\0';
             }
-            if (server->on_message) {
+            // Check if this is a JSON ping message - handle synchronously to avoid connection issues
+            bool is_json_ping = false;
+            if (ws_pkt.type == HTTPD_WS_TYPE_TEXT) {
+                // Simple check for {"type":"ping"}
+                if (ws_pkt.len >= 15 && strstr((char*)buf, "\"type\":\"ping\"") != NULL) {
+                    is_json_ping = true;
+                    ESP_LOGI(TAG, "Received JSON ping from fd=%d, sending pong synchronously", fd);
+                    httpd_ws_frame_t pong_pkt = {
+                        .type = HTTPD_WS_TYPE_TEXT,
+                        .payload = (const uint8_t*)"{\"type\":\"pong\"}",
+                        .len = 15,
+                    };
+                    httpd_ws_send_frame(req, &pong_pkt);
+                }
+            }
+            // Only call on_message for non-ping messages or if ping wasn't handled
+            if (!is_json_ping && server->on_message) {
+                server->on_message(fd, buf, ws_pkt.len, ws_pkt.type);
+            } else if (server->on_message) {
+                // For ping messages, still notify callback but don't let it send
+                // (we already sent the pong)
                 server->on_message(fd, buf, ws_pkt.len, ws_pkt.type);
             }
             break;

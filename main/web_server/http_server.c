@@ -94,6 +94,7 @@ static void ws_on_message(int fd, const uint8_t *data, size_t len, httpd_ws_type
     }
 
     // Handle subscription requests
+    // Note: ping/pong is now handled directly in ws_uri_handler for better stability
     if (type == HTTPD_WS_TYPE_TEXT) {
         cJSON *msg = cJSON_Parse((char*)data);
         if (msg) {
@@ -103,11 +104,8 @@ static void ws_on_message(int fd, const uint8_t *data, size_t len, httpd_ws_type
                     // Send subscription confirmation
                     ws_server_send_text(server_context_get()->ws_server, fd,
                                         "{\"type\":\"subscribed\"}");
-                } else if (strcmp(msg_type->valuestring, "ping") == 0) {
-                    ESP_LOGI(TAG, "Received ping from fd=%d, sending pong", fd);
-                    ws_server_send_text(server_context_get()->ws_server, fd,
-                                        "{\"type\":\"pong\"}");
                 }
+                // ping is now handled in ws_uri_handler, no need to handle here
             }
             cJSON_Delete(msg);
         }
