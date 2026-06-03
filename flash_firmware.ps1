@@ -1,4 +1,6 @@
 #requires -Version 5.1
+[Console]::OutputEncoding = [System.Text.Encoding]::UTF8
+$PSDefaultParameterValues['Out-File:Encoding'] = 'utf8'
 <#
 .SYNOPSIS
     一键编译烧录 ESP32 固件脚本
