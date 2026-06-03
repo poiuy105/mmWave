@@ -185,6 +185,10 @@ const App = {
         // 注册消息处理器
         this.ws.onMessage('radar_data', (data) => {
             this.radarData.processRadarData(data);
+            // Update zone trigger states from broadcast
+            if (data.zones && Array.isArray(data.zones)) {
+                this.zoneManager.updateTriggerStates(data.zones);
+            }
         });
         
         // 区域配置消息

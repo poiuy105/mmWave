@@ -317,9 +317,26 @@ class ZoneManager {
         
         let hasChanges = false;
         
-        for (const [zoneId, triggered] of triggerStates) {
+        for (const item of triggerStates) {
+            // Support both formats: [zoneId, triggered] or {id, triggered, target_count}
+            let zoneId, triggered, targetCount;
+            if (Array.isArray(item)) {
+                [zoneId, triggered] = item;
+            } else if (typeof item === 'object' && item !== null) {
+                zoneId = item.id;
+                triggered = item.triggered;
+                targetCount = item.target_count;
+            } else {
+                continue;
+            }
+            
             const zone = this.zones.get(zoneId);
             if (!zone) continue;
+            
+            // Update target count if provided
+            if (targetCount !== undefined) {
+                zone.targetCount = targetCount;
+            }
             
             const wasTriggered = zone.triggered;
             zone.triggered = !!triggered;
