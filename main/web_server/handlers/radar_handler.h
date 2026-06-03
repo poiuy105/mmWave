@@ -44,6 +44,24 @@ esp_err_t api_radar_range_get_handler(httpd_req_t *req);
  */
 esp_err_t api_radar_range_put_handler(httpd_req_t *req);
 
+/**
+ * @brief 获取视图配置
+ * GET /api/view/config
+ */
+esp_err_t api_view_config_get_handler(httpd_req_t *req);
+
+/**
+ * @brief 保存视图配置
+ * PUT /api/view/config
+ */
+esp_err_t api_view_config_put_handler(httpd_req_t *req);
+
+/**
+ * @brief 重置视图配置
+ * DELETE /api/view/config
+ */
+esp_err_t api_view_config_delete_handler(httpd_req_t *req);
+
 #ifdef __cplusplus
 }
 #endif

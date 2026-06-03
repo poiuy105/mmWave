@@ -73,6 +73,10 @@ const App = {
             settingTrailLength: $('settingTrailLength'),
             settingShowGrid: $('settingShowGrid'),
             settingShowTrail: $('settingShowTrail'),
+            settingRotation: $('settingRotation'),
+            rotationValue: $('rotationValue'),
+            btnSaveView: $('btnSaveView'),
+            btnResetView: $('btnResetView'),
             toastContainer: $('toastContainer'),
             // 区域管理
             zoneList: $('zoneList'),
@@ -154,6 +158,15 @@ const App = {
         this.els.btnCloseSettings.addEventListener('click', () => this._closeSettings());
         this.els.btnCancelSettings.addEventListener('click', () => this._closeSettings());
         this.els.btnSaveSettings.addEventListener('click', () => this._saveSettings());
+
+        // 视图控制
+        this.els.settingRotation.addEventListener('input', (e) => {
+            const rotation = parseFloat(e.target.value) || 0;
+            this.canvas.rotation = rotation;
+            this.els.rotationValue.textContent = rotation + '°';
+        });
+        this.els.btnSaveView.addEventListener('click', () => this._saveViewConfig());
+        this.els.btnResetView.addEventListener('click', () => this._resetViewConfig());
 
         // 点击模态框背景关闭
         this.els.settingsPanel.addEventListener('click', (e) => {
@@ -290,6 +303,20 @@ const App = {
                 }
             } catch (e) {
                 console.warn('[App] 加载区域配置失败:', e);
+            }
+
+            // 加载视图配置
+            try {
+                const viewConfig = await this.api.getViewConfig();
+                if (viewConfig.has_config) {
+                    console.log('[App] 加载视图配置:', viewConfig);
+                    this.canvas.rotation = viewConfig.rotation || 0;
+                    this.canvas.scale = viewConfig.scale || 60;
+                    this.canvas.offsetX = viewConfig.offset_x || 0;
+                    this.canvas.offsetY = viewConfig.offset_y || 0;
+                }
+            } catch (e) {
+                console.warn('[App] 加载视图配置失败:', e);
             }
 
             if (state.errors.length > 0) {
@@ -451,6 +478,8 @@ const App = {
         this.els.settingTrailLength.value = this.canvas.trailLength;
         this.els.settingShowGrid.checked = this.canvas.showGrid;
         this.els.settingShowTrail.checked = this.canvas.showTrail;
+        this.els.settingRotation.value = this.canvas.rotation || 0;
+        this.els.rotationValue.textContent = (this.canvas.rotation || 0) + '°';
 
         this.els.settingsPanel.classList.remove('hidden');
     },
@@ -498,6 +527,38 @@ const App = {
         }
 
         this._closeSettings();
+    },
+
+    /**
+     * 保存视图配置
+     */
+    async _saveViewConfig() {
+        try {
+            const config = {
+                rotation: this.canvas.rotation || 0,
+                scale: this.canvas.scale,
+                offset_x: this.canvas.offsetX,
+                offset_y: this.canvas.offsetY
+            };
+            await this.api.saveViewConfig(config);
+            this._showToast('视图已保存', 'success');
+        } catch (e) {
+            this._showToast('保存视图失败: ' + e.message, 'error');
+        }
+    },
+
+    /**
+     * 重置视图配置
+     */
+    async _resetViewConfig() {
+        try {
+            await this.api.resetViewConfig();
+            this.canvas.rotation = 0;
+            this.canvas._centerView();
+            this._showToast('视图已重置', 'success');
+        } catch (e) {
+            this._showToast('重置视图失败: ' + e.message, 'error');
+        }
     },
 
     /**

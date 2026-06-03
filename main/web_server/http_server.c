@@ -387,6 +387,24 @@ esp_err_t http_server_start(void)
         }
     }
 
+    // 7.6. Register view config API handlers
+    {
+        httpd_uri_t view_uris[] = {
+            { .uri = "/api/view/config", .method = HTTP_GET,    .handler = api_view_config_get_handler,    .user_ctx = NULL },
+            { .uri = "/api/view/config", .method = HTTP_PUT,    .handler = api_view_config_put_handler,    .user_ctx = NULL },
+            { .uri = "/api/view/config", .method = HTTP_DELETE, .handler = api_view_config_delete_handler, .user_ctx = NULL },
+        };
+        for (size_t i = 0; i < sizeof(view_uris) / sizeof(view_uris[0]); i++) {
+            esp_err_t reg_ret = httpd_register_uri_handler(handle, &view_uris[i]);
+            if (reg_ret == ESP_ERR_HTTPD_HANDLER_EXISTS) {
+                ESP_LOGW(TAG, "View handler %s already registered, skipping", view_uris[i].uri);
+            } else if (reg_ret != ESP_OK) {
+                ESP_LOGE(TAG, "Failed to register view handler %s: %s",
+                         view_uris[i].uri, esp_err_to_name(reg_ret));
+            }
+        }
+    }
+
     // 8. Create WebSocket server
     if (config.ws_enabled) {
         ws_server_config_t ws_config = {

@@ -5,6 +5,7 @@
 
 #include "radar_handler.h"
 #include "radar_adapter/radar_adapter.h"
+#include "view_config.h"
 #include "cJSON.h"
 #include "esp_log.h"
 #include "esp_system.h"
@@ -307,4 +308,97 @@ esp_err_t api_radar_range_put_handler(httpd_req_t *req)
              s_radar_config.range_angle_end);
 
     return send_success_response(req, "Range updated");
+}
+
+// ============================================================
+// View Config API
+// ============================================================
+
+esp_err_t api_view_config_get_handler(httpd_req_t *req)
+{
+    view_config_t config;
+    esp_err_t ret = view_config_get(&config);
+
+    cJSON *root = cJSON_CreateObject();
+    if (ret == ESP_OK && config.valid) {
+        cJSON_AddNumberToObject(root, "rotation", config.rotation);
+        cJSON_AddNumberToObject(root, "scale", config.scale);
+        cJSON_AddNumberToObject(root, "offset_x", config.offset_x);
+        cJSON_AddNumberToObject(root, "offset_y", config.offset_y);
+        cJSON_AddBoolToObject(root, "has_config", true);
+    } else {
+        cJSON_AddBoolToObject(root, "has_config", false);
+    }
+
+    char *json = cJSON_PrintUnformatted(root);
+    cJSON_Delete(root);
+
+    esp_err_t send_ret = send_json_response(req, json, 200);
+    free(json);
+    return send_ret;
+}
+
+esp_err_t api_view_config_put_handler(httpd_req_t *req)
+{
+    char *body = read_request_body(req);
+    if (body == NULL) {
+        return send_error_response(req, "Invalid request body");
+    }
+
+    cJSON *root = cJSON_Parse(body);
+    free(body);
+
+    if (root == NULL) {
+        return send_error_response(req, "Invalid JSON");
+    }
+
+    view_config_t config = {0};
+    config.valid = true;
+
+    // Parse rotation
+    cJSON *rot_json = cJSON_GetObjectItem(root, "rotation");
+    if (rot_json && cJSON_IsNumber(rot_json)) {
+        config.rotation = rot_json->valuedouble;
+        if (config.rotation < -180) config.rotation = -180;
+        if (config.rotation > 180) config.rotation = 180;
+    }
+
+    // Parse scale
+    cJSON *scale_json = cJSON_GetObjectItem(root, "scale");
+    if (scale_json && cJSON_IsNumber(scale_json)) {
+        config.scale = scale_json->valuedouble;
+        if (config.scale < 10) config.scale = 10;
+        if (config.scale > 200) config.scale = 200;
+    }
+
+    // Parse offset_x
+    cJSON *ox_json = cJSON_GetObjectItem(root, "offset_x");
+    if (ox_json && cJSON_IsNumber(ox_json)) {
+        config.offset_x = ox_json->valuedouble;
+    }
+
+    // Parse offset_y
+    cJSON *oy_json = cJSON_GetObjectItem(root, "offset_y");
+    if (oy_json && cJSON_IsNumber(oy_json)) {
+        config.offset_y = oy_json->valuedouble;
+    }
+
+    cJSON_Delete(root);
+
+    esp_err_t ret = view_config_save(&config);
+    if (ret != ESP_OK) {
+        return send_error_response(req, "Failed to save view config");
+    }
+
+    return send_success_response(req, "View config saved");
+}
+
+esp_err_t api_view_config_delete_handler(httpd_req_t *req)
+{
+    esp_err_t ret = view_config_reset();
+    if (ret != ESP_OK) {
+        return send_error_response(req, "Failed to reset view config");
+    }
+
+    return send_success_response(req, "View config reset");
 }

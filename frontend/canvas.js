@@ -24,6 +24,7 @@ class RadarCanvas {
         this.scale = 60; // 像素/米
         this.offsetX = 0;
         this.offsetY = 0;
+        this.rotation = 0; // 旋转角度（度），绕雷达原点
 
         // 交互状态
         this.isDragging = false;
@@ -242,27 +243,35 @@ class RadarCanvas {
      * 顶装模式：X轴水平，Y轴（前方）朝上
      */
     worldToScreen(wx, wy) {
-        if (this.mountMode === 'side') {
-            return {
-                x: this.offsetX + wx * this.scale,
-                y: this.offsetY - wy * this.scale
-            };
-        } else {
-            // 顶装模式：雷达在中心
-            return {
-                x: this.offsetX + wx * this.scale,
-                y: this.offsetY - wy * this.scale
-            };
-        }
+        // 1. 旋转（绕雷达原点）
+        const rad = this.rotation * Math.PI / 180;
+        const cos = Math.cos(rad);
+        const sin = Math.sin(rad);
+        const rx = wx * cos - wy * sin;
+        const ry = wx * sin + wy * cos;
+
+        // 2. 缩放 + 平移
+        return {
+            x: this.offsetX + rx * this.scale,
+            y: this.offsetY - ry * this.scale  // Y轴翻转
+        };
     }
 
     /**
      * 屏幕坐标 → 世界坐标
      */
     screenToWorld(sx, sy) {
+        // 1. 逆向平移 + 缩放
+        const rx = (sx - this.offsetX) / this.scale;
+        const ry = -(sy - this.offsetY) / this.scale;
+
+        // 2. 逆向旋转
+        const rad = -this.rotation * Math.PI / 180;
+        const cos = Math.cos(rad);
+        const sin = Math.sin(rad);
         return {
-            x: (sx - this.offsetX) / this.scale,
-            y: -(sy - this.offsetY) / this.scale
+            x: rx * cos - ry * sin,
+            y: rx * sin + ry * cos
         };
     }
 

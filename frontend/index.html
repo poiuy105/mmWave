@@ -166,6 +166,23 @@
                         <div class="form-group checkbox">
                             <label><input type="checkbox" id="settingShowTrail" checked> 显示轨迹</label>
                         </div>
+                        <hr style="margin: 16px 0; border: none; border-top: 1px solid #e5e7eb;">
+                        <h4 style="margin-bottom: 12px; color: #374151;">视图控制</h4>
+                        <div class="form-group">
+                            <label>旋转角度 (度)</label>
+                            <input type="range" id="settingRotation" class="form-control" value="0" step="5" min="-180" max="180">
+                            <span id="rotationValue" style="font-size: 12px; color: #6b7280;">0°</span>
+                        </div>
+                        <div class="form-group">
+                            <button id="btnSaveView" class="btn btn-primary" style="width: 100%;">
+                                保存当前视图
+                            </button>
+                        </div>
+                        <div class="form-group">
+                            <button id="btnResetView" class="btn" style="width: 100%;">
+                                重置视图
+                            </button>
+                        </div>
                     </div>
                 </div>
             </div>

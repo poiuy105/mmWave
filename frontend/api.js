@@ -176,6 +176,19 @@ class ApiClient {
         });
     }
 
+    // ===== 视图配置 =====
+    async getViewConfig() {
+        return this.request('GET', '/api/view/config');
+    }
+
+    async saveViewConfig(config) {
+        return this.request('PUT', '/api/view/config', config);
+    }
+
+    async resetViewConfig() {
+        return this.request('DELETE', '/api/view/config');
+    }
+
     // ===== 系统信息 =====
 
     async getStatus() {
