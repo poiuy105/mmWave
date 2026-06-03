@@ -466,7 +466,7 @@ class RadarCanvas {
 
     /**
      * 绘制背景图片
-     * 背景图片需要跟随视图变换（旋转/缩放/平移）
+     * 背景图片固定铺满画布，不跟随视图变换
      */
     _drawBackgroundImage(ctx) {
         if (!this.backgroundImage || !this.bgImageLoaded) return;
@@ -475,24 +475,26 @@ class RadarCanvas {
         const w = this._displayWidth;
         const h = this._displayHeight;
 
-        // 保存当前状态
-        ctx.save();
+        // 固定铺满画布，保持比例居中裁剪
+        const imgRatio = img.width / img.height;
+        const canvasRatio = w / h;
+        let drawW, drawH, drawX, drawY;
 
-        // 应用与雷达数据相同的变换
-        // 以雷达原点为中心进行变换
-        const radarScreen = this.worldToScreen(0, 0);
+        if (imgRatio > canvasRatio) {
+            // 图片更宽，以高度为准
+            drawH = h;
+            drawW = h * imgRatio;
+            drawX = (w - drawW) / 2;
+            drawY = 0;
+        } else {
+            // 图片更高，以宽度为准
+            drawW = w;
+            drawH = w / imgRatio;
+            drawX = 0;
+            drawY = (h - drawH) / 2;
+        }
 
-        ctx.translate(radarScreen.x, radarScreen.y);
-        ctx.rotate(-this.rotation * Math.PI / 180); // Canvas 旋转方向与我们的坐标系相反
-        ctx.scale(this.scale, this.scale);
-
-        // 绘制图片，以雷达原点为中心
-        // 假设图片中心对应雷达位置
-        const imgW = img.width / this.scale;
-        const imgH = img.height / this.scale;
-        ctx.drawImage(img, -imgW / 2, -imgH / 2, imgW, imgH);
-
-        ctx.restore();
+        ctx.drawImage(img, drawX, drawY, drawW, drawH);
     }
 
     /**
