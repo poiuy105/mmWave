@@ -38,6 +38,7 @@ set(srcs
     "web_server/handlers/health_handler.c"
     "web_server/handlers/upload_handler.c"
     "web_server/handlers/radar_handler.c"
+    "web_server/view_config.c"
     "web_server/http_server.c"
     "web_server/portal_handlers.c"
     "web_server/fatfs_init.c"
