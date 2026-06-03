@@ -251,20 +251,23 @@ class ZoneEditor {
     /**
      * 保存编辑后的区域
      */
-    _saveEditedZone() {
+    async _saveEditedZone() {
         const zone = this.zoneManager.getZone(this.editingZoneId);
         if (!zone) return;
-        
+
         // 验证区域有效性
         if (zone.points.length < 3) {
             alert('区域至少需要 3 个顶点');
             this.cancelEditing();
             return;
         }
-        
+
         // 触发更新
         this.zoneManager.notifyUpdate();
         this._showToast('区域已更新', 'success');
+
+        // 自动保存到后端
+        await this._autoSave();
     }
     
     /**
@@ -318,11 +321,28 @@ class ZoneEditor {
     /**
      * 删除区域
      */
-    deleteZone(zoneId) {
+    async deleteZone(zoneId) {
         if (!confirm('确定要删除这个区域吗？')) {
             return;
         }
-        
+
+        // 如果是已持久化的区域（ID > 0），先从后端删除
+        if (zoneId > 0) {
+            try {
+                const result = await this.api.deleteZone(zoneId);
+                if (!result.success) {
+                    this._showToast('删除失败: ' + (result.error || '未知错误'), 'error');
+                    console.error(`[ZoneEditor] 后端删除失败:`, result.error);
+                    return;
+                }
+            } catch (e) {
+                this._showToast('网络错误，删除失败', 'error');
+                console.error(`[ZoneEditor] 后端删除异常:`, e);
+                return;
+            }
+        }
+
+        // 从本地管理器删除
         const success = this.zoneManager.removeZone(zoneId);
         if (success) {
             this._showToast('区域已删除', 'success');
@@ -363,8 +383,13 @@ class ZoneEditor {
     async _autoSave() {
         try {
             const zones = this.zoneManager.exportConfig();
-            const result = await this.api.saveZones(zones);
-            
+
+            // 传入回调，当后端返回真实 ID 时更新本地临时 ID
+            const result = await this.api.saveZones(zones, (oldId, newId) => {
+                this.zoneManager.updateZoneId(oldId, newId);
+                console.log(`[ZoneEditor] 区域 ID 已更新: ${oldId} -> ${newId}`);
+            });
+
             if (result.success) {
                 console.log('[ZoneEditor] 区域已自动保存');
             } else {

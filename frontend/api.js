@@ -205,7 +205,8 @@ class ApiClient {
     async getZones() {
         try {
             const data = await this.request('GET', '/api/zones');
-            return data.zones || [];
+            // 后端返回直接数组，不是 { zones: [...] } 格式
+            return Array.isArray(data) ? data : (data.zones || []);
         } catch (e) {
             console.warn('[API] 获取区域配置失败:', e.message);
             return [];
@@ -214,28 +215,55 @@ class ApiClient {
 
     /**
      * Save detection zone config (sync with backend)
-     * Sends each zone individually: POST for new, PUT for existing
+     * Sends each zone individually: POST for new (negative temp ID), PUT for existing (positive ID)
      * @param {array} zones - zone array from ZoneManager.exportConfig()
+     * @param {function} onIdUpdate - callback when zone ID is updated: (oldId, newId) => void
      * @returns {Promise} save result
      */
-    async saveZones(zones) {
+    async saveZones(zones, onIdUpdate) {
         try {
             const results = [];
             for (const zone of zones) {
                 let result;
-                if (zone.id) {
-                    // Update existing zone: PUT /api/zones/<id>
+                if (zone.id > 0) {
+                    // Existing zone: PUT /api/zones/<id>
                     const { id, ...data } = zone;
                     result = await this.request('PUT', `/api/zones/${id}`, data);
                 } else {
-                    // Create new zone: POST /api/zones
-                    result = await this.request('POST', '/api/zones', zone);
+                    // New zone (temporary negative ID): POST /api/zones
+                    // Don't send the temporary ID to backend
+                    const { id, ...data } = zone;
+                    result = await this.request('POST', '/api/zones', data);
+
+                    // Backend returns the created zone with real ID
+                    if (result && result.id && onIdUpdate) {
+                        onIdUpdate(zone.id, result.id);
+                    }
                 }
                 results.push(result);
             }
             return { success: true, data: results };
         } catch (e) {
             console.error('[API] save zone config failed:', e.message);
+            return { success: false, error: e.message };
+        }
+    }
+
+    /**
+     * Delete a zone
+     * @param {number} zoneId - zone ID (must be positive, persisted on backend)
+     * @returns {Promise} delete result
+     */
+    async deleteZone(zoneId) {
+        if (zoneId <= 0) {
+            console.warn('[API] Cannot delete zone with temporary ID:', zoneId);
+            return { success: false, error: 'Invalid zone ID' };
+        }
+        try {
+            await this.request('DELETE', `/api/zones/${zoneId}`);
+            return { success: true };
+        } catch (e) {
+            console.error('[API] delete zone failed:', e.message);
             return { success: false, error: e.message };
         }
     }

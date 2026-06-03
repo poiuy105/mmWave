@@ -275,6 +275,19 @@ const App = {
                 this.els.frameCount.textContent = (si.radar_frames || 0).toLocaleString();
             }
 
+            // 加载区域配置
+            try {
+                const zones = await this.api.getZones();
+                if (zones && zones.length > 0) {
+                    console.log('[App] 加载区域配置:', zones.length, '个');
+                    this.zoneManager.setZones(zones);
+                } else {
+                    console.log('[App] 没有保存的区域配置');
+                }
+            } catch (e) {
+                console.warn('[App] 加载区域配置失败:', e);
+            }
+
             if (state.errors.length > 0) {
                 console.warn('[App] 部分初始状态加载失败:', state.errors);
                 this._showToast('部分数据加载失败，功能可能受限', 'warning');
@@ -488,15 +501,19 @@ const App = {
      */
     async _saveZones() {
         const zones = this.zoneManager.exportConfig();
-        
+
         if (zones.length === 0) {
             this._showToast('至少需要一个区域', 'warning');
             return;
         }
-        
+
         try {
-            const result = await this.api.saveZones(zones);
-            
+            // 传入回调，当后端返回真实 ID 时更新本地临时 ID
+            const result = await this.api.saveZones(zones, (oldId, newId) => {
+                this.zoneManager.updateZoneId(oldId, newId);
+                console.log(`[App] 区域 ID 已更新: ${oldId} -> ${newId}`);
+            });
+
             if (result.success) {
                 this._showToast('区域配置已保存', 'success');
                 console.log('[App] 区域配置保存成功');

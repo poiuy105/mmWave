@@ -87,11 +87,13 @@ class ZoneManager {
             console.warn(`[ZoneManager] 区域数量已达上限 (${this.maxZones})`);
             return null;
         }
-        
-        // 生成 ID
+
+        // 使用负数 ID 表示前端临时创建的区域（未保存到后端）
+        // 后端持久化后的 ID 为正数
+        const tempId = -(this.zones.size + 1);
         const zone = {
-            id: this.nextId++,
-            name: zoneData.name || `区域${this.nextId}`,
+            id: tempId, // 临时 ID，保存后会被后端分配的 ID 替换
+            name: zoneData.name || `新区域${Math.abs(tempId)}`,
             points: zoneData.points || [],
             color: zoneData.color || this._getNextColor(),
             enabled: zoneData.enabled !== false,
@@ -160,6 +162,27 @@ class ZoneManager {
         }
     }
     
+    /**
+     * 更新区域 ID（用于保存后端返回的真实 ID）
+     * @param {number} oldId - 旧 ID（临时 ID）
+     * @param {number} newId - 新 ID（后端持久化 ID）
+     * @returns {boolean} 是否成功
+     */
+    updateZoneId(oldId, newId) {
+        if (!this.zones.has(oldId)) {
+            console.warn(`[ZoneManager] 区域不存在: ${oldId}`);
+            return false;
+        }
+
+        const zone = this.zones.get(oldId);
+        this.zones.delete(oldId);
+        zone.id = newId;
+        this.zones.set(newId, zone);
+
+        console.log(`[ZoneManager] 区域 ID 更新: ${oldId} -> ${newId}`);
+        return true;
+    }
+
     /**
      * 更新区域
      * @param {number} zoneId - 区域 ID

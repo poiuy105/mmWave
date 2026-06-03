@@ -632,6 +632,104 @@ esp_err_t app_mqtt_publish_ha_discovery(void)
     return ESP_OK;
 }
 
+// ============================================================
+// Dynamic Zone Discovery - Publish discovery for a single zone
+// ============================================================
+
+esp_err_t app_mqtt_publish_zone_discovery(uint8_t zone_id)
+{
+    if (!app_mqtt_is_connected()) {
+        return ESP_ERR_INVALID_STATE;
+    }
+
+    zone_config_t *zone = zone_config_get(zone_id);
+    if (zone == NULL || !zone->enabled) {
+        return ESP_ERR_NOT_FOUND;
+    }
+
+    char config_topic[128];
+    char zone_topic[64];
+    char unique_id[64];
+    char avail_topic[64];
+    snprintf(avail_topic, sizeof(avail_topic), "%s/status", s_node_id);
+
+    // binary_sensor: zone triggered state
+    snprintf(config_topic, sizeof(config_topic),
+             "homeassistant/binary_sensor/%s/zone_%d/config", s_node_id, zone_id);
+    snprintf(zone_topic, sizeof(zone_topic), "%s/zone/%d/state", s_node_id, zone_id);
+    snprintf(unique_id, sizeof(unique_id), "zone_triggered_%d", zone_id);
+    cJSON *config = cJSON_CreateObject();
+    cJSON_AddStringToObject(config, "name", zone->name);
+    cJSON_AddStringToObject(config, "state_topic", zone_topic);
+    cJSON_AddStringToObject(config, "payload_on", "ON");
+    cJSON_AddStringToObject(config, "payload_off", "OFF");
+    cJSON_AddStringToObject(config, "device_class", "motion");
+    cJSON_AddStringToObject(config, "unique_id", unique_id);
+    cJSON_AddStringToObject(config, "availability_topic", avail_topic);
+    cJSON_AddStringToObject(config, "payload_available", "online");
+    cJSON_AddStringToObject(config, "payload_not_available", "offline");
+    cJSON *device = cJSON_CreateObject();
+    cJSON_AddStringToObject(device, "identifiers", s_node_id);
+    cJSON_AddStringToObject(device, "name", "LD Radar Monitor");
+    cJSON_AddItemToObject(config, "device", device);
+    char *json_str = cJSON_PrintUnformatted(config);
+    cJSON_Delete(config);
+    if (json_str) { app_mqtt_publish(config_topic, json_str, 0, 1, true); free(json_str); }
+
+    // sensor: zone target count
+    snprintf(config_topic, sizeof(config_topic),
+             "homeassistant/sensor/%s/zone_%d_count/config", s_node_id, zone_id);
+    snprintf(zone_topic, sizeof(zone_topic), "%s/zone/%d/count", s_node_id, zone_id);
+    snprintf(unique_id, sizeof(unique_id), "zone_count_%d", zone_id);
+    char zone_count_name[64];
+    snprintf(zone_count_name, sizeof(zone_count_name), "Zone %d Count", zone_id);
+    config = cJSON_CreateObject();
+    cJSON_AddStringToObject(config, "name", zone_count_name);
+    cJSON_AddStringToObject(config, "state_topic", zone_topic);
+    cJSON_AddStringToObject(config, "unit_of_measurement", "targets");
+    cJSON_AddStringToObject(config, "unique_id", unique_id);
+    cJSON_AddStringToObject(config, "availability_topic", avail_topic);
+    cJSON_AddStringToObject(config, "payload_available", "online");
+    cJSON_AddStringToObject(config, "payload_not_available", "offline");
+    device = cJSON_CreateObject();
+    cJSON_AddStringToObject(device, "identifiers", s_node_id);
+    cJSON_AddStringToObject(device, "name", "LD Radar Monitor");
+    cJSON_AddItemToObject(config, "device", device);
+    json_str = cJSON_PrintUnformatted(config);
+    cJSON_Delete(config);
+    if (json_str) { app_mqtt_publish(config_topic, json_str, 0, 1, true); free(json_str); }
+
+    ESP_LOGI(TAG, "Zone %d HA discovery published", zone_id);
+    return ESP_OK;
+}
+
+// ============================================================
+// Dynamic Zone Discovery - Remove discovery for a single zone
+// Send empty payload to delete HA entity
+// ============================================================
+
+esp_err_t app_mqtt_remove_zone_discovery(uint8_t zone_id)
+{
+    if (!app_mqtt_is_connected()) {
+        return ESP_ERR_INVALID_STATE;
+    }
+
+    char config_topic[128];
+
+    // Remove binary_sensor discovery
+    snprintf(config_topic, sizeof(config_topic),
+             "homeassistant/binary_sensor/%s/zone_%d/config", s_node_id, zone_id);
+    app_mqtt_publish(config_topic, "", 0, 1, true);
+
+    // Remove sensor discovery
+    snprintf(config_topic, sizeof(config_topic),
+             "homeassistant/sensor/%s/zone_%d_count/config", s_node_id, zone_id);
+    app_mqtt_publish(config_topic, "", 0, 1, true);
+
+    ESP_LOGI(TAG, "Zone %d HA discovery removed", zone_id);
+    return ESP_OK;
+}
+
 esp_err_t app_mqtt_publish_led_state(bool on)
 {
     if (!app_mqtt_is_connected()) {

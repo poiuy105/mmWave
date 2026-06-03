@@ -14,6 +14,10 @@
 #include <string.h>
 #include <stdio.h>
 
+// Forward declaration for MQTT discovery callback
+extern esp_err_t app_mqtt_publish_zone_discovery(uint8_t zone_id);
+extern esp_err_t app_mqtt_remove_zone_discovery(uint8_t zone_id);
+
 static const char *TAG = "zone_config";
 
 // 内部状态
@@ -182,6 +186,9 @@ esp_err_t zone_config_add(const zone_config_t *zone)
 
     s_zone_list.count++;
 
+    // Publish MQTT discovery for new zone
+    app_mqtt_publish_zone_discovery(new_id);
+
     ESP_LOGI(TAG, "Added zone %d: %s, total=%d", new_id, new_zone->name, s_zone_list.count);
     return ESP_OK;
 }
@@ -212,6 +219,9 @@ esp_err_t zone_config_update(uint8_t id, const zone_config_t *zone)
     existing->id = id;
     existing->triggered = old_triggered;
     existing->target_count = old_target_count;
+
+    // Re-publish MQTT discovery (name may have changed)
+    app_mqtt_publish_zone_discovery(id);
 
     ESP_LOGI(TAG, "Updated zone %d: %s", id, existing->name);
     return ESP_OK;
@@ -249,6 +259,9 @@ esp_err_t zone_config_delete(uint8_t id)
     s_zone_list.count--;
     // 清空最后一个元素
     memset(&s_zone_list.zones[s_zone_list.count], 0, sizeof(zone_config_t));
+
+    // Remove MQTT discovery for deleted zone
+    app_mqtt_remove_zone_discovery(id);
 
     ESP_LOGI(TAG, "Deleted zone %d, remaining=%d", id, s_zone_list.count);
     return ESP_OK;

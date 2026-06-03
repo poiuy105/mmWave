@@ -47,4 +47,8 @@ esp_err_t app_mqtt_publish_led_state(bool on);
 // ============ 区域状态上报 ============
 esp_err_t app_mqtt_publish_zone_status(void);
 
+// ============ 动态 Zone Discovery ============
+esp_err_t app_mqtt_publish_zone_discovery(uint8_t zone_id);
+esp_err_t app_mqtt_remove_zone_discovery(uint8_t zone_id);
+
 #endif
