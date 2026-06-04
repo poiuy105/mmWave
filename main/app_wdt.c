@@ -48,10 +48,13 @@ esp_err_t app_wdt_register_task(wdt_task_id_t id)
 
     // 订阅当前任务到 TWDT
     esp_err_t ret = esp_task_wdt_add(NULL);
-    if (ret != ESP_OK) {
+    if (ret != ESP_OK && ret != ESP_ERR_INVALID_STATE) {
         ESP_LOGE(TAG, "Failed to subscribe task %s to TWDT: %s",
                  s_task_names[id], esp_err_to_name(ret));
         return ret;
+    }
+    if (ret == ESP_ERR_INVALID_STATE) {
+        ESP_LOGD(TAG, "Task %s already subscribed to TWDT (by ESP-IDF)", s_task_names[id]);
     }
 
     s_registered[id] = true;

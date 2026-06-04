@@ -111,6 +111,13 @@ esp_err_t dns_server_start(uint16_t port, const char *override_ip)
     int opt = 1;
     setsockopt(dns_socket, SOL_SOCKET, SO_REUSEADDR, &opt, sizeof(opt));
 
+    // 设置接收超时，确保 DNS 任务能定期喂狗（工业级看门狗要求）
+    struct timeval tv = {
+        .tv_sec = 5,
+        .tv_usec = 0
+    };
+    setsockopt(dns_socket, SOL_SOCKET, SO_RCVTIMEO, &tv, sizeof(tv));
+
     struct sockaddr_in server_addr = {
         .sin_family = AF_INET,
         .sin_port = htons(port),
