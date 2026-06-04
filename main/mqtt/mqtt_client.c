@@ -145,6 +145,28 @@ esp_err_t app_mqtt_init(void)
     return ESP_OK;
 }
 
+/**
+ * 暂停 MQTT 客户端（释放 TLS 内存，用于上传等内存密集操作）
+ */
+void app_mqtt_pause(void)
+{
+    if (s_mqtt_client != NULL) {
+        esp_mqtt_client_stop(s_mqtt_client);
+        ESP_LOGI(TAG, "MQTT paused (stopped) for upload");
+    }
+}
+
+/**
+ * 恢复 MQTT 客户端
+ */
+void app_mqtt_resume(void)
+{
+    if (s_mqtt_client != NULL) {
+        esp_mqtt_client_start(s_mqtt_client);
+        ESP_LOGI(TAG, "MQTT resumed (restarted)");
+    }
+}
+
 esp_err_t app_mqtt_connect(const mqtt_config_t *config)
 {
     if (config == NULL) {

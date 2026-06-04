@@ -30,6 +30,10 @@ void app_mqtt_deinit(void);
 mqtt_state_t app_mqtt_get_state(void);
 bool app_mqtt_is_connected(void);
 
+// ============ 暂停/恢复（上传等内存密集操作时使用） ============
+void app_mqtt_pause(void);
+void app_mqtt_resume(void);
+
 // ============ 发布接口 ============
 esp_err_t app_mqtt_publish(const char *topic, const char *data, int len, int qos, bool retain);
 

@@ -19,6 +19,7 @@
 #include <cJSON.h>
 #include "freertos/FreeRTOS.h"
 #include "freertos/task.h"
+#include "app_mqtt.h"
 
 static const char *TAG = "UPLOAD";
 
@@ -224,6 +225,9 @@ static esp_err_t api_upload_handler(httpd_req_t *req)
 
     ESP_LOGI(TAG, "File opened, streaming upload...");
 
+    // 暂停 MQTT 以释放 TLS 内存（约 30KB），避免上传期间内存不足
+    app_mqtt_pause();
+
     // Stream: read chunks and write directly
     // EAGAIN (errno=11) means no data available yet - retry with delay
     uint8_t buf[UPLOAD_BUF_SIZE];
@@ -281,6 +285,9 @@ static esp_err_t api_upload_handler(httpd_req_t *req)
     }
 
     fclose(file);
+
+    // 恢复 MQTT
+    app_mqtt_resume();
 
     size_t heap_after = esp_get_free_heap_size();
     ESP_LOGI(TAG, "Upload complete: wrote %lu bytes, heap: %lu -> %lu, ret=%d",
