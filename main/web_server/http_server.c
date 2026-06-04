@@ -27,6 +27,7 @@
 #include <arpa/inet.h>
 #include <sys/socket.h>
 #include "radar_adapter/radar_adapter.h"
+#include "app_mqtt.h"
 #include <string.h>
 #include <sys/stat.h>
 #include <dirent.h>
@@ -256,6 +257,24 @@ static esp_err_t api_options_handler(httpd_req_t *req)
     return ESP_OK;
 }
 
+static esp_err_t api_mqtt_pause_handler(httpd_req_t *req)
+{
+    app_mqtt_pause();
+    httpd_resp_set_type(req, "application/json");
+    httpd_resp_set_hdr(req, "Access-Control-Allow-Origin", "*");
+    httpd_resp_send(req, "{\"success\":true,\"message\":\"MQTT paused\"}", 37);
+    return ESP_OK;
+}
+
+static esp_err_t api_mqtt_resume_handler(httpd_req_t *req)
+{
+    app_mqtt_resume();
+    httpd_resp_set_type(req, "application/json");
+    httpd_resp_set_hdr(req, "Access-Control-Allow-Origin", "*");
+    httpd_resp_send(req, "{\"success\":true,\"message\":\"MQTT resumed\"}", 38);
+    return ESP_OK;
+}
+
 // ============================================================
 // URI Handler list
 // ============================================================
@@ -286,6 +305,10 @@ static const httpd_uri_t uri_handlers[] = {
     { .uri = "/api/radar/install_mode", .method = HTTP_PUT,  .handler = api_radar_install_mode_put_handler },
     { .uri = "/api/radar/range",        .method = HTTP_GET,  .handler = api_radar_range_get_handler },
     { .uri = "/api/radar/range",        .method = HTTP_PUT,  .handler = api_radar_range_put_handler },
+
+    // MQTT control (for upload memory management)
+    { .uri = "/api/mqtt/pause",  .method = HTTP_POST, .handler = api_mqtt_pause_handler },
+    { .uri = "/api/mqtt/resume", .method = HTTP_POST, .handler = api_mqtt_resume_handler },
 
     // WebSocket /ws is registered by ws_server_create() - do NOT register here
 };
