@@ -25,10 +25,8 @@ static const char *s_task_names[WDT_TASK_COUNT] = {
 
 esp_err_t app_wdt_init(void)
 {
-    memset(s_last_feed_time, 0, sizeof(s_last_feed_time));
-    memset(s_registered, 0, sizeof(s_registered));
-
-    // 读取 TWDT 超时配置
+    // 注意：不清零 s_registered，因为任务可能在 init 之前就注册了
+    // 只初始化超时配置
     s_timeout_sec = CONFIG_ESP_TASK_WDT_TIMEOUT_S;
 
     ESP_LOGI(TAG, "Watchdog initialized, timeout=%lu sec", (unsigned long)s_timeout_sec);
@@ -84,19 +82,12 @@ esp_err_t app_wdt_unregister_task(wdt_task_id_t id)
 
 void app_wdt_feed(wdt_task_id_t id)
 {
-    if (id >= WDT_TASK_COUNT) {
-        return;
-    }
-    if (!s_registered[id]) {
-        ESP_LOGW(TAG, "Feed called but task %s not registered!", s_task_names[id]);
+    if (id >= WDT_TASK_COUNT || !s_registered[id]) {
         return;
     }
 
     s_last_feed_time[id] = (uint32_t)(xTaskGetTickCount() * portTICK_PERIOD_MS / 1000);
-    esp_err_t ret = esp_task_wdt_reset();
-    if (ret != ESP_OK) {
-        ESP_LOGE(TAG, "esp_task_wdt_reset failed for %s: %s", s_task_names[id], esp_err_to_name(ret));
-    }
+    esp_task_wdt_reset();
 }
 
 bool app_wdt_is_healthy(wdt_task_id_t id)
