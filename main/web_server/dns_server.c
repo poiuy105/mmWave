@@ -6,6 +6,7 @@
 #include "freertos/task.h"
 #include "app_wdt.h"
 #include <string.h>
+#include <errno.h>
 
 static const char *TAG = "dns_server";
 
@@ -36,8 +37,13 @@ static void dns_server_task(void *pvParameters)
         int len = recvfrom(dns_socket, rx_buffer, sizeof(rx_buffer), 0,
                           (struct sockaddr *)&client_addr, &addr_len);
         if (len < 0) {
+            // 超时（EAGAIN/EWOULDBLOCK）是正常的，继续循环喂狗
+            if (errno == EAGAIN || errno == EWOULDBLOCK) {
+                app_wdt_feed(WDT_TASK_DNS);
+                continue;
+            }
             if (dns_socket >= 0) {
-                ESP_LOGE(TAG, "recvfrom failed");
+                ESP_LOGE(TAG, "recvfrom failed (errno=%d)", errno);
             }
             break;
         }
