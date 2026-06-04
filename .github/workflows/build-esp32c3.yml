@@ -20,7 +20,7 @@ jobs:
         target: esp32c3
         path: ./
         command: >
-          bash -c "rm -rf build && idf.py build &&
+          bash -c "rm -rf build sdkconfig && idf.py set-target esp32c3 && idf.py build &&
           esptool.py --chip esp32c3 merge_bin
           -o build/ld_radar_monitor_merged.bin
           --flash_mode dio --flash_freq 80m --flash_size 4MB
