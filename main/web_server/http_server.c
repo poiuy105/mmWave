@@ -161,12 +161,7 @@ static esp_err_t static_file_handler(httpd_req_t *req)
     }
 
     // Build file path - use hardcoded defaults to avoid config copy issues
-    // Support both /style.css (old) and /storage/www/style.css (new) paths
-    if (strncmp(uri, "/storage/www/", 13) == 0) {
-        snprintf(filepath, sizeof(filepath), "%s", uri);
-    } else {
-        snprintf(filepath, sizeof(filepath), "/storage/www%s", uri);
-    }
+    snprintf(filepath, sizeof(filepath), "/storage/www%s", uri);
 
     ESP_LOGI(TAG, "Static file request: uri=%s, mount=%s, root=%s, filepath=%s",
              uri, ctx->config->fatfs_mount_path, ctx->config->static_file_root, filepath);
@@ -471,22 +466,8 @@ esp_err_t http_server_start(void)
     };
     esp_err_t wc_ret = httpd_register_uri_handler(handle, &wildcard_uri);
     if (wc_ret == ESP_ERR_HTTPD_HANDLER_EXISTS) {
-        // /* 通配符可能因为与 "/" handler 冲突而注册失败（ESP-IDF wildcard 匹配特性）
-        // 解决方案：先取消注册 "/" 的 GET handler，再注册 /*，再重新注册 "/"
-        httpd_unregister_uri_handler(handle, "/", HTTP_GET);
-        wc_ret = httpd_register_uri_handler(handle, &wildcard_uri);
-        if (wc_ret == ESP_OK) {
-            // 重新注册 "/" 的精确匹配（优先于 /* 通配符）
-            httpd_uri_t root_uri = {
-                .uri = "/",
-                .method = HTTP_GET,
-                .handler = static_file_handler,
-                .user_ctx = NULL
-            };
-            httpd_register_uri_handler(handle, &root_uri);
-        }
-    }
-    if (wc_ret != ESP_OK && wc_ret != ESP_ERR_HTTPD_HANDLER_EXISTS) {
+        ESP_LOGW(TAG, "Handler /* already registered, skipping");
+    } else if (wc_ret != ESP_OK) {
         ESP_LOGE(TAG, "Failed to register /* wildcard: %s", esp_err_to_name(wc_ret));
     }
 
