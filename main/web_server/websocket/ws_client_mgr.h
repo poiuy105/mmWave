@@ -159,6 +159,14 @@ int ws_client_mgr_find_by_fd(ws_client_mgr_t *mgr, int fd);
 void ws_client_mgr_update_activity(ws_client_mgr_t *mgr, int fd);
 
 /**
+ * @brief 设置客户端状态
+ * @param mgr 客户端管理器指针
+ * @param fd socket 文件描述符
+ * @param state 新状态
+ */
+void ws_client_mgr_set_state(ws_client_mgr_t *mgr, int fd, ws_client_state_t state);
+
+/**
  * @brief 获取活跃客户端数
  * @param mgr 客户端管理器指针
  * @return int 活跃客户端数

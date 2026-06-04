@@ -165,7 +165,15 @@ esp_err_t ws_uri_handler(httpd_req_t *req)
         }
 
         case HTTPD_WS_TYPE_PONG: {
+            // PONG 是对服务器发送的 PING 的响应
+            // 更新活动时间并恢复客户端状态
             ws_client_mgr_update_activity(&server->client_mgr, fd);
+            ws_client_mgr_set_state(&server->client_mgr, fd, WS_CLIENT_STATE_ACTIVE);
+            // 更新心跳统计
+            if (server->heartbeat_enabled) {
+                ws_heartbeat_record_pong(&server->heartbeat_ctx);
+            }
+            ESP_LOGD(TAG, "Received PONG from fd=%d, state restored to ACTIVE", fd);
             break;
         }
 

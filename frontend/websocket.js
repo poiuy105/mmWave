@@ -10,9 +10,9 @@ class WebSocketClient {
         this.options = {
             reconnectBaseDelay: 1000,   // 初始重连延迟 1s
             reconnectMaxDelay: 30000,   // 最大重连延迟 30s
-            heartbeatInterval: 30000,   // 心跳间隔 30s
-            heartbeatTimeout: 90000,    // 心跳超时 90s（应为后端超时的1.5倍以上，避免误断）
-            maxReconnectAttempts: 10,   // 最大重连次数
+            heartbeatInterval: 25000,   // 心跳间隔 25s（略小于后端检查间隔，确保保活）
+            heartbeatTimeout: 60000,    // 心跳超时 60s（小于后端90s超时，前端主动断开重连）
+            // 移除重连次数限制 - 工业级应用使用无限重连
             ...options
         };
 
@@ -67,7 +67,7 @@ class WebSocketClient {
     _onOpen(event) {
         console.log('[WS] 连接成功');
         this._setState('connected');
-        this.reconnectAttempt = 0;
+        this.reconnectAttempt = 0;  // 重置重连计数器
         this.stats.connectTime = Date.now();
         this.stats.reconnectCount++;
 
@@ -161,22 +161,14 @@ class WebSocketClient {
     }
 
     /**
-     * 调度重连（指数退避）
+     * 调度重连（指数退避，无限重连）
+     * 工业级标准：持续尝试重连，永不放弃
      */
     _scheduleReconnect() {
         if (this.reconnectTimer) return;
 
-        // 检查是否超过最大重连次数
-        if (this.reconnectAttempt >= this.options.maxReconnectAttempts) {
-            console.error(`[WS] 重连次数超过上限 (${this.options.maxReconnectAttempts})，停止重连`);
-            this._setState('disconnected');
-            this._emit('reconnect_failed', {
-                attempts: this.reconnectAttempt,
-                reason: 'max_attempts_exceeded'
-            });
-            return;
-        }
-
+        // 计算延迟：指数退避，但有上限
+        // 第1次: 1s, 第2次: 2s, 第3次: 4s, ... 第6次起: 30s (最大值)
         const delay = Math.min(
             this.options.reconnectBaseDelay * Math.pow(2, this.reconnectAttempt),
             this.options.reconnectMaxDelay
@@ -185,12 +177,12 @@ class WebSocketClient {
         this.reconnectAttempt++;
         this._setState('reconnecting');
 
-        console.log(`[WS] 将在 ${Math.round(delay / 1000)}s 后重连 (第 ${this.reconnectAttempt}/${this.options.maxReconnectAttempts} 次)`);
+        const delaySec = Math.round(delay / 1000);
+        console.log(`[WS] 将在 ${delaySec}s 后重连 (第 ${this.reconnectAttempt} 次) - 工业级无限重连`);
 
         this._emit('reconnecting', {
             attempt: this.reconnectAttempt,
-            delay: delay,
-            maxAttempts: this.options.maxReconnectAttempts
+            delay: delay
         });
 
         this.reconnectTimer = setTimeout(() => {
@@ -201,6 +193,9 @@ class WebSocketClient {
 
     /**
      * 启动心跳
+     * 工业级配置：
+     * - 心跳间隔 25s（小于后端 30s 检查间隔）
+     * - 超时时间 60s（小于后端 90s 超时，前端主动断开重连）
      */
     _startHeartbeat() {
         this._stopHeartbeat();
@@ -209,7 +204,10 @@ class WebSocketClient {
         // 心跳发送定时器
         this.heartbeatTimer = setInterval(() => {
             if (this.ws && this.ws.readyState === WebSocket.OPEN) {
-                console.log('[WS] 发送心跳 ping');
+                // 只在调试模式打印，避免日志过多
+                if (this.reconnectAttempt > 0) {
+                    console.log('[WS] 发送心跳 ping (重连中)');
+                }
                 this.send({ type: 'ping' });
 
                 // 设置心跳超时检测
@@ -217,12 +215,14 @@ class WebSocketClient {
                     clearTimeout(this.heartbeatTimeoutTimer);
                 }
                 this.heartbeatTimeoutTimer = setTimeout(() => {
-                    console.warn('[WS] 心跳超时，强制断开连接');
+                    const timeSinceLastPong = Date.now() - this.lastPongTime;
+                    console.warn(`[WS] 心跳超时：${Math.round(timeSinceLastPong / 1000)}s 未收到 pong，强制断开重连`);
                     this._emit('heartbeat_timeout', {
                         lastPongTime: this.lastPongTime,
-                        timeout: this.options.heartbeatTimeout
+                        timeout: this.options.heartbeatTimeout,
+                        timeSinceLastPong: timeSinceLastPong
                     });
-                    // 强制关闭连接，触发重连
+                    // 强制关闭连接，触发自动重连
                     if (this.ws) {
                         this.ws.close(3000, 'Heartbeat timeout');
                     }

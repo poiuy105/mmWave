@@ -198,3 +198,11 @@ void ws_heartbeat_get_stats(const ws_heartbeat_ctx_t *ctx,
     if (timeouts) *timeouts = ctx->total_timeouts;
     if (pongs_received) *pongs_received = ctx->total_pong_received;
 }
+
+void ws_heartbeat_record_pong(ws_heartbeat_ctx_t *ctx)
+{
+    if (ctx == NULL) {
+        return;
+    }
+    ctx->total_pong_received++;
+}

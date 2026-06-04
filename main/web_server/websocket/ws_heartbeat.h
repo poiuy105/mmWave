@@ -98,4 +98,10 @@ esp_err_t ws_heartbeat_send_ping(httpd_handle_t http_server, int fd);
 void ws_heartbeat_get_stats(const ws_heartbeat_ctx_t *ctx,
                            uint32_t *pings_sent, uint32_t *timeouts, uint32_t *pongs_received);
 
+/**
+ * @brief 记录收到 PONG 响应
+ * @param ctx 心跳上下文指针
+ */
+void ws_heartbeat_record_pong(ws_heartbeat_ctx_t *ctx);
+
 #endif // WS_HEARTBEAT_H

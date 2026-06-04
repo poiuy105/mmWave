@@ -1,0 +1,8 @@
+{
+  "servers": {
+    "espressif-docs": {
+      "url": "https://mcp.espressif.com/docs"
+    }
+  },
+  "inputs": []
+}

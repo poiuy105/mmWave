@@ -211,6 +211,26 @@ void ws_client_mgr_update_activity(ws_client_mgr_t *mgr, int fd)
     xSemaphoreGive(mgr->mutex);
 }
 
+void ws_client_mgr_set_state(ws_client_mgr_t *mgr, int fd, ws_client_state_t state)
+{
+    if (mgr == NULL || fd < 0) {
+        return;
+    }
+
+    xSemaphoreTake(mgr->mutex, portMAX_DELAY);
+
+    int idx = ws_client_mgr_find_by_fd(mgr, fd);
+    if (idx >= 0) {
+        ws_client_state_t old_state = mgr->clients[idx].state;
+        mgr->clients[idx].state = state;
+        if (old_state != state) {
+            ESP_LOGD(TAG, "Client fd=%d state changed: %d -> %d", fd, old_state, state);
+        }
+    }
+
+    xSemaphoreGive(mgr->mutex);
+}
+
 int ws_client_mgr_get_active_count(const ws_client_mgr_t *mgr)
 {
     if (mgr == NULL) {
