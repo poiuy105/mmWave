@@ -33,6 +33,7 @@
 #include "radar_adapter/radar_adapter.h"
 #include "radar_test/radar_test.h"
 #include "zone_detector/zone_config.h"
+#include "app_wdt.h"
 
 static const char *TAG = "MAIN";
 
@@ -152,6 +153,7 @@ static void run_state_softap(void)
             ESP_LOGW(TAG, "SoftAP timeout (%d min), restarting...", SOFTAP_TIMEOUT_MS / 60000);
             esp_restart();
         }
+        app_wdt_feed(WDT_TASK_APP);
         vTaskDelay(pdMS_TO_TICKS(1000));
     }
 
@@ -172,6 +174,7 @@ static bool connect_wifi_with_retry(void)
     int max_attempts = 5;
 
     for (int attempt = 0; attempt < max_attempts; attempt++) {
+        app_wdt_feed(WDT_TASK_APP);
         ESP_LOGI(TAG, "WiFi connect attempt %d/%d (SSID: %s)", 
                  attempt + 1, max_attempts, s_app_config.wifi_ssid);
 
@@ -192,6 +195,7 @@ static bool connect_wifi_with_retry(void)
                                                 pdTRUE, pdFALSE,
                                                 pdMS_TO_TICKS(WIFI_CONNECT_TIMEOUT_MS));
 
+        app_wdt_feed(WDT_TASK_APP);
         if (bits & WIFI_CONNECTED_BIT) {
             ESP_LOGI(TAG, "WiFi connected successfully");
             state_machine_trigger_event(EVENT_WIFI_CONNECTED);
@@ -202,6 +206,7 @@ static bool connect_wifi_with_retry(void)
         ESP_LOGW(TAG, "WiFi connect timeout/fail, retrying in %dms", retry_delay_ms);
         wifi_manager_stop_sta();
         vTaskDelay(pdMS_TO_TICKS(1000));
+        app_wdt_feed(WDT_TASK_APP);
         vTaskDelay(pdMS_TO_TICKS(retry_delay_ms));
         retry_delay_ms = (retry_delay_ms * 2 < max_retry_delay_ms) ? retry_delay_ms * 2 : max_retry_delay_ms;
     }
@@ -262,6 +267,7 @@ static void run_state_connecting(void)
         }
         
         // 延时等待，避免 tight loop
+        app_wdt_feed(WDT_TASK_APP);
         vTaskDelay(pdMS_TO_TICKS(1000));
         return;
     }
@@ -350,6 +356,7 @@ static void run_state_running(void)
     // 主循环
     uint32_t report_count = 0;
     while (state_machine_get_state() == STATE_RUNNING) {
+        app_wdt_feed(WDT_TASK_APP);
         vTaskDelay(pdMS_TO_TICKS(1000));
         report_count++;
 
@@ -382,6 +389,7 @@ static void run_state_running(void)
 static void app_task(void *pvParameters)
 {
     ESP_LOGI(TAG, "App task started");
+    app_wdt_register_task(WDT_TASK_APP);
 
     while (1) {
         app_state_t state = state_machine_get_state();
@@ -498,6 +506,9 @@ void app_main(void)
 
     // 6. 状态机初始化
     state_machine_init();
+
+    // 初始化看门狗
+    app_wdt_init();
 
     // 7. 创建主任务（状态机驱动循环）
     xTaskCreate(app_task, "app_task", 4096, NULL, 5, NULL);

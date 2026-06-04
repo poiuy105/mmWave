@@ -7,6 +7,7 @@
 #include "server_context.h"
 #include "server_config.h"
 #include "ws_server.h"
+#include "app_wdt.h"
 #include "esp_log.h"
 #include "esp_timer.h"
 #include <string.h>
@@ -92,6 +93,23 @@ static esp_err_t api_health_handler(httpd_req_t *req)
         cJSON_AddNumberToObject(broadcast, "interval", 0);
     }
     cJSON_AddItemToObject(root, "broadcast", broadcast);
+
+    // Watchdog status
+    cJSON *watchdog = cJSON_CreateObject();
+    cJSON_AddNumberToObject(watchdog, "timeout", (double)app_wdt_get_timeout_sec());
+
+    cJSON *wdt_tasks = cJSON_CreateObject();
+    cJSON_AddStringToObject(wdt_tasks, "app",
+        app_wdt_is_healthy(WDT_TASK_APP) ? "healthy" : "stalled");
+    cJSON_AddStringToObject(wdt_tasks, "ws_heartbeat",
+        app_wdt_is_healthy(WDT_TASK_WS_HEARTBEAT) ? "healthy" : "stalled");
+    cJSON_AddStringToObject(wdt_tasks, "radar_broadcast",
+        app_wdt_is_healthy(WDT_TASK_RADAR_BROADCAST) ? "healthy" : "stalled");
+    cJSON_AddStringToObject(wdt_tasks, "radar_parse",
+        app_wdt_is_healthy(WDT_TASK_RADAR_PARSE) ? "healthy" : "stalled");
+    cJSON_AddItemToObject(watchdog, "tasks", wdt_tasks);
+
+    cJSON_AddItemToObject(root, "watchdog", watchdog);
 
     char *json = cJSON_PrintUnformatted(root);
     httpd_resp_set_type(req, "application/json");

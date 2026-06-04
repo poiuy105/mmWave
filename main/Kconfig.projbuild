@@ -250,3 +250,21 @@ menu "File System Configuration"
             Directory under mount path where static files are served from.
 
 endmenu
+
+    menu "Watchdog Configuration"
+        config APP_WDT_ENABLED
+            bool "Enable Application Watchdog"
+            default y
+            help
+                Enable application-level watchdog monitoring for all critical tasks.
+
+        config APP_WDT_TIMEOUT_S
+            int "Task Watchdog Timeout (seconds)"
+            default 30
+            range 5 120
+            depends on APP_WDT_ENABLED
+            help
+                Timeout for Task Watchdog Timer. Must be longer than the longest
+                expected blocking time of any monitored task.
+                30 seconds is recommended for industrial use (covers WiFi reconnection).
+    endmenu

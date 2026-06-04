@@ -19,6 +19,7 @@
 #include "esp_log.h"
 #include "driver/uart.h"
 #include "radar_ld6004.h"
+#include "app_wdt.h"
 
 static const char *TAG = "ld6004";
 
@@ -494,6 +495,8 @@ static void ld6004_task_entry(void *arg)
         return;
     }
 
+    app_wdt_register_task(WDT_TASK_RADAR_PARSE);
+
     while (1) {
         if (xQueueReceive(ctx->event_queue, &event, pdMS_TO_TICKS(200))) {
             switch (event.type) {
@@ -548,6 +551,7 @@ static void ld6004_task_entry(void *arg)
                 break;
             }
         }
+        app_wdt_feed(WDT_TASK_RADAR_PARSE);
         /* Drive the event loop */
         esp_event_loop_run(ctx->event_loop_hdl, pdMS_TO_TICKS(50));
     }

@@ -119,6 +119,7 @@ static void radar_broadcast_task(void *arg)
         }
 
         vTaskDelay(pdMS_TO_TICKS(frame.target_count > 0 ? broadcast_interval_ms : idle_interval_ms));
+        app_wdt_feed(WDT_TASK_RADAR_BROADCAST);
     }
 
     ESP_LOGI(TAG, "Broadcast task stopped");

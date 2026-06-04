@@ -4,6 +4,7 @@
 #include "lwip/netdb.h"
 #include "freertos/FreeRTOS.h"
 #include "freertos/task.h"
+#include "app_wdt.h"
 #include <string.h>
 
 static const char *TAG = "dns_server";
@@ -81,6 +82,7 @@ static void dns_server_task(void *pvParameters)
 
         sendto(dns_socket, tx_buffer, resp_len, 0,
                (struct sockaddr *)&client_addr, addr_len);
+        app_wdt_feed(WDT_TASK_DNS);
     }
 
     dns_task_handle = NULL;

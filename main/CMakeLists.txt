@@ -44,6 +44,8 @@ set(srcs
     "web_server/fatfs_init.c"
     "web_server/file_manager.c"
     "web_server/radar_broadcast.c"
+    # watchdog 模块（看门狗管理）
+    "watchdog/app_wdt.c"
 )
 
 # 头文件目录
