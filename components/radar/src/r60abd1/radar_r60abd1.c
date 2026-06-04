@@ -8,6 +8,7 @@
  */
 
 #include "radar_r60abd1.h"
+#include "app_wdt.h"
 #include <string.h>
 #include <stdlib.h>
 #include "freertos/FreeRTOS.h"

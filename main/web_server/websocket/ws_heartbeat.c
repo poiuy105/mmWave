@@ -7,6 +7,7 @@
  */
 
 #include "ws_heartbeat.h"
+#include "app_wdt.h"
 #include "esp_log.h"
 
 static const char *TAG = "WS_HEARTBEAT";

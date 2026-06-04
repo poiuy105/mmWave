@@ -7,6 +7,7 @@
  */
 
 #include "radar_broadcast.h"
+#include "app_wdt.h"
 #include "config/server_config.h"
 #include "radar_adapter/radar_adapter.h"
 #include "websocket/ws_server.h"
