@@ -161,7 +161,12 @@ static esp_err_t static_file_handler(httpd_req_t *req)
     }
 
     // Build file path - use hardcoded defaults to avoid config copy issues
-    snprintf(filepath, sizeof(filepath), "/storage/www%s", uri);
+    // Support both /style.css (old) and /storage/www/style.css (new) paths
+    if (strncmp(uri, "/storage/www/", 13) == 0) {
+        snprintf(filepath, sizeof(filepath), "%s", uri);
+    } else {
+        snprintf(filepath, sizeof(filepath), "/storage/www%s", uri);
+    }
 
     ESP_LOGI(TAG, "Static file request: uri=%s, mount=%s, root=%s, filepath=%s",
              uri, ctx->config->fatfs_mount_path, ctx->config->static_file_root, filepath);
