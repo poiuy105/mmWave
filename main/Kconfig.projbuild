@@ -27,7 +27,7 @@ menu "HTTP/WebSocket Server"
 
     config HTTP_SERVER_MAX_URI_HANDLERS
         int "Maximum URI Handlers"
-        default 32
+        default 64
         range 8 64
         depends on HTTP_SERVER_ENABLED
         help
