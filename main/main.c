@@ -326,8 +326,17 @@ static void run_state_running(void)
     ESP_LOGI(TAG, "Main HTTP server started");
 
     // 雷达控制命令验证测试
+    // softap 配网后 WiFi 模式切换可能影响 UART，如果测试失败尝试重新初始化
     vTaskDelay(pdMS_TO_TICKS(RADAR_TEST_DELAY_MS));
     esp_err_t test_err = radar_test_run_all();
+    if (test_err != ESP_OK) {
+        ESP_LOGW(TAG, "Radar test failed after softap, reinitializing...");
+        radar_adapter_deinit();
+        vTaskDelay(pdMS_TO_TICKS(100));
+        radar_adapter_init();
+        vTaskDelay(pdMS_TO_TICKS(500));
+        test_err = radar_test_run_all();
+    }
     if (test_err == ESP_OK) {
         ESP_LOGI(TAG, "Radar control test passed");
     } else {
