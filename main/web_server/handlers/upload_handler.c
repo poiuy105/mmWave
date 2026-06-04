@@ -225,16 +225,13 @@ static esp_err_t api_upload_handler(httpd_req_t *req)
 
     ESP_LOGI(TAG, "File opened, streaming upload...");
 
-    // 暂停 MQTT 以释放 TLS 内存（约 30KB），避免上传期间内存不足
-    app_mqtt_pause();
-
     // Stream: read chunks and write directly
     // EAGAIN (errno=11) means no data available yet - retry with delay
     uint8_t buf[UPLOAD_BUF_SIZE];
     size_t total_written = 0;
     esp_err_t ret = ESP_OK;
     int recv_retry = 0;
-    const int max_recv_retry = 10;  // Retry EAGAIN up to 10 times (500ms total)
+    const int max_recv_retry = 60;  // Retry EAGAIN up to 60 times (3000ms total)
 
     while (total_written < content_length) {
         size_t remaining = content_length - total_written;
@@ -251,16 +248,18 @@ static esp_err_t api_upload_handler(httpd_req_t *req)
                 vTaskDelay(pdMS_TO_TICKS(50));
                 continue;
             }
-            ESP_LOGE(TAG, "recv failed at offset %lu (recv=%d, errno=%d)",
-                     (unsigned long)total_written, received, errno);
+            ESP_LOGE(TAG, "recv failed at offset %lu (recv=%d, errno=%d, heap=%lu)",
+                     (unsigned long)total_written, received, errno,
+                     (unsigned long)esp_get_free_heap_size());
             ret = ESP_FAIL;
             break;
         }
 
         if (received == 0) {
             // Connection closed
-            ESP_LOGW(TAG, "Connection closed at offset %lu (expected %lu)",
-                     (unsigned long)total_written, (unsigned long)content_length);
+            ESP_LOGW(TAG, "Connection closed at offset %lu (expected %lu, heap=%lu)",
+                     (unsigned long)total_written, (unsigned long)content_length,
+                     (unsigned long)esp_get_free_heap_size());
             ret = ESP_FAIL;
             break;
         }
@@ -277,17 +276,15 @@ static esp_err_t api_upload_handler(httpd_req_t *req)
 
         total_written += received;
 
-        // Log progress every 8192 bytes
-        if (total_written % 8192 == 0 || total_written == content_length) {
-            ESP_LOGI(TAG, "Upload progress: %lu/%lu bytes",
-                     (unsigned long)total_written, (unsigned long)content_length);
+        // Log progress every 4096 bytes (more frequent for debugging)
+        if (total_written % 4096 == 0 || total_written == content_length) {
+            ESP_LOGI(TAG, "Upload progress: %lu/%lu bytes, heap=%lu",
+                     (unsigned long)total_written, (unsigned long)content_length,
+                     (unsigned long)esp_get_free_heap_size());
         }
     }
 
     fclose(file);
-
-    // 恢复 MQTT
-    app_mqtt_resume();
 
     size_t heap_after = esp_get_free_heap_size();
     ESP_LOGI(TAG, "Upload complete: wrote %lu bytes, heap: %lu -> %lu, ret=%d",
