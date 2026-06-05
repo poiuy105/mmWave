@@ -27,9 +27,13 @@ static void ws_heartbeat_task(void *arg)
     int action_count;
 
     app_wdt_register_task(WDT_TASK_WS_HEARTBEAT);
+    uint32_t tick_counter = 0;
     while (ctx->running) {
-        vTaskDelayUntil(&last_wake, pdMS_TO_TICKS(ctx->config.check_interval_sec * 1000));
+        vTaskDelay(pdMS_TO_TICKS(1000));
         app_wdt_feed(WDT_TASK_WS_HEARTBEAT);
+        tick_counter++;
+        if (tick_counter < ctx->config.check_interval_sec) continue;
+        tick_counter = 0;
         if (!ctx->running) break;
         if (ctx->client_mgr == NULL || ctx->http_server == NULL) continue;
 
