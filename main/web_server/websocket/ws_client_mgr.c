@@ -306,15 +306,11 @@ int ws_client_mgr_remove_timeout(ws_client_mgr_t *mgr, httpd_handle_t server, Ti
 
     xSemaphoreGive(mgr->mutex);
 
-    // Phase 2: Send close frames without holding lock
-    for (int i = 0; i < close_count; i++) {
-        httpd_ws_frame_t close_pkt = {
-            .type = HTTPD_WS_TYPE_CLOSE,
-            .payload = NULL,
-            .len = 0,
-        };
-        httpd_ws_send_frame_async(server, close_actions[i].fd, &close_pkt);
-    }
+    // Phase 2: Do NOT send close frames to dead sockets — writing to a
+    // disconnected fd blocks on TCP retransmit timeout (~12 s), which can
+    // starve the calling task and trigger the task watchdog.
+    // The client is already timed out; the OS will clean up the socket.
+    (void)server;  // suppress unused-parameter warning
 
     return removed;
 }
