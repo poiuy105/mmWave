@@ -100,8 +100,9 @@ void app_wdt_feed(wdt_task_id_t id)
         // TWDT 触发后 ESP-IDF 自动移除了该任务的订阅，需要重新订阅
         ESP_LOGW(TAG, "Feed: task %s removed from TWDT, re-subscribing", s_task_names[id]);
         ret = esp_task_wdt_add(NULL);
-        if (ret == ESP_ERR_INVALID_STATE) {
-            ret = ESP_OK;  // 已被自动重新订阅
+        if (ret == ESP_OK || ret == ESP_ERR_INVALID_STATE) {
+            // 重新订阅成功，再次喂狗
+            ret = esp_task_wdt_reset();
         }
     }
     if (ret != ESP_OK) {
