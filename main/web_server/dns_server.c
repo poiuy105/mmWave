@@ -29,6 +29,8 @@ static uint32_t dns_override_ip = 0;
 
 static void dns_server_task(void *pvParameters)
 {
+    app_wdt_register_task(WDT_TASK_DNS);
+
     uint8_t rx_buffer[DNS_MAX_LEN];
     struct sockaddr_in client_addr;
     socklen_t addr_len = sizeof(client_addr);
@@ -92,6 +94,7 @@ static void dns_server_task(void *pvParameters)
     }
 
     dns_task_handle = NULL;
+    app_wdt_unregister_task(WDT_TASK_DNS);
     vTaskDelete(NULL);
 }
 

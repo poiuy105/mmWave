@@ -79,6 +79,8 @@ static char* build_radar_json(const radar_frame_t *frame, uint32_t frame_id)
  */
 static void radar_broadcast_task(void *arg)
 {
+    app_wdt_register_task(WDT_TASK_RADAR_BROADCAST);
+
     uint32_t frame_counter = 0;
     uint32_t broadcast_interval_ms = 500; // 2Hz - 降低 TCP 拥塞减少帧碎片概率
     uint32_t idle_interval_ms = 2000;    // 无目标时 0.5Hz
@@ -125,6 +127,7 @@ static void radar_broadcast_task(void *arg)
 
     ESP_LOGI(TAG, "Broadcast task stopped");
     s_broadcast_task = NULL;
+    app_wdt_unregister_task(WDT_TASK_RADAR_BROADCAST);
     vTaskDelete(NULL);
 }
 

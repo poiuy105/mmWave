@@ -7,10 +7,10 @@
 
 static const char *TAG = "APP_WDT";
 
-// 每个任务的最后喂狗时间（uptime 秒）
-static uint32_t s_last_feed_time[WDT_TASK_COUNT];
+// 每个任务的最后喂狗时间（tick count，避免溢出）
+static volatile TickType_t s_last_feed_tick[WDT_TASK_COUNT];
 // 任务是否已注册
-static bool s_registered[WDT_TASK_COUNT];
+static volatile bool s_registered[WDT_TASK_COUNT];
 // 看门狗超时时间（秒）
 static uint32_t s_timeout_sec;
 
@@ -20,13 +20,23 @@ static const char *s_task_names[WDT_TASK_COUNT] = {
     [WDT_TASK_DNS]            = "dns",
     [WDT_TASK_WS_HEARTBEAT]   = "ws_hb",
     [WDT_TASK_RADAR_BROADCAST] = "radar_bc",
-    [WDT_TASK_RADAR_PARSE]    = "radar_parse",
+    [WDT_TASK_RADAR_LD2450]   = "radar_ld2450",
+    [WDT_TASK_RADAR_LD2452]   = "radar_ld2452",
+    [WDT_TASK_RADAR_LD2460]   = "radar_ld2460",
+    [WDT_TASK_RADAR_LD2461]   = "radar_ld2461",
+    [WDT_TASK_RADAR_LD6002B]  = "radar_ld6002b",
+    [WDT_TASK_RADAR_LD6004]   = "radar_ld6004",
+    [WDT_TASK_RADAR_R60ABD1]  = "radar_r60abd1",
 };
 
 esp_err_t app_wdt_init(void)
 {
-    // 注意：不清零 s_registered，因为任务可能在 init 之前就注册了
-    // 只初始化超时配置
+    // 工业级：显式初始化所有状态，不依赖 BSS 段清零
+    for (int i = 0; i < WDT_TASK_COUNT; i++) {
+        s_last_feed_tick[i] = 0;
+        s_registered[i] = false;
+    }
+
     s_timeout_sec = CONFIG_ESP_TASK_WDT_TIMEOUT_S;
 
     ESP_LOGI(TAG, "Watchdog initialized, timeout=%lu sec", (unsigned long)s_timeout_sec);
@@ -56,7 +66,7 @@ esp_err_t app_wdt_register_task(wdt_task_id_t id)
     }
 
     s_registered[id] = true;
-    s_last_feed_time[id] = (uint32_t)(xTaskGetTickCount() * portTICK_PERIOD_MS / 1000);
+    s_last_feed_tick[id] = xTaskGetTickCount();
     ESP_LOGI(TAG, "Task %s subscribed to TWDT", s_task_names[id]);
     return ESP_OK;
 }
@@ -75,7 +85,7 @@ esp_err_t app_wdt_unregister_task(wdt_task_id_t id)
     }
 
     s_registered[id] = false;
-    s_last_feed_time[id] = 0;
+    s_last_feed_tick[id] = 0;
     ESP_LOGI(TAG, "Task %s unsubscribed from TWDT", s_task_names[id]);
     return ret;
 }
@@ -86,21 +96,25 @@ void app_wdt_feed(wdt_task_id_t id)
         return;
     }
 
-    s_last_feed_time[id] = (uint32_t)(xTaskGetTickCount() * portTICK_PERIOD_MS / 1000);
+    s_last_feed_tick[id] = xTaskGetTickCount();
     esp_task_wdt_reset();
 }
 
 bool app_wdt_is_healthy(wdt_task_id_t id)
 {
-    if (id >= WDT_TASK_COUNT || !s_registered[id]) {
-        return true;  // 未注册的任务视为健康
+    if (id >= WDT_TASK_COUNT) {
+        return false;  // 无效 ID 视为不健康
+    }
+    if (!s_registered[id]) {
+        return false;  // 未注册的任务视为不健康（工业级：明确状态）
     }
 
-    uint32_t now = (uint32_t)(xTaskGetTickCount() * portTICK_PERIOD_MS / 1000);
-    uint32_t elapsed = now - s_last_feed_time[id];
+    TickType_t now = xTaskGetTickCount();
+    TickType_t elapsed_ticks = now - s_last_feed_tick[id];
+    TickType_t timeout_ticks = pdMS_TO_TICKS(s_timeout_sec * 1000);
 
     // 如果超过 1.5 倍超时时间未喂狗，视为不健康
-    return (elapsed < (s_timeout_sec * 3 / 2));
+    return (elapsed_ticks < (timeout_ticks * 3 / 2));
 }
 
 uint32_t app_wdt_get_last_feed_time(wdt_task_id_t id)
@@ -108,7 +122,8 @@ uint32_t app_wdt_get_last_feed_time(wdt_task_id_t id)
     if (id >= WDT_TASK_COUNT) {
         return 0;
     }
-    return s_last_feed_time[id];
+    // 返回秒数，使用 tick / configTICK_RATE_HZ 避免溢出
+    return (uint32_t)(s_last_feed_tick[id] / configTICK_RATE_HZ);
 }
 
 uint32_t app_wdt_get_timeout_sec(void)

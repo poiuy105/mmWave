@@ -207,7 +207,15 @@ static bool connect_wifi_with_retry(void)
         wifi_manager_stop_sta();
         vTaskDelay(pdMS_TO_TICKS(1000));
         app_wdt_feed(WDT_TASK_APP);
-        vTaskDelay(pdMS_TO_TICKS(retry_delay_ms));
+
+        // 工业级看门狗：退避延时不能超过 TWDT 超时的一半（15s）
+        // 避免 feed 后到下次 feed 间隔超过 TWDT 超时
+        uint32_t wdt_timeout_ms = app_wdt_get_timeout_sec() * 1000;
+        uint32_t safe_delay_ms = (retry_delay_ms < wdt_timeout_ms / 2) ? retry_delay_ms : wdt_timeout_ms / 2;
+        if (safe_delay_ms < retry_delay_ms) {
+            ESP_LOGW(TAG, "Retry delay capped from %dms to %lums (WDT safety)", retry_delay_ms, (unsigned long)safe_delay_ms);
+        }
+        vTaskDelay(pdMS_TO_TICKS(safe_delay_ms));
         retry_delay_ms = (retry_delay_ms * 2 < max_retry_delay_ms) ? retry_delay_ms * 2 : max_retry_delay_ms;
     }
 

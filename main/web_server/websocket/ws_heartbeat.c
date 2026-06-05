@@ -86,6 +86,7 @@ static void ws_heartbeat_task(void *arg)
     }
 
     ESP_LOGI(TAG, "Heartbeat task stopped");
+    app_wdt_unregister_task(WDT_TASK_WS_HEARTBEAT);
     vTaskDelete(NULL);
 }
 

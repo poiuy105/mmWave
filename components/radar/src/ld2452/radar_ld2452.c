@@ -92,13 +92,13 @@ static void ld2452_uart_task(void *arg)
     uint8_t buf[FRAME_BUF_SIZE];
     int pos = 0;
 
-    app_wdt_register_task(WDT_TASK_RADAR_PARSE);
+    app_wdt_register_task(WDT_TASK_RADAR_LD2452);
 
     while (1) {
         uint8_t ch;
         int len = uart_read_bytes(dev->uart_num, &ch, 1,
                                   pdMS_TO_TICKS(100));
-        app_wdt_feed(WDT_TASK_RADAR_PARSE);
+        app_wdt_feed(WDT_TASK_RADAR_LD2452);
         if (len <= 0) {
             continue;
         }

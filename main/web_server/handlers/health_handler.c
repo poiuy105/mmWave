@@ -106,7 +106,14 @@ static esp_err_t api_health_handler(httpd_req_t *req)
     cJSON_AddStringToObject(wdt_tasks, "radar_broadcast",
         app_wdt_is_healthy(WDT_TASK_RADAR_BROADCAST) ? "healthy" : "stalled");
     cJSON_AddStringToObject(wdt_tasks, "radar_parse",
-        app_wdt_is_healthy(WDT_TASK_RADAR_PARSE) ? "healthy" : "stalled");
+        app_wdt_is_healthy(WDT_TASK_RADAR_LD2450) ||
+        app_wdt_is_healthy(WDT_TASK_RADAR_LD2452) ||
+        app_wdt_is_healthy(WDT_TASK_RADAR_LD2460) ||
+        app_wdt_is_healthy(WDT_TASK_RADAR_LD2461) ||
+        app_wdt_is_healthy(WDT_TASK_RADAR_LD6002B) ||
+        app_wdt_is_healthy(WDT_TASK_RADAR_LD6004) ||
+        app_wdt_is_healthy(WDT_TASK_RADAR_R60ABD1)
+        ? "healthy" : "stalled");
     cJSON_AddItemToObject(watchdog, "tasks", wdt_tasks);
 
     cJSON_AddItemToObject(root, "watchdog", watchdog);
