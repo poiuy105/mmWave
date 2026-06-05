@@ -93,11 +93,17 @@ esp_err_t app_wdt_unregister_task(wdt_task_id_t id)
 void app_wdt_feed(wdt_task_id_t id)
 {
     if (id >= WDT_TASK_COUNT || !s_registered[id]) {
+        ESP_LOGW(TAG, "Feed: task %s not registered (id=%d)",
+                 (id < WDT_TASK_COUNT) ? s_task_names[id] : "invalid", id);
         return;
     }
 
     s_last_feed_tick[id] = xTaskGetTickCount();
-    esp_task_wdt_reset();
+    esp_err_t ret = esp_task_wdt_reset();
+    if (ret != ESP_OK) {
+        ESP_LOGE(TAG, "Feed: esp_task_wdt_reset failed for %s: %s",
+                 s_task_names[id], esp_err_to_name(ret));
+    }
 }
 
 bool app_wdt_is_healthy(wdt_task_id_t id)
