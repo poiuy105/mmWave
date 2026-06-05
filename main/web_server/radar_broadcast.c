@@ -147,7 +147,7 @@ esp_err_t radar_broadcast_start(server_context_t *ctx)
     s_running = true;
 
     // Use hardcoded values to avoid uninitialized config fields
-    uint32_t stack_size = 8192;  // 增加栈大小，cJSON操作需要大量栈空间
+    uint32_t stack_size = 16384;  // cJSON + zone_detector + MQTT publish 需要大量栈空间
     uint8_t priority = 5;  // Low priority, below HTTP server (12) and WiFi (23)
 
     BaseType_t ret = xTaskCreate(

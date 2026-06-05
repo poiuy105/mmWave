@@ -387,6 +387,12 @@ esp_err_t ws_client_mgr_send_async(ws_client_mgr_t *mgr, httpd_handle_t server,
         return ESP_ERR_INVALID_SIZE;
     }
 
+    if (len > WS_MSG_PAYLOAD_MAX) {
+        ESP_LOGW(TAG, "Message exceeds payload buffer: %lu > %d",
+                 (unsigned long)len, WS_MSG_PAYLOAD_MAX);
+        return ESP_ERR_INVALID_SIZE;
+    }
+
     xSemaphoreTake(mgr->mutex, portMAX_DELAY);
 
     int idx = ws_client_mgr_find_by_fd(mgr, fd);
