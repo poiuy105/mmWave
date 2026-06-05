@@ -31,12 +31,8 @@ static const char *s_task_names[WDT_TASK_COUNT] = {
 
 esp_err_t app_wdt_init(void)
 {
-    // 工业级：显式初始化所有状态，不依赖 BSS 段清零
-    for (int i = 0; i < WDT_TASK_COUNT; i++) {
-        s_last_feed_tick[i] = 0;
-        s_registered[i] = false;
-    }
-
+    // 注意：不清零 s_registered/s_last_feed_tick
+    // 因为任务可能在 init 之前就注册了（如雷达任务在 radar_adapter_init 中创建）
     s_timeout_sec = CONFIG_ESP_TASK_WDT_TIMEOUT_S;
 
     ESP_LOGI(TAG, "Watchdog initialized, timeout=%lu sec", (unsigned long)s_timeout_sec);
