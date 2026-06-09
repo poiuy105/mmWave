@@ -10,7 +10,6 @@
 
 #include "radar_test.h"
 #include "radar_adapter/radar_adapter.h"
-#include "radar_ld2460.h"
 #include "esp_log.h"
 #include "esp_timer.h"
 #include <stdio.h>
@@ -18,262 +17,118 @@
 
 static const char *TAG = "RADAR_TEST";
 
-/**
- * @brief 测试 LD2460 安装模式设置
- */
+#ifdef CONFIG_RADAR_LD2460
+#include "radar_ld2460.h"
+
 static esp_err_t test_install_mode(void *handle)
 {
     ESP_LOGI(TAG, "=== Test: Set Install Mode ===");
-
-    // 1. 获取当前安装模式
     ld2460_install_mode_t current_mode;
     esp_err_t err = ld2460_get_install_mode(handle, &current_mode);
-    if (err != ESP_OK) {
-        ESP_LOGE(TAG, "Failed to get install mode: %s", esp_err_to_name(err));
-        return err;
-    }
+    if (err != ESP_OK) { ESP_LOGE(TAG, "Failed to get install mode: %s", esp_err_to_name(err)); return err; }
     ESP_LOGI(TAG, "Current install mode: %d (1=side, 2=top)", current_mode);
-
-    // 2. 设置为顶装模式
-    ESP_LOGI(TAG, "Setting install mode to TOP (2)...");
     err = ld2460_set_install_mode(handle, LD2460_INSTALL_TOP);
-    if (err != ESP_OK) {
-        ESP_LOGE(TAG, "Failed to set install mode: %s", esp_err_to_name(err));
-        return err;
-    }
-    ESP_LOGI(TAG, "Set install mode TOP: SUCCESS");
-
-    // 3. 等待 1 秒后读取确认
+    if (err != ESP_OK) { ESP_LOGE(TAG, "Failed to set install mode: %s", esp_err_to_name(err)); return err; }
     vTaskDelay(pdMS_TO_TICKS(1000));
-
     err = ld2460_get_install_mode(handle, &current_mode);
-    if (err != ESP_OK) {
-        ESP_LOGE(TAG, "Failed to verify install mode: %s", esp_err_to_name(err));
-        return err;
-    }
+    if (err != ESP_OK) { ESP_LOGE(TAG, "Failed to verify install mode: %s", esp_err_to_name(err)); return err; }
     ESP_LOGI(TAG, "Verified install mode: %d (expected 2)", current_mode);
-
-    // 4. 恢复侧装模式
-    ESP_LOGI(TAG, "Restoring install mode to SIDE (1)...");
     err = ld2460_set_install_mode(handle, LD2460_INSTALL_SIDE);
-    if (err != ESP_OK) {
-        ESP_LOGE(TAG, "Failed to restore install mode: %s", esp_err_to_name(err));
-        return err;
-    }
-    ESP_LOGI(TAG, "Restore install mode SIDE: SUCCESS");
-
+    if (err != ESP_OK) { ESP_LOGE(TAG, "Failed to restore install mode: %s", esp_err_to_name(err)); return err; }
     return ESP_OK;
 }
 
-/**
- * @brief 测试 LD2460 灵敏度设置
- */
 static esp_err_t test_sensitivity(void *handle)
 {
     ESP_LOGI(TAG, "=== Test: Set Sensitivity ===");
-
-    // 1. 获取当前灵敏度
     ld2460_sensitivity_t current_level;
     esp_err_t err = ld2460_get_sensitivity(handle, &current_level);
-    if (err != ESP_OK) {
-        ESP_LOGE(TAG, "Failed to get sensitivity: %s", esp_err_to_name(err));
-        return err;
-    }
-    ESP_LOGI(TAG, "Current sensitivity: %d (1=high, 2=mid, 3=low)", current_level);
-
-    // 2. 设置为低灵敏度
-    ESP_LOGI(TAG, "Setting sensitivity to LOW (3)...");
+    if (err != ESP_OK) { ESP_LOGE(TAG, "Failed to get sensitivity: %s", esp_err_to_name(err)); return err; }
     err = ld2460_set_sensitivity(handle, LD2460_SENSITIVITY_LOW);
-    if (err != ESP_OK) {
-        ESP_LOGE(TAG, "Failed to set sensitivity: %s", esp_err_to_name(err));
-        return err;
-    }
-    ESP_LOGI(TAG, "Set sensitivity LOW: SUCCESS");
-
-    // 3. 等待 1 秒后读取确认
+    if (err != ESP_OK) { ESP_LOGE(TAG, "Failed to set sensitivity: %s", esp_err_to_name(err)); return err; }
     vTaskDelay(pdMS_TO_TICKS(1000));
-
     err = ld2460_get_sensitivity(handle, &current_level);
-    if (err != ESP_OK) {
-        ESP_LOGE(TAG, "Failed to verify sensitivity: %s", esp_err_to_name(err));
-        return err;
-    }
-    ESP_LOGI(TAG, "Verified sensitivity: %d (expected 3)", current_level);
-
-    // 4. 恢复高灵敏度
-    ESP_LOGI(TAG, "Restoring sensitivity to HIGH (1)...");
+    if (err != ESP_OK) { ESP_LOGE(TAG, "Failed to verify sensitivity: %s", esp_err_to_name(err)); return err; }
     err = ld2460_set_sensitivity(handle, LD2460_SENSITIVITY_HIGH);
-    if (err != ESP_OK) {
-        ESP_LOGE(TAG, "Failed to restore sensitivity: %s", esp_err_to_name(err));
-        return err;
-    }
-    ESP_LOGI(TAG, "Restore sensitivity HIGH: SUCCESS");
-
+    if (err != ESP_OK) { ESP_LOGE(TAG, "Failed to restore sensitivity: %s", esp_err_to_name(err)); return err; }
     return ESP_OK;
 }
 
-/**
- * @brief 测试 LD2460 检测范围设置
- */
 static esp_err_t test_detection_range(void *handle)
 {
     ESP_LOGI(TAG, "=== Test: Set Detection Range ===");
-
-    // 1. 获取当前检测范围
     ld2460_range_t current_range;
     esp_err_t err = ld2460_get_detection_range(handle, &current_range);
-    if (err != ESP_OK) {
-        ESP_LOGE(TAG, "Failed to get detection range: %s", esp_err_to_name(err));
-        return err;
-    }
-    ESP_LOGI(TAG, "Current range: distance=%.1fm, angle=%.1f~%.1f",
-             current_range.distance, current_range.angle_start, current_range.angle_end);
-
-    // 2. 设置缩小检测范围（3m, ±30°）
-    ESP_LOGI(TAG, "Setting detection range to 3m, ±30°...");
+    if (err != ESP_OK) { ESP_LOGE(TAG, "Failed to get detection range: %s", esp_err_to_name(err)); return err; }
     err = ld2460_set_detection_range(handle, 3.0f, -30.0f, 30.0f);
-    if (err != ESP_OK) {
-        ESP_LOGE(TAG, "Failed to set detection range: %s", esp_err_to_name(err));
-        return err;
-    }
-    ESP_LOGI(TAG, "Set detection range: SUCCESS");
-
-    // 3. 等待 1 秒后读取确认
+    if (err != ESP_OK) { ESP_LOGE(TAG, "Failed to set detection range: %s", esp_err_to_name(err)); return err; }
     vTaskDelay(pdMS_TO_TICKS(1000));
-
     err = ld2460_get_detection_range(handle, &current_range);
-    if (err != ESP_OK) {
-        ESP_LOGE(TAG, "Failed to verify detection range: %s", esp_err_to_name(err));
-        return err;
-    }
-    ESP_LOGI(TAG, "Verified range: distance=%.1fm, angle=%.1f~%.1f (expected 3m, ±30°)",
-             current_range.distance, current_range.angle_start, current_range.angle_end);
-
-    // 4. 恢复默认范围（6m, ±60°）
-    ESP_LOGI(TAG, "Restoring detection range to 6m, ±60°...");
+    if (err != ESP_OK) { ESP_LOGE(TAG, "Failed to verify detection range: %s", esp_err_to_name(err)); return err; }
     err = ld2460_set_detection_range(handle, 6.0f, -60.0f, 60.0f);
-    if (err != ESP_OK) {
-        ESP_LOGE(TAG, "Failed to restore detection range: %s", esp_err_to_name(err));
-        return err;
-    }
-    ESP_LOGI(TAG, "Restore detection range: SUCCESS");
-
+    if (err != ESP_OK) { ESP_LOGE(TAG, "Failed to restore detection range: %s", esp_err_to_name(err)); return err; }
     return ESP_OK;
 }
 
-/**
- * @brief 测试 LD2460 固件版本查询（最基本的命令）
- */
 static esp_err_t test_firmware_version(void *handle)
 {
     ESP_LOGI(TAG, "=== Test: Get Firmware Version ===");
-
     ld2460_version_t version;
     esp_err_t err = ld2460_get_firmware_version(handle, &version);
-    if (err != ESP_OK) {
-        ESP_LOGE(TAG, "Failed to get firmware version: %s", esp_err_to_name(err));
-        return err;
-    }
-
+    if (err != ESP_OK) { ESP_LOGE(TAG, "Failed to get firmware version: %s", esp_err_to_name(err)); return err; }
     ESP_LOGI(TAG, "Firmware version: %d.%d, date: %d/%02d, install_mode=%d",
-             version.version_major, version.version_minor,
-             2000 + version.year, version.month,
-             version.mode);
-
+             version.version_major, version.version_minor, 2000 + version.year, version.month, version.mode);
     return ESP_OK;
 }
+#endif // CONFIG_RADAR_LD2460
 
-/**
- * @brief 运行所有雷达控制测试
- */
 esp_err_t radar_test_run_all(void)
 {
     ESP_LOGI(TAG, "========================================");
     ESP_LOGI(TAG, "RADAR CONTROL COMMAND VERIFICATION TEST");
     ESP_LOGI(TAG, "========================================");
 
-    // 获取底层驱动句柄
     void *handle = radar_adapter_get_handle();
     if (handle == NULL) {
         ESP_LOGE(TAG, "Radar not initialized, cannot run test");
         return ESP_ERR_INVALID_STATE;
     }
 
-    // 检查雷达型号
     radar_info_t info;
     radar_adapter_get_info(&info);
     ESP_LOGI(TAG, "Radar type: %s", info.type);
 
-    // 只测试 LD2460
+#ifndef CONFIG_RADAR_LD2460
+    ESP_LOGW(TAG, "This test is designed for LD2460 only, skipping");
+    return ESP_OK;
+#else
     if (strcmp(info.type, "LD2460") != 0) {
         ESP_LOGW(TAG, "This test is designed for LD2460 only, skipping");
         return ESP_OK;
     }
 
     esp_err_t err;
-
-    // 关键步骤：先停止上报，否则雷达可能无法响应配置命令
-    ESP_LOGI(TAG, "Stopping radar report before configuration...");
     err = ld2460_enable_report(handle, false);
-    if (err != ESP_OK) {
-        ESP_LOGW(TAG, "Failed to stop report: %s (continuing anyway)", esp_err_to_name(err));
-    } else {
-        ESP_LOGI(TAG, "Report stopped successfully");
-    }
-    vTaskDelay(pdMS_TO_TICKS(500));  // 等待上报停止
+    if (err != ESP_OK) { ESP_LOGW(TAG, "Failed to stop report: %s", esp_err_to_name(err)); }
+    vTaskDelay(pdMS_TO_TICKS(500));
 
-    // 测试 0: 固件版本查询（最基本的命令）
     err = test_firmware_version(handle);
-    if (err != ESP_OK) {
-        ESP_LOGE(TAG, "Firmware version test FAILED - radar may not be responding");
-        ld2460_enable_report(handle, true);
-        return err;
-    }
-    ESP_LOGI(TAG, "Firmware version test PASSED");
+    if (err != ESP_OK) { ESP_LOGE(TAG, "Firmware version test FAILED"); ld2460_enable_report(handle, true); return err; }
     vTaskDelay(pdMS_TO_TICKS(1000));
 
-    // 测试 1: 安装模式
     err = test_install_mode(handle);
-    if (err != ESP_OK) {
-        ESP_LOGE(TAG, "Install mode test FAILED");
-        // 恢复上报后返回
-        ld2460_enable_report(handle, true);
-        return err;
-    }
-    ESP_LOGI(TAG, "Install mode test PASSED");
+    if (err != ESP_OK) { ESP_LOGE(TAG, "Install mode test FAILED"); ld2460_enable_report(handle, true); return err; }
     vTaskDelay(pdMS_TO_TICKS(2000));
 
-    // 测试 2: 灵敏度
     err = test_sensitivity(handle);
-    if (err != ESP_OK) {
-        ESP_LOGE(TAG, "Sensitivity test FAILED");
-        ld2460_enable_report(handle, true);
-        return err;
-    }
-    ESP_LOGI(TAG, "Sensitivity test PASSED");
+    if (err != ESP_OK) { ESP_LOGE(TAG, "Sensitivity test FAILED"); ld2460_enable_report(handle, true); return err; }
     vTaskDelay(pdMS_TO_TICKS(2000));
 
-    // 测试 3: 检测范围
     err = test_detection_range(handle);
-    if (err != ESP_OK) {
-        ESP_LOGE(TAG, "Detection range test FAILED");
-        ld2460_enable_report(handle, true);
-        return err;
-    }
-    ESP_LOGI(TAG, "Detection range test PASSED");
+    if (err != ESP_OK) { ESP_LOGE(TAG, "Detection range test FAILED"); ld2460_enable_report(handle, true); return err; }
 
-    // 恢复上报
-    ESP_LOGI(TAG, "Restoring radar report...");
-    err = ld2460_enable_report(handle, true);
-    if (err != ESP_OK) {
-        ESP_LOGW(TAG, "Failed to restore report: %s", esp_err_to_name(err));
-    } else {
-        ESP_LOGI(TAG, "Report restored successfully");
-    }
-
-    ESP_LOGI(TAG, "========================================");
+    ld2460_enable_report(handle, true);
     ESP_LOGI(TAG, "ALL TESTS PASSED!");
-    ESP_LOGI(TAG, "========================================");
-
     return ESP_OK;
+#endif
 }
