@@ -34,6 +34,10 @@ static uint32_t s_frame_counter = 0;
 #error "Both CONFIG_RADAR_LD2460 and CONFIG_RADAR_LD2452 are defined!"
 #endif
 
+#if !defined(CONFIG_RADAR_LD2452)
+#error "CONFIG_RADAR_LD2452 is not defined!"
+#endif
+
 #if defined(CONFIG_RADAR_LD2460)
 static const radar_info_t s_radar_info = {
     .type = "LD2460",

@@ -45,5 +45,4 @@ endif()
 
 idf_component_register(SRCS ${RADAR_SRCS}
                        INCLUDE_DIRS ${RADAR_INCLUDES}
-                       REQUIRES esp_event esp_driver_uart
-                       PRIV_REQUIRES main)
+                       REQUIRES esp_event esp_driver_uart)
