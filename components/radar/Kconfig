@@ -2,7 +2,7 @@ menu "Radar Configuration"
 
     choice RADAR_TYPE
         prompt "Select radar type"
-        default RADAR_LD2460
+        default RADAR_LD2452
 
         config RADAR_LD2450
             bool "HLK-LD2450 (1T2R Multi-target Tracking)"
