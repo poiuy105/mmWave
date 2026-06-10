@@ -29,6 +29,11 @@ static uint32_t s_frame_counter = 0;
 
 /* ============ 雷达信息（编译时确定） ============ */
 
+// 编译时验证：确保只有一个雷达类型被定义
+#if defined(CONFIG_RADAR_LD2460) && defined(CONFIG_RADAR_LD2452)
+#error "Both CONFIG_RADAR_LD2460 and CONFIG_RADAR_LD2452 are defined!"
+#endif
+
 #if defined(CONFIG_RADAR_LD2460)
 static const radar_info_t s_radar_info = {
     .type = "LD2460",
