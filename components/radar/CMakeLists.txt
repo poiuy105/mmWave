@@ -1,58 +1,25 @@
-# LD2460 radar driver sources
-set(LD2460_SRCS src/ld2460/radar_ld2460.c)
+# 所有雷达驱动源文件
+set(RADAR_SRCS
+    src/ld2460/radar_ld2460.c
+    src/ld2450/radar_ld2450.c
+    src/ld6004/radar_ld6004.c
+    src/ld6002b/radar_ld6002b.c
+    src/ld2461/radar_ld2461.c
+    src/ld2452/radar_ld2452.c
+    src/r60abd1/radar_r60abd1.c
+)
 
-# LD2450 radar driver sources
-set(LD2450_SRCS src/ld2450/radar_ld2450.c)
-
-# LD6004 radar driver sources
-set(LD6004_SRCS src/ld6004/radar_ld6004.c)
-
-# LD6002B radar driver sources
-set(LD6002B_SRCS src/ld6002b/radar_ld6002b.c)
-
-# LD2461 radar driver sources
-set(LD2461_SRCS src/ld2461/radar_ld2461.c)
-
-# LD2452 radar driver sources
-set(LD2452_SRCS src/ld2452/radar_ld2452.c)
-
-# R60ABD1 radar driver sources
-set(R60ABD1_SRCS src/r60abd1/radar_r60abd1.c)
-
-# Select sources based on configured radar type
-message(STATUS "RADAR: CONFIG_RADAR_LD2460=${CONFIG_RADAR_LD2460}")
-message(STATUS "RADAR: CONFIG_RADAR_LD2452=${CONFIG_RADAR_LD2452}")
-if(CONFIG_RADAR_LD2460)
-    set(RADAR_SRCS ${LD2460_SRCS})
-    set(RADAR_INCLUDES include src/ld2460)
-    message(STATUS "RADAR: Selected LD2460")
-elseif(CONFIG_RADAR_LD2450)
-    set(RADAR_SRCS ${LD2450_SRCS})
-    set(RADAR_INCLUDES include src/ld2450)
-    message(STATUS "RADAR: Selected LD2450")
-elseif(CONFIG_RADAR_LD6004)
-    set(RADAR_SRCS ${LD6004_SRCS})
-    set(RADAR_INCLUDES include src/ld6004)
-    message(STATUS "RADAR: Selected LD6004")
-elseif(CONFIG_RADAR_LD6002B)
-    set(RADAR_SRCS ${LD6002B_SRCS})
-    set(RADAR_INCLUDES include src/ld6002b)
-    message(STATUS "RADAR: Selected LD6002B")
-elseif(CONFIG_RADAR_LD2461)
-    set(RADAR_SRCS ${LD2461_SRCS})
-    set(RADAR_INCLUDES include src/ld2461)
-    message(STATUS "RADAR: Selected LD2461")
-elseif(CONFIG_RADAR_LD2452)
-    set(RADAR_SRCS ${LD2452_SRCS})
-    set(RADAR_INCLUDES include src/ld2452)
-    message(STATUS "RADAR: Selected LD2452")
-elseif(CONFIG_RADAR_R60ABD1)
-    set(RADAR_SRCS ${R60ABD1_SRCS})
-    set(RADAR_INCLUDES include src/r60abd1)
-    message(STATUS "RADAR: Selected R60ABD1")
-else()
-    message(WARNING "RADAR: No radar type selected!")
-endif()
+# 所有头文件目录
+set(RADAR_INCLUDES
+    include
+    src/ld2460
+    src/ld2450
+    src/ld6004
+    src/ld6002b
+    src/ld2461
+    src/ld2452
+    src/r60abd1
+)
 
 idf_component_register(SRCS ${RADAR_SRCS}
                        INCLUDE_DIRS ${RADAR_INCLUDES}
