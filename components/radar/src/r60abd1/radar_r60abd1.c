@@ -8,7 +8,6 @@
  */
 
 #include "radar_r60abd1.h"
-#include "app_wdt.h"
 #include <string.h>
 #include <stdlib.h>
 #include "freertos/FreeRTOS.h"
@@ -345,13 +344,10 @@ static void r60abd1_uart_task(void *arg)
     uint8_t buf[FRAME_BUF_SIZE];
     int pos = 0;
 
-    app_wdt_register_task(WDT_TASK_RADAR_R60ABD1);
-
     while (1) {
         uint8_t ch;
         int len = uart_read_bytes(dev->uart_num, &ch, 1,
                                   pdMS_TO_TICKS(100));
-        app_wdt_feed(WDT_TASK_RADAR_R60ABD1);
         if (len <= 0) {
             continue;
         }
